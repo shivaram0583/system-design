@@ -1,0 +1,457 @@
+# Topic 12: Load Balancing
+
+> **Track**: Core Concepts — Fundamentals
+> **Difficulty**: Beginner → Intermediate
+> **Prerequisites**: Topics 1–11
+
+---
+
+## Table of Contents
+
+- [A. Concept Explanation](#a-concept-explanation)
+- [B. Interview View](#b-interview-view)
+- [C. Practical Engineering View](#c-practical-engineering-view)
+- [D. Example](#d-example)
+- [E. HLD and LLD](#e-hld-and-lld)
+- [F. Summary & Practice](#f-summary--practice)
+
+---
+
+## A. Concept Explanation
+
+### What is Load Balancing?
+
+A **load balancer** distributes incoming network traffic across multiple servers to ensure no single server is overwhelmed, improving availability, throughput, and reliability.
+
+```
+WITHOUT Load Balancer:
+  All traffic → Single Server → Overloaded → Crashes
+  
+WITH Load Balancer:
+  ┌────────┐     ┌──────────┐     ┌──────────┐
+  │ Client │────►│   Load   │──┬─►│ Server 1 │  33% traffic
+  └────────┘     │ Balancer │  ├─►│ Server 2 │  33% traffic
+                 └──────────┘  └─►│ Server 3 │  33% traffic
+                                  └──────────┘
+```
+
+### Where Load Balancers Sit
+
+```
+┌────────┐   ┌────┐   ┌───────┐   ┌────┐   ┌──────┐   ┌────┐   ┌────┐
+│ Client │──►│LB 1│──►│  Web  │──►│LB 2│──►│ App  │──►│LB 3│──►│ DB │
+│        │   │    │   │Servers│   │    │   │Servers│   │    │   │    │
+└────────┘   └────┘   └───────┘   └────┘   └──────┘   └────┘   └────┘
+             Layer 1              Layer 2              Layer 3
+           (Internet             (Internal           (Database
+            facing)               services)           connections)
+```
+
+### L4 vs L7 Load Balancing
+
+| Feature | L4 (Transport) | L7 (Application) |
+|---------|----------------|------------------|
+| **OSI Layer** | Layer 4 (TCP/UDP) | Layer 7 (HTTP/HTTPS) |
+| **Sees** | IP addresses, ports | URLs, headers, cookies, body |
+| **Speed** | Faster (less processing) | Slower (must parse HTTP) |
+| **Routing** | Based on IP/port only | Based on URL path, headers, cookies |
+| **SSL termination** | No (passes through) | Yes (can decrypt HTTPS) |
+| **Use case** | TCP load balancing, gaming, non-HTTP | HTTP APIs, web apps, microservices |
+| **Example** | AWS NLB, HAProxy (TCP mode) | AWS ALB, Nginx, HAProxy (HTTP mode) |
+
+```
+L4 Load Balancer:
+  Sees: Source IP 1.2.3.4:5678 → Dest IP 10.0.0.1:80
+  Decision: Based on IP hash or round-robin
+  Can't see: URL, headers, cookies
+
+L7 Load Balancer:
+  Sees: GET /api/users HTTP/1.1  Host: api.example.com  Cookie: session=abc
+  Decision: /api/* → API servers, /static/* → CDN, session=abc → Server 2
+  Can do: URL routing, header-based routing, SSL termination, compression
+```
+
+### Load Balancing Algorithms
+
+| Algorithm | How It Works | Pros | Cons | Best For |
+|-----------|-------------|------|------|----------|
+| **Round Robin** | Rotates through servers sequentially | Simple, fair | Ignores server load | Equal-capacity servers |
+| **Weighted Round Robin** | Round robin with weights per server | Handles mixed capacity | Static weights | Mixed server sizes |
+| **Least Connections** | Routes to server with fewest active connections | Adapts to load | Slower (must track connections) | Long-lived connections |
+| **Weighted Least Connections** | Least connections + server weights | Best load distribution | Most complex | Production web apps |
+| **IP Hash** | Hash of client IP → consistent server | Session affinity | Uneven if IPs cluster | Stateful without sticky sessions |
+| **Random** | Randomly pick a server | Simple, no state | Can be uneven | Simple setups |
+| **Least Response Time** | Routes to fastest-responding server | Best latency | Requires monitoring | Latency-sensitive apps |
+| **Consistent Hashing** | Hash ring; minimal redistribution on change | Minimal disruption | Complex implementation | Cache servers, DB sharding |
+
+```
+ROUND ROBIN:
+  Request 1 → Server A
+  Request 2 → Server B
+  Request 3 → Server C
+  Request 4 → Server A  (cycles back)
+
+LEAST CONNECTIONS:
+  Server A: 5 connections
+  Server B: 3 connections  ← next request goes here
+  Server C: 7 connections
+
+CONSISTENT HASHING (for cache):
+  Hash ring: [0 ──── A ──── B ──── C ──── 0]
+  hash("user:123") → lands between A and B → goes to B
+  If B is removed → those keys move to C (not all keys reshuffled)
+```
+
+### Health Checks
+
+```
+Load balancer must know which servers are healthy:
+
+PASSIVE health check:
+  LB monitors responses from servers
+  If server returns 5xx errors → mark unhealthy
+  Pro: No extra traffic
+  Con: Slow detection (waits for real traffic)
+
+ACTIVE health check:
+  LB periodically pings servers:
+    GET /health → 200 OK (healthy)
+    GET /health → timeout or 500 (unhealthy)
+  
+  Config:
+    Interval: 10 seconds
+    Timeout: 5 seconds
+    Healthy threshold: 3 consecutive successes
+    Unhealthy threshold: 2 consecutive failures
+  
+  Unhealthy server → removed from pool
+  Recovered server → added back after healthy threshold
+```
+
+### High Availability for Load Balancers
+
+The LB itself can be a single point of failure:
+
+```
+ACTIVE-PASSIVE LB:
+  ┌─────────────┐     ┌─────────────┐
+  │  Primary LB │     │ Standby LB  │
+  │  (Active)   │────►│  (Passive)  │
+  │  VIP: 1.2.3 │     │  Monitors   │
+  └─────────────┘     └─────────────┘
+  If primary fails → standby takes over VIP (via VRRP/keepalived)
+  Failover time: 1-5 seconds
+
+ACTIVE-ACTIVE LB:
+  ┌──────────┐     ┌──────────┐
+  │   LB 1   │     │   LB 2   │
+  │ (Active) │     │ (Active) │
+  └──────────┘     └──────────┘
+       ▲                ▲
+       └────────┬───────┘
+          ┌─────┴─────┐
+          │    DNS     │  DNS returns both LB IPs
+          │ Round Robin│  or uses ECMP/anycast
+          └───────────┘
+```
+
+### Global Server Load Balancing (GSLB)
+
+```
+┌────────────────────────────────────────────────────┐
+│                    DNS (GSLB)                       │
+│  User in US → resolve to 1.2.3.4 (US datacenter)  │
+│  User in EU → resolve to 5.6.7.8 (EU datacenter)  │
+└────────────────┬────────────────┬──────────────────┘
+                 │                │
+          ┌──────┴──────┐  ┌─────┴──────┐
+          │  US Region  │  │  EU Region │
+          │  LB → Servers│  │  LB → Servers│
+          └─────────────┘  └────────────┘
+
+Strategies:
+  • Geographic: Route to nearest datacenter
+  • Latency-based: Route to lowest-latency datacenter
+  • Failover: Route to backup if primary is down
+  • Weighted: Split traffic (80% US, 20% EU)
+```
+
+---
+
+## B. Interview View
+
+### What Interviewers Expect
+
+| Level | Expectation |
+|-------|------------|
+| **Junior** | Knows what an LB does; can draw it in architecture |
+| **Mid** | Knows L4 vs L7, common algorithms, health checks |
+| **Senior** | Discusses GSLB, consistent hashing, LB as potential bottleneck |
+| **Staff+** | HA for LBs, DNS-based routing, connection draining, cost implications |
+
+### Red Flags
+
+- Forgetting to add a load balancer in a multi-server design
+- Not knowing the difference between L4 and L7
+- Using sticky sessions without justification
+- Not considering LB failure (single point of failure)
+
+### Common Questions
+
+1. What is a load balancer and why do you need one?
+2. Compare L4 vs L7 load balancing.
+3. What algorithm would you use for this system?
+4. How do you make the load balancer itself highly available?
+5. What are health checks and how do they work?
+6. When would you use consistent hashing?
+7. How does DNS-based load balancing work?
+
+---
+
+## C. Practical Engineering View
+
+### AWS Load Balancer Options
+
+| Service | Type | Use Case | Cost |
+|---------|------|----------|------|
+| **ALB** | L7 | HTTP/HTTPS, microservices, path routing | ~$20/mo + traffic |
+| **NLB** | L4 | TCP/UDP, gaming, IoT, extreme performance | ~$20/mo + traffic |
+| **CLB** | L4/L7 (legacy) | Simple HTTP/TCP | ~$20/mo + traffic |
+| **Global Accelerator** | GSLB | Multi-region, anycast | ~$20/mo + traffic |
+
+### Connection Draining
+
+```
+When removing a server from the pool (deploy, scale-down):
+
+WITHOUT draining:
+  Server removed → in-flight requests DROPPED → errors
+
+WITH draining:
+  1. LB stops sending NEW requests to server
+  2. Existing in-flight requests continue (grace period: 30-300s)
+  3. Once all connections close (or timeout) → server removed
+  4. Safe to terminate/update server
+
+  Timeline:
+    ──── [Draining starts] ──── [All connections closed] ──── [Server removed]
+         No new requests      In-flight requests finish       Safe to terminate
+```
+
+### SSL/TLS Termination
+
+```
+SSL at LB (recommended):
+  Client ──HTTPS──► LB ──HTTP──► Servers
+  
+  Pros:
+  • Servers don't need SSL certificates
+  • LB handles CPU-intensive encryption/decryption
+  • Easier certificate management (one place)
+  
+  Cons:
+  • Traffic between LB and servers is unencrypted (OK within VPC)
+  • If compliance requires end-to-end encryption: use SSL passthrough
+
+SSL passthrough (L4):
+  Client ──HTTPS──► LB ──HTTPS──► Servers
+  LB can't inspect traffic (just routes TCP)
+```
+
+---
+
+## D. Example: Scaling an API with Load Balancing
+
+```
+Architecture:
+  ┌────────┐     ┌──────┐     ┌─────────────────────┐
+  │ Client │────►│ ALB  │────►│ API Servers (×5)    │
+  │        │     │ (L7) │     │ Target group:       │
+  └────────┘     └──────┘     │  /api/* → API group │
+                              │  /ws/*  → WS group  │
+                              └─────────────────────┘
+
+ALB Configuration:
+  Algorithm: Least connections (weighted)
+  Health check: GET /health every 30s
+  Stickiness: Disabled (stateless API)
+  SSL: Terminate at ALB (ACM certificate)
+  
+  Path-based routing:
+    /api/*       → API target group (5 instances, port 8080)
+    /websocket/* → WS target group (3 instances, port 8081)
+    /static/*    → S3 bucket (via redirect)
+  
+  Auto-scaling:
+    Min: 3, Max: 20
+    Scale on: RequestCountPerTarget > 1000
+```
+
+---
+
+## E. HLD and LLD
+
+### E.1 HLD — Multi-Tier Load Balanced Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Internet                                                  │
+│  ┌────────┐                                                │
+│  │ Client │                                                │
+│  └───┬────┘                                                │
+│      │                                                     │
+│  ┌───┴─────────┐  DNS-based GSLB (Route 53)               │
+│  │ US: 1.2.3.4 │  Latency-based routing                   │
+│  │ EU: 5.6.7.8 │                                          │
+│  └───┬─────────┘                                           │
+│      │                                                     │
+│  ┌───┴───┐       ┌──────────────────────────┐             │
+│  │  ALB  │──────►│  Web/API Servers (×N)    │             │
+│  │  (L7) │       │  Stateless, auto-scaled  │             │
+│  └───────┘       └────────────┬─────────────┘             │
+│                               │                            │
+│                    ┌──────────┼──────────┐                 │
+│                    │          │          │                  │
+│              ┌─────┴───┐ ┌───┴───┐ ┌────┴─────┐          │
+│              │  Redis  │ │  NLB  │ │  Kafka   │          │
+│              │ Cluster │ │  (L4) │ │  Cluster │          │
+│              └─────────┘ └───┬───┘ └──────────┘          │
+│                              │                            │
+│                    ┌─────────┴──────────┐                 │
+│                    │  Internal Services │                 │
+│                    │  (gRPC, port 9090) │                 │
+│                    └────────────────────┘                 │
+└──────────────────────────────────────────────────────────┘
+```
+
+### E.2 LLD — Simple Load Balancer
+
+```python
+import random
+import time
+from collections import defaultdict
+
+class Server:
+    def __init__(self, host: str, port: int, weight: int = 1):
+        self.host = host
+        self.port = port
+        self.weight = weight
+        self.healthy = True
+        self.active_connections = 0
+        self.last_health_check = 0
+
+class LoadBalancer:
+    def __init__(self, algorithm="round_robin"):
+        self.servers = []
+        self.algorithm = algorithm
+        self.rr_index = 0
+        self.request_counts = defaultdict(int)
+
+    def add_server(self, server: Server):
+        self.servers.append(server)
+
+    def remove_server(self, server: Server):
+        self.servers.remove(server)
+
+    def get_healthy_servers(self):
+        return [s for s in self.servers if s.healthy]
+
+    def get_server(self, client_ip: str = None) -> Server:
+        healthy = self.get_healthy_servers()
+        if not healthy:
+            raise Exception("No healthy servers available")
+
+        if self.algorithm == "round_robin":
+            return self._round_robin(healthy)
+        elif self.algorithm == "least_connections":
+            return self._least_connections(healthy)
+        elif self.algorithm == "ip_hash":
+            return self._ip_hash(healthy, client_ip)
+        elif self.algorithm == "weighted_round_robin":
+            return self._weighted_round_robin(healthy)
+        elif self.algorithm == "random":
+            return random.choice(healthy)
+
+    def _round_robin(self, servers):
+        server = servers[self.rr_index % len(servers)]
+        self.rr_index += 1
+        return server
+
+    def _least_connections(self, servers):
+        return min(servers, key=lambda s: s.active_connections)
+
+    def _ip_hash(self, servers, client_ip):
+        index = hash(client_ip) % len(servers)
+        return servers[index]
+
+    def _weighted_round_robin(self, servers):
+        weighted_list = []
+        for s in servers:
+            weighted_list.extend([s] * s.weight)
+        server = weighted_list[self.rr_index % len(weighted_list)]
+        self.rr_index += 1
+        return server
+
+    def health_check(self, check_fn, interval_sec=10):
+        """Run health checks on all servers"""
+        for server in self.servers:
+            try:
+                healthy = check_fn(server.host, server.port)
+                server.healthy = healthy
+            except Exception:
+                server.healthy = False
+            server.last_health_check = time.time()
+```
+
+#### Edge Cases
+
+| Edge Case | Handling |
+|-----------|---------|
+| All servers unhealthy | Return 503; alert ops; check if LB health check is too aggressive |
+| Single server much slower | Least-connections naturally routes away; or use least-response-time |
+| Connection leak on one server | Monitor per-server connection counts; alert on outliers |
+| LB itself overloaded | Scale LB horizontally (DNS round-robin across LBs) |
+| Long-lived WebSocket connections | Use separate target group; don't include in least-connections count |
+
+---
+
+## F. Summary & Practice
+
+### Key Takeaways
+
+1. **Load balancers** distribute traffic across servers for availability and throughput
+2. **L4** operates on TCP/IP (faster, simpler); **L7** on HTTP (smarter routing)
+3. **Round robin** for simple cases; **least connections** for production; **consistent hashing** for caches
+4. **Health checks** (active + passive) detect and remove unhealthy servers
+5. LBs themselves need **HA** (active-passive or active-active)
+6. **SSL termination** at the LB simplifies certificate management
+7. **Connection draining** prevents dropped requests during deploys
+8. **GSLB** uses DNS for geographic/latency-based routing across regions
+9. Modern cloud LBs (ALB, NLB) handle most use cases out of the box
+10. Every system design diagram should include a load balancer
+
+### Interview Questions
+
+1. What is a load balancer and why is it needed?
+2. Compare L4 and L7 load balancing.
+3. Describe 4 load balancing algorithms and when to use each.
+4. How do health checks work?
+5. How do you make the load balancer itself highly available?
+6. What is consistent hashing and when would you use it?
+7. What is connection draining?
+8. Where would you place load balancers in a microservices architecture?
+9. What is SSL termination and where should it happen?
+10. How does DNS-based global load balancing work?
+
+### Practice Exercises
+
+1. **Exercise 1**: Design the LB strategy for an app with: (a) 10 API servers, (b) 3 WebSocket servers, (c) 5 gRPC internal services. Choose L4 vs L7, algorithm, and health check config for each.
+
+2. **Exercise 2**: Your LB uses round-robin but one server is 2× more powerful. Design a weighted scheme. What happens if the powerful server goes down?
+
+3. **Exercise 3**: Implement consistent hashing for a cache cluster. Show what happens when a node is added or removed.
+
+---
+
+> **Previous**: [11 — Stateless vs Stateful](11-stateless-vs-stateful.md)
+> **Next**: [13 — Reverse Proxy](13-reverse-proxy.md)
