@@ -61,26 +61,22 @@ Relationship:
 
 ### Latency Breakdown — Where Does Time Go?
 
-```
-Client sends request
-  │
-  ├── DNS Lookup              ~1-50ms   (cached: ~0ms)
-  ├── TCP Handshake           ~1-100ms  (depends on distance)
-  ├── TLS Handshake           ~5-150ms  (for HTTPS)
-  ├── Network Transit         ~1-150ms  (same DC: <1ms, cross-continent: ~150ms)
-  ├── Load Balancer           ~0.1-1ms
-  ├── Server Processing       ~1-500ms  (business logic)
-  │     ├── Authentication    ~1-10ms
-  │     ├── Business Logic    ~1-50ms
-  │     ├── Cache Lookup      ~0.1-1ms  (Redis)
-  │     ├── Database Query    ~1-100ms
-  │     └── External API      ~50-500ms
-  ├── Response Serialization  ~0.1-5ms
-  ├── Network Transit (back)  ~1-150ms
-  │
-  └── Total Latency = Sum of all above
-      Typical API call: 50-200ms
-      Typical web page: 200-2000ms
+```mermaid
+flowchart TD
+    A["Client sends request"] --> B["DNS Lookup ~1-50ms"]
+    B --> C["TCP Handshake ~1-100ms"]
+    C --> D["TLS Handshake ~5-150ms"]
+    D --> E["Network Transit ~1-150ms"]
+    E --> F["Load Balancer ~0.1-1ms"]
+    F --> G["Server Processing ~1-500ms"]
+    G --> G1["Authentication ~1-10ms"]
+    G --> G2["Business Logic ~1-50ms"]
+    G --> G3["Cache Lookup ~0.1-1ms"]
+    G --> G4["Database Query ~1-100ms"]
+    G --> G5["External API ~50-500ms"]
+    G --> H["Response Serialization ~0.1-5ms"]
+    H --> I["Network Transit back ~1-150ms"]
+    I --> J["Total: Typical API call 50-200ms"]
 ```
 
 ### Latency Percentiles — Why Average Lies
@@ -110,51 +106,29 @@ Example: 100 requests, sorted by latency:
 - **Google found**: 500ms extra latency = 20% traffic drop
 - Tail latency matters because high-value customers often trigger complex queries (more data, more items, more history) → they experience p99
 
+```mermaid
+xychart-beta
+    title "Latency Percentile Distribution"
+    x-axis ["p10", "p25", "p50", "p75", "p90", "p95", "p99", "p100"]
+    y-axis "Latency (ms)" 0 --> 2500
+    bar [10, 20, 45, 80, 120, 250, 800, 2500]
 ```
-Percentile Distribution:
 
-Requests ▲
-         │
-    90%  │████████████████████████████
-         │████████████████████████████████
-    50%  │████████████████████████████████████
-         │████████████████████████████████████████
-    10%  │████████████████████████████████████████████
-         │████████████████████████████████████████████████████
-         └───────────────────────────────────────────────────► Latency (ms)
-         0    50   100   200   500   1000   2000   5000
-
-         ◄──── Most users ────►◄──── Tail (p99+) ─────►
-         (fast, good experience)  (slow, frustrated users)
-```
+> **Most users** (p50 and below) get fast responses. The **tail** (p99+) experiences 10-50x worse latency — and these are often your highest-value customers.
 
 ### The Latency-Throughput Trade-off
 
 Latency and throughput are **often inversely related** under load:
 
+```mermaid
+xychart-beta
+    title "Latency vs Throughput Curve"
+    x-axis "Throughput (% of Max)" ["10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"]
+    y-axis "Latency (ms)" 0 --> 500
+    line [10, 12, 15, 20, 30, 50, 90, 180, 350, 500]
 ```
-Latency ▲
-        │                              ╱
-        │                            ╱
-        │                          ╱
-        │                        ╱
-        │                     ╱
-        │                  ╱          ← "Knee" of the curve
-        │              ╱──              (optimal operating point)
-        │          ╱──
-        │      ╱──
-        │  ╱──
-        │╱─
-        └──────────────────────────────────► Throughput (QPS)
-        0                              Max
 
-As throughput increases → latency stays flat initially
-                       → then rises gradually
-                       → then EXPLODES near capacity
-                       
-Rule of thumb: Operate at 50-70% of max throughput
-               to keep latency reasonable
-```
+> As throughput increases → latency stays flat initially → then rises gradually → then **EXPLODES** near capacity. **Rule of thumb**: Operate at 50-70% of max throughput to keep latency reasonable.
 
 **Why this happens:**
 - At low load: plenty of resources → fast responses
@@ -470,60 +444,40 @@ But: If a celebrity has 10M followers:
 
 ### Approach 3: Hybrid (What Facebook/Twitter Actually Do)
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    HYBRID MODEL                      │
-│                                                      │
-│  Celebrity posts (>10K followers):                   │
-│    → DON'T fan out (too expensive)                   │
-│    → Pull at read time (merge with cached feed)      │
-│                                                      │
-│  Normal user posts (<10K followers):                 │
-│    → Fan out on write to follower feed caches        │
-│    → Pre-computed, instantly available                │
-│                                                      │
-│  Read path:                                          │
-│    1. Get pre-computed feed from cache      (1ms)    │
-│    2. Get celebrity posts for this user     (5ms)    │
-│    3. Merge + rank                          (3ms)    │
-│    4. Return                                (1ms)    │
-│    Total: ~10ms                                      │
-└─────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Hybrid["HYBRID MODEL"]
+        direction TB
+        C1["Celebrity posts >10K followers"] --> C2["DON'T fan out — too expensive"]
+        C2 --> C3["Pull at read time — merge with cached feed"]
+        N1["Normal user posts <10K followers"] --> N2["Fan out on write to follower feed caches"]
+        N2 --> N3["Pre-computed, instantly available"]
+    end
+
+    subgraph ReadPath["Read Path ~10ms"]
+        direction LR
+        R1["Get pre-computed feed from cache 1ms"] --> R2["Get celebrity posts 5ms"]
+        R2 --> R3["Merge + rank 3ms"] --> R4["Return 1ms"]
+    end
+
+    Hybrid --> ReadPath
 ```
 
 ### Architecture
 
+```mermaid
+flowchart TD
+    Client["Client App"] --> LB["Load Balancer"]
+    LB --> Feed["Feed Service<br/>Stateless"]
+    Feed --> FeedCache["Feed Cache<br/>Redis Cluster<br/>Pre-computed feeds per user"]
+    Feed --> PostSvc["Post Service<br/>Post DB"]
+    Feed --> Social["Social Graph Service<br/>Graph DB"]
+    FeedCache --> Worker["Fan-out Worker<br/>Async via Kafka"]
 ```
-┌──────────┐     ┌──────────┐     ┌─────────────────┐
-│  Client  │────►│    LB    │────►│  Feed Service   │
-│  (App)   │     │          │     │  (Stateless)    │
-└──────────┘     └──────────┘     └────────┬────────┘
-                                           │
-                              ┌────────────┼────────────┐
-                              │            │            │
-                        ┌─────┴─────┐ ┌────┴────┐ ┌────┴──────┐
-                        │Feed Cache │ │Post Svc │ │Social     │
-                        │(Redis     │ │         │ │Graph Svc  │
-                        │Cluster)   │ │┌───────┐│ │           │
-                        │           │ ││Post DB││ │┌─────────┐│
-                        │Pre-computed│ │└───────┘│ ││Graph DB ││
-                        │feeds per  │ └─────────┘ │└─────────┘│
-                        │user       │             └───────────┘
-                        └───────────┘
-                              │
-                        ┌─────┴─────┐
-                        │Fan-out    │
-                        │Worker     │
-                        │(Async via │
-                        │ Kafka)    │
-                        └───────────┘
 
-Write Path (fan-out on write):
-  Post created → Kafka → Fan-out Worker → Write to each follower's feed cache
+**Write Path** (fan-out on write): Post created → Kafka → Fan-out Worker → Write to each follower's feed cache
 
-Read Path:
-  Client → Feed Service → Redis (pre-computed feed) + merge celebrity posts → Return
-```
+**Read Path**: Client → Feed Service → Redis (pre-computed feed) + merge celebrity posts → Return
 
 ### Latency and Throughput Analysis
 
@@ -584,58 +538,28 @@ Bandwidth: 31,200 × 5 KB = 156 MB/sec
 
 #### Architecture Diagram — Multi-Region, Latency-Optimized
 
-```
-                     ┌───────────────────────────┐
-                     │       Global DNS          │
-                     │   (Route 53 / Cloudflare)  │
-                     │   Geo-based routing         │
-                     └─────────┬─────────────────┘
-                               │
-                ┌──────────────┼──────────────┐
-                │              │              │
-         ┌──────┴──────┐ ┌────┴─────┐ ┌──────┴──────┐
-         │  US-East    │ │ EU-West  │ │ AP-South    │
-         │  Region     │ │ Region   │ │ Region      │
-         └──────┬──────┘ └────┬─────┘ └──────┬──────┘
-                │             │              │
-         (Same structure per region:)
-                │
-         ┌──────┴──────┐
-         │     CDN     │  ← Static assets, cached API responses
-         └──────┬──────┘
-                │
-         ┌──────┴──────┐
-         │     LB      │  ← L7 load balancer
-         └──────┬──────┘
-                │
-         ┌──────┴──────┐
-         │  App Server  │  ← Stateless, auto-scaled
-         │  Cluster     │
-         └──────┬──────┘
-                │
-         ┌──────┼──────┐
-         │      │      │
-    ┌────┴──┐ ┌─┴───┐ ┌┴─────────┐
-    │L1 Cache│ │L2   │ │ DB Read  │
-    │(Local) │ │Cache│ │ Replica  │
-    │In-proc │ │Redis│ │(Postgres)│
-    │ 10MB   │ │     │ │          │
-    └────────┘ └─────┘ └──────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    │  Primary DB       │
-                    │  (US-East)        │
-                    │  Cross-region     │
-                    │  replication      │
-                    └───────────────────┘
+```mermaid
+flowchart TD
+    DNS["Global DNS<br/>Route 53 / Cloudflare<br/>Geo-based routing"] --> US["US-East Region"]
+    DNS --> EU["EU-West Region"]
+    DNS --> AP["AP-South Region"]
 
-Latency at each layer:
-  CDN hit:          5-20ms  (from edge)
-  L1 cache hit:     0.01ms  (in-process memory)
-  L2 cache hit:     0.5ms   (Redis in same AZ)
-  DB read replica:  3-10ms  (same region)
-  DB primary:       3-10ms + cross-region replication lag
+    subgraph Region["Per-Region Structure"]
+        direction TB
+        CDN2["CDN<br/>Static assets, cached API responses"] --> LB2["L7 Load Balancer"]
+        LB2 --> App["App Server Cluster<br/>Stateless, auto-scaled"]
+        App --> L1["L1 Cache — Local<br/>In-process 10MB"]
+        App --> L2["L2 Cache — Redis"]
+        App --> RR["DB Read Replica<br/>PostgreSQL"]
+        RR --> Primary["Primary DB — US-East<br/>Cross-region replication"]
+    end
+
+    US --> Region
+    EU --> Region
+    AP --> Region
 ```
+
+**Latency at each layer**: CDN hit: 5-20ms · L1 cache: 0.01ms · L2 cache (Redis): 0.5ms · DB read replica: 3-10ms · DB primary: 3-10ms + replication lag
 
 #### Multi-Layer Caching Strategy
 

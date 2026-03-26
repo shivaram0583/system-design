@@ -687,30 +687,36 @@ CREATE INDEX idx_request_logs_status ON request_logs(status_code);
 
 #### Sequence Flow — Handling a GET Request
 
-```
-Client              LB              Server           Middleware          Handler         Cache         DB
-  │                  │                 │                  │                 │              │            │
-  │── GET /users/42 ─►                 │                  │                 │              │            │
-  │                  │── Forward ──────►                   │                 │              │            │
-  │                  │                 │── AuthMiddleware ─►                │              │            │
-  │                  │                 │                  │ Verify JWT      │              │            │
-  │                  │                 │                  │ ✓ Valid         │              │            │
-  │                  │                 │◄─ next() ────────│                 │              │            │
-  │                  │                 │── LogMiddleware ──►                │              │            │
-  │                  │                 │                  │ Log request     │              │            │
-  │                  │                 │◄─ next() ────────│                 │              │            │
-  │                  │                 │── RateLimitMW ───►                 │              │            │
-  │                  │                 │                  │ Check limit     │              │            │
-  │                  │                 │◄─ next() ────────│                 │              │            │
-  │                  │                 │── Route match ────────────────────►│              │            │
-  │                  │                 │                                    │── GET key ──►│            │
-  │                  │                 │                                    │◄─ MISS ──────│            │
-  │                  │                 │                                    │── SELECT ────────────────►│
-  │                  │                 │                                    │◄─ Row data ──────────────│
-  │                  │                 │                                    │── SET cache ─►│           │
-  │                  │                 │◄── 200 OK {user data} ────────────│              │            │
-  │                  │◄── Response ────│                                    │              │            │
-  │◄── 200 OK ──────│                 │                                    │              │            │
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant LB as Load Balancer
+    participant S as Server
+    participant MW as Middleware
+    participant H as Handler
+    participant Ca as Cache
+    participant DB as DB
+
+    C->>LB: GET /users/42
+    LB->>S: Forward request
+    S->>MW: AuthMiddleware
+    Note over MW: Verify JWT ✓ Valid
+    MW-->>S: next()
+    S->>MW: LogMiddleware
+    Note over MW: Log request
+    MW-->>S: next()
+    S->>MW: RateLimitMW
+    Note over MW: Check limit
+    MW-->>S: next()
+    S->>H: Route match
+    H->>Ca: GET key
+    Ca-->>H: MISS
+    H->>DB: SELECT * FROM users WHERE id=42
+    DB-->>H: Row data
+    H->>Ca: SET cache
+    H-->>S: 200 OK {user data}
+    S-->>LB: Response
+    LB-->>C: 200 OK
 ```
 
 #### Pseudocode — Server Request Handling

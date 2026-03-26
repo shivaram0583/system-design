@@ -175,60 +175,69 @@ graph TD
 
 #### 1. Development Velocity
 
+```mermaid
+xychart-beta
+    title "Development Velocity vs Team Size"
+    x-axis ["Small Team", "Growing", "Medium", "Large Team"]
+    y-axis "Velocity" 0 --> 100
+    line "Monolith" [80, 70, 50, 30]
+    line "Microservices" [30, 50, 70, 90]
 ```
-                    ┌─── Microservices win here
-                    │    (teams work independently)
-Velocity ▲          │
-         │         /────────────────────
-         │        /
-         │       /
-         │──────/─── Monolith wins here
-         │     /     (simpler, faster to start)
-         │    /
-         │   /
-         │──/
-         └──────────────────────────────► Team Size / Complexity
-            Small                  Large
-```
+
+> **Insight**: Monolith wins for small teams (simpler, faster to start). Microservices win for large teams (teams work independently).
 
 #### 2. Data Consistency
 
+```mermaid
+flowchart LR
+    subgraph Monolith["MONOLITH — Easy (Single ACID Transaction)"]
+        direction LR
+        M1["BEGIN TRANSACTION"] --> M2["deduct_inventory()"] --> M3["create_order()"] --> M4["charge_payment()"] --> M5["COMMIT"]
+    end
 ```
-MONOLITH (Easy):
-  BEGIN TRANSACTION
-    deduct_inventory(item_id, qty)
-    create_order(user_id, item_id, qty)
-    charge_payment(user_id, amount)
-  COMMIT
-  → All or nothing. Simple ACID transaction.
 
-MICROSERVICES (Hard):
-  Inventory Service → deduct stock     ✓
-  Order Service     → create order     ✓
-  Payment Service   → charge card      ✗ FAILED!
-  
-  Now what? Need to:
-  → Compensate: restore inventory, cancel order
-  → This is the SAGA pattern
-  → Much harder to implement correctly
+> All or nothing. Simple ACID transaction.
+
+```mermaid
+flowchart LR
+    subgraph Micro["MICROSERVICES — Hard (Saga Pattern Required)"]
+        direction LR
+        S1["Inventory Service\ndeduct stock ✓"] --> S2["Order Service\ncreate order ✓"] --> S3["Payment Service\ncharge card ✗ FAILED!"]
+        S3 -->|Compensate| S4["Restore inventory\n+ Cancel order"]
+    end
+
+    style S3 fill:#ff6b6b,color:#fff
+    style S4 fill:#ffa726,color:#fff
 ```
+
+> Need compensating transactions (Saga pattern). Much harder to implement correctly.
 
 #### 3. Failure Handling
 
-```
-MONOLITH:
-  Bug in Payment module → Entire app crashes
-  One bad deployment → Everything is down
-  Memory leak anywhere → Whole process affected
+```mermaid
+flowchart TD
+    subgraph Monolith["MONOLITH — Blast Radius: Everything"]
+        direction TB
+        MB["Bug in Payment module"] --> MC["💥 Entire app crashes"]
+        MD["One bad deployment"] --> ME["💥 Everything is down"]
+        MF["Memory leak anywhere"] --> MG["💥 Whole process affected"]
+    end
+    subgraph Micro["MICROSERVICES — Blast Radius: Per Service"]
+        direction TB
+        SA["Payment Service down"] --> SB["✅ Orders still work"]
+        SC["Bad deploy of Auth"] --> SD["✅ Only auth affected"]
+        SE["Memory leak in Search"] --> SF["✅ Only search restarts"]
+    end
 
-MICROSERVICES:
-  Payment Service down → Orders still work (degrade gracefully)
-  Bad deploy of Auth → Only auth affected (if properly isolated)
-  Memory leak in Search → Only search service restarts
-  
-  BUT: Network failures, timeout cascades, and partial
-  failures are NEW problems you didn't have before
+    style MC fill:#ff6b6b,color:#fff
+    style ME fill:#ff6b6b,color:#fff
+    style MG fill:#ff6b6b,color:#fff
+    style SB fill:#66bb6a,color:#fff
+    style SD fill:#66bb6a,color:#fff
+    style SF fill:#66bb6a,color:#fff
 ```
+
+> **BUT**: Microservices introduce NEW problems — network failures, timeout cascades, and partial failures that you didn't have before.
 
 ### Common Mistakes
 
@@ -594,46 +603,29 @@ All requests include: Authorization: Bearer <JWT>
 
 #### Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLIENTS                                  │
-│   ┌────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐    │
-│   │  Web   │  │   iOS    │  │ Android  │  │ Partner API   │    │
-│   └───┬────┘  └────┬─────┘  └────┬─────┘  └───────┬───────┘    │
-└───────┼─────────────┼────────────┼─────────────────┼────────────┘
-        └─────────────┴──────┬─────┴─────────────────┘
-                             │
-                        ┌────┴─────┐
-                        │   CDN    │ (Static assets, product images)
-                        └────┬─────┘
-                             │
-                        ┌────┴─────┐
-                        │    LB    │ (AWS ALB)
-                        └────┬─────┘
-                             │
-                    ┌────────┴────────┐
-                    │   API Gateway   │ (Kong)
-                    │  • Auth check   │
-                    │  • Rate limiting │
-                    │  • Routing      │
-                    └────────┬────────┘
-                             │
-        ┌──────────┬─────────┼──────────┬───────────┐
-        │          │         │          │           │
-   ┌────┴───┐ ┌───┴───┐ ┌───┴───┐ ┌───┴────┐ ┌───┴────┐
-   │  Auth  │ │Catalog│ │ Order │ │Payment │ │ Notif  │
-   │Service │ │Service│ │Service│ │Service │ │Service │
-   └───┬────┘ └───┬───┘ └───┬───┘ └───┬────┘ └───┬────┘
-       │          │         │         │           │
-   ┌───┴──┐  ┌───┴───┐ ┌───┴──┐  ┌───┴──┐    ┌──┴──┐
-   │Redis │  │MongoDB│ │Postgres│ │Postgres│   │Redis│
-   │+     │  │+      │ │      │  │      │    │+SQS │
-   │Postgres│ │Elastic│ │      │  │      │    │     │
-   └──────┘  └───────┘ └──────┘  └──────┘    └─────┘
-                             │
-                    ┌────────┴────────┐
-                    │   Kafka Cluster │ (Event bus)
-                    └─────────────────┘
+```mermaid
+flowchart TD
+    subgraph Clients["CLIENTS"]
+        Web["Web"] & iOS["iOS"] & Android["Android"] & Partner["Partner API"]
+    end
+
+    Clients --> CDN["CDN<br/>Static assets, product images"]
+    CDN --> LB["Load Balancer<br/>AWS ALB"]
+    LB --> GW["API Gateway — Kong<br/>• Auth check<br/>• Rate limiting<br/>• Routing"]
+
+    GW --> Auth["Auth Service"]
+    GW --> Cat["Catalog Service"]
+    GW --> Ord["Order Service"]
+    GW --> Pay["Payment Service"]
+    GW --> Notif["Notification Service"]
+
+    Auth --> AuthDB["Redis + PostgreSQL"]
+    Cat --> CatDB["MongoDB + Elasticsearch"]
+    Ord --> OrdDB["PostgreSQL"]
+    Pay --> PayDB["PostgreSQL"]
+    Notif --> NotifDB["Redis + SQS"]
+
+    Ord & Pay & Notif --> Kafka["Kafka Cluster<br/>Event Bus"]
 ```
 
 #### Scaling Approach
@@ -665,80 +657,64 @@ All requests include: Authorization: Bearer <JWT>
 
 #### Classes and Components
 
-```
-┌────────────────────────────────┐
-│     ServiceClient              │
-│  (Base class for inter-service │
-│   communication)               │
-│                                │
-│  - baseUrl: string             │
-│  - timeout: Duration           │
-│  - retryConfig: RetryConfig    │
-│  - circuitBreaker: CircuitBkr  │
-│  + call(request): Response     │
-└────────────┬───────────────────┘
-             │
-    ┌────────┴─────────┐
-    │                  │
-┌───┴──────────┐ ┌─────┴─────────┐
-│ HttpClient   │ │ GrpcClient    │
-│              │ │               │
-│ + get()      │ │ + call()      │
-│ + post()     │ │ + stream()    │
-│ + put()      │ │               │
-│ + delete()   │ │               │
-└──────────────┘ └───────────────┘
+```mermaid
+classDiagram
+    class ServiceClient {
+        -String baseUrl
+        -Duration timeout
+        -RetryConfig retryConfig
+        -CircuitBreaker circuitBreaker
+        +call(request) Response
+    }
+    class HttpClient {
+        +get() Response
+        +post() Response
+        +put() Response
+        +delete() Response
+    }
+    class GrpcClient {
+        +call() Response
+        +stream() Response
+    }
+    class CircuitBreaker {
+        -State state
+        -int failureCount
+        -int failureThreshold
+        -Duration resetTimeout
+        -int successThreshold
+        +execute(fn) Result
+        +onSuccess() void
+        +onFailure() void
+        +isOpen() boolean
+    }
+    class RetryConfig {
+        -int maxRetries
+        -Duration baseDelay
+        -Duration maxDelay
+        -float backoffMultiplier
+        -Set~int~ retryableErrors
+        +shouldRetry(attempt, err) boolean
+        +getDelay(attempt) Duration
+    }
+    class EventPublisher {
+        -Producer kafkaProducer
+        -Serializer serializer
+        +publish(topic, event) void
+        +publishWithKey(topic, key, event) void
+    }
+    class EventConsumer {
+        -Consumer kafkaConsumer
+        -Map~String Handler~ handlers
+        -Deserializer deserializer
+        +subscribe(topic) void
+        +onMessage(handler) void
+        +commit() void
+    }
 
-┌─────────────────────────────────┐
-│        CircuitBreaker           │
-│                                 │
-│  - state: CLOSED|OPEN|HALF_OPEN│
-│  - failureCount: int           │
-│  - failureThreshold: int       │
-│  - resetTimeout: Duration      │
-│  - successThreshold: int       │
-│                                 │
-│  + execute(fn): Result          │
-│  + onSuccess(): void            │
-│  + onFailure(): void            │
-│  + isOpen(): boolean            │
-└─────────────────────────────────┘
-
-┌─────────────────────────────────┐
-│        RetryConfig              │
-│                                 │
-│  - maxRetries: int              │
-│  - baseDelay: Duration          │
-│  - maxDelay: Duration           │
-│  - backoffMultiplier: float     │
-│  - retryableErrors: Set<int>   │
-│                                 │
-│  + shouldRetry(attempt, err)    │
-│  + getDelay(attempt): Duration  │
-└─────────────────────────────────┘
-
-┌─────────────────────────────────┐
-│      EventPublisher             │
-│                                 │
-│  - kafkaProducer: Producer      │
-│  - serializer: Serializer       │
-│                                 │
-│  + publish(topic, event): void  │
-│  + publishWithKey(topic, key,   │
-│    event): void                 │
-└─────────────────────────────────┘
-
-┌─────────────────────────────────┐
-│      EventConsumer              │
-│                                 │
-│  - kafkaConsumer: Consumer      │
-│  - handlers: Map<string,Handler>│
-│  - deserializer: Deserializer   │
-│                                 │
-│  + subscribe(topic): void       │
-│  + onMessage(handler): void     │
-│  + commit(): void               │
-└─────────────────────────────────┘
+    ServiceClient <|-- HttpClient
+    ServiceClient <|-- GrpcClient
+    ServiceClient --> CircuitBreaker
+    ServiceClient --> RetryConfig
 ```
 
 #### Data Models
@@ -796,54 +772,35 @@ public class PaymentCompletedEvent {
 
 #### Sequence Flow — Order Placement Saga
 
-```
-Client          API GW      OrderSvc     InventorySvc   PaymentSvc    NotifSvc
-  │               │            │              │              │            │
-  │─ POST /orders─►            │              │              │            │
-  │               │─ route ───►│              │              │            │
-  │               │            │              │              │            │
-  │               │            │─ Create order│              │            │
-  │               │            │  (PENDING)   │              │            │
-  │               │            │              │              │            │
-  │               │            │─ Publish ────────────────────────────────│
-  │               │            │  OrderCreated│              │            │
-  │               │            │  to Kafka    │              │            │
-  │               │◄── 202 ────│              │              │            │
-  │◄── 202 ───────│  Accepted  │              │              │            │
-  │  {order_id}   │            │              │              │            │
-  │               │            │         ┌────┴────┐         │            │
-  │               │            │         │ Consume │         │            │
-  │               │            │         │ event   │         │            │
-  │               │            │         │         │         │            │
-  │               │            │         │ Reserve │         │            │
-  │               │            │         │ stock   │         │            │
-  │               │            │         └────┬────┘         │            │
-  │               │            │              │              │            │
-  │               │            │              │─ Publish ────│            │
-  │               │            │              │ Inventory    │            │
-  │               │            │              │ Reserved     │            │
-  │               │            │              │         ┌────┴────┐       │
-  │               │            │              │         │ Consume │       │
-  │               │            │              │         │ event   │       │
-  │               │            │              │         │         │       │
-  │               │            │              │         │ Charge  │       │
-  │               │            │              │         │ payment │       │
-  │               │            │              │         └────┬────┘       │
-  │               │            │              │              │            │
-  │               │            │              │              │─ Publish   │
-  │               │            │              │              │ Payment    │
-  │               │            │              │              │ Completed  │
-  │               │       ┌────┴────┐         │              │            │
-  │               │       │ Consume │         │              │            │
-  │               │       │ event   │         │              │            │
-  │               │       │         │         │              │            │
-  │               │       │ Update  │         │              │       ┌────┴───┐
-  │               │       │ order → │         │              │       │Consume │
-  │               │       │CONFIRMED│         │              │       │event   │
-  │               │       └─────────┘         │              │       │        │
-  │               │            │              │              │       │Send    │
-  │               │            │              │              │       │email   │
-  │               │            │              │              │       └────────┘
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant GW as API Gateway
+    participant O as Order Service
+    participant I as Inventory Service
+    participant P as Payment Service
+    participant N as Notification Service
+
+    C->>GW: POST /orders
+    GW->>O: Route request
+    Note over O: Create order (PENDING)
+    O->>O: Publish OrderCreated to Kafka
+    O-->>GW: 202 Accepted
+    GW-->>C: 202 {order_id}
+
+    Note over I: Consume OrderCreated event
+    Note over I: Reserve stock
+    I->>I: Publish InventoryReserved
+
+    Note over P: Consume InventoryReserved event
+    Note over P: Charge payment
+    P->>P: Publish PaymentCompleted
+
+    Note over O: Consume PaymentCompleted
+    Note over O: Update order → CONFIRMED
+
+    Note over N: Consume OrderConfirmed
+    Note over N: Send email notification
 ```
 
 #### Pseudocode — Circuit Breaker
