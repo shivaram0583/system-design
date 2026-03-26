@@ -25,17 +25,10 @@ A **circuit breaker** is a resilience pattern that prevents a service from repea
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Inspired by electrical circuit breakers:<br/>Too much current -&gt; breaker trips -&gt; circuit disconnected -&gt; prevents fire"]
-    class N0 primary
     N1["In software:<br/>Too many failures -&gt; breaker opens -&gt; requests fail fast -&gt; prevents cascade"]
-    class N1 secondary
     N2["WITHOUT Circuit Breaker:<br/>Service A timeout 5s -&gt; Service B (down)<br/>Every request waits 5 seconds, then fails.<br/>100 concurrent requests × 5s = thread pool exhaustion -&gt; Service A also crashes!"]
-    class N2 secondary
     N3["WITH Circuit Breaker:<br/>Service A -&gt; Circuit Breaker -&gt; Service B (down)<br/>After 5 failures -&gt; breaker OPENS -&gt; requests fail immediately (no waiting)<br/>Periodically checks if B is back -&gt; if yes, breaker CLOSES"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -45,21 +38,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Failure threshold reached"]
-    class N0 primary
     N1["CLOSED -&gt; OPEN<br/>(normal) (fail fast)<br/>&lt;-<br/>up<br/>Success Timeout expires"]
-    class N1 secondary
     N2["HALF-OPEN &lt;-<br/>(testing)<br/>Enough<br/>successes Failure -&gt; back to OPEN"]
-    class N2 secondary
     N3["CLOSED: All requests pass through normally. Failures are counted.<br/>If failure count &gt; threshold -&gt; switch to OPEN."]
-    class N3 secondary
     N4["OPEN: All requests fail immediately with an error (no call to dependency).<br/>After a timeout period -&gt; switch to HALF-OPEN."]
-    class N4 secondary
     N5["HALF-OPEN: A limited number of test requests pass through.<br/>If they succeed -&gt; switch to CLOSED (recovered).<br/>If they fail -&gt; switch back to OPEN."]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -192,17 +176,10 @@ Circuit Breaker + Bulkhead:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Order -&gt; Circuit -&gt; Payment Gateway<br/>Service Breaker (Stripe)"]
-    class N0 primary
     N1["State: CLOSED<br/>Failures: 2/5"]
-    class N1 secondary
     N2["Scenario:<br/>1. Stripe starts timing out (5 failures in 1 min)<br/>2. Circuit OPENS -&gt; orders get instant error<br/>3. Fallback: Queue payment for retry + show &quot;Payment processing&quot;<br/>4. After 30s -&gt; HALF-OPEN -&gt; try one Stripe call<br/>5a. Success -&gt; CLOSE circuit -&gt; normal operation<br/>5b. Failure -&gt; OPEN again -&gt; wait another 30s"]
-    class N2 secondary
     N3["User experience:<br/>CLOSED: &quot;Payment successful!&quot; (normal)<br/>OPEN: &quot;Payment is being processed. You'll get a confirmation email.&quot;<br/>(order saved, payment retried from queue)"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -216,23 +193,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Service A"]
-    class N0 primary
     N1["Resilience Layer"]
-    class N1 secondary
     N2["Timeout -&gt; Retry<br/>(5s) (3x, exp)"]
-    class N2 secondary
     N3["Circuit Breaker<br/>threshold: 5, timeout:30s"]
-    class N3 secondary
     N4["Bulkhead (max 20 threads)"]
-    class N4 secondary
     N5["Service B"]
-    class N5 secondary
     N6["Order of wrapping (outside -&gt; inside):<br/>Timeout -&gt; Retry -&gt; Circuit Breaker -&gt; Bulkhead -&gt; Actual call"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

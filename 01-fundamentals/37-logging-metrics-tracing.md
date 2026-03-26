@@ -58,21 +58,12 @@ STRUCTURED (good — JSON):
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Service A Service B Service C<br/>(stdout) (stdout) (stdout)"]
-    class N0 primary
     N1["Log Shipper (Fluentd / Filebeat)<br/>Collects, parses, enriches, forwards"]
-    class N1 secondary
     N2["Message Queue (Kafka) Buffer for spikes"]
-    class N2 secondary
     N3["Indexer (Logstash / Loki)"]
-    class N3 secondary
     N4["Storage (Elasticsearch / S3)<br/>Hot: 7 days (SSD)<br/>Warm: 30 days (HDD)<br/>Cold: 90 days (S3)"]
-    class N4 secondary
     N5["Visualization (Kibana / Grafana)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -164,21 +155,12 @@ annotations:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["HTTP header propagation (W3C standard):"]
-    class N0 primary
     N1["Request from Service A -&gt; Service B:<br/>traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"]
-    class N1 secondary
     N2["trace-id (128-bit) parent-span-id flags<br/>version sampled"]
-    class N2 secondary
     N3["Service B extracts trace-id -&gt; creates child span -&gt; propagates to Service C"]
-    class N3 secondary
     N4["Propagation formats:<br/>W3C Trace Context (standard): traceparent header<br/>B3 (Zipkin): X-B3-TraceId, X-B3-SpanId headers<br/>Jaeger: uber-trace-id header<br/>AWS X-Ray: X-Amzn-Trace-Id header"]
-    class N4 secondary
     N5["OpenTelemetry SDK handles propagation automatically."]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -323,17 +305,10 @@ Without observability: hours of guessing
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Application Services (OTel SDK)<br/>logs metrics traces<br/>down down down"]
-    class N0 primary
     N1["OpenTelemetry Collector<br/>(process, batch, export)"]
-    class N1 secondary
     N2["Loki Prom Tempo/<br/>(logs) (metric Jaeger<br/>s) (traces)"]
-    class N2 secondary
     N3["Grafana<br/>Dashboard alerts -&gt; PagerDuty/Slack"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

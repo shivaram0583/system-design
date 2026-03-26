@@ -25,23 +25,13 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["WITHOUT read replicas:<br/>All reads + writes -&gt; Primary DB (bottleneck at high read load)"]
-    class N0 primary
     N1["1000 reads/s + 100 writes/s -&gt; 1 DB handles all 1100 queries/s"]
-    class N1 secondary
     N2["WITH read replicas:<br/>Writes -&gt; Primary DB (100 writes/s)<br/>Reads -&gt; 3 Read Replicas (333 reads/s each)"]
-    class N2 secondary
     N3["Primary &lt;- All writes<br/>(write)"]
-    class N3 secondary
     N4["async replication"]
-    class N4 secondary
     N5["R1 R2 R3 &lt;- All reads (load balanced)"]
-    class N5 secondary
     N6["Read capacity: scales linearly by adding replicas<br/>Write capacity: unchanged (single primary)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -231,25 +221,14 @@ Application-level routing:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Product catalog: 10M products, 50K reads/s, 500 writes/s"]
-    class N0 primary
     N1["App Server -&gt; Primary &lt;- writes (500/s)<br/>(write) PostgreSQL product updates, new products"]
-    class N1 secondary
     N2["async replication"]
-    class N2 secondary
     N3["Rep 1 Rep 2 Rep 3"]
-    class N3 secondary
     N4["up"]
-    class N4 secondary
     N5["App Server &lt;- reads (50K/s)<br/>(read) load balanced across 3<br/>replicas (~17K each)"]
-    class N5 secondary
     N6["Consistency strategy:<br/>Product listings/search: eventual consistency (OK if 2-5s stale)<br/>After admin updates product: read from primary for 5s<br/>Inventory/stock checks: always read from primary (critical)"]
-    class N6 secondary
     N7["Cache layer (Redis) in front of replicas for hot products<br/>Cache invalidation on product update event"]
-    class N7 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -267,19 +246,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Application Layer"]
-    class N0 primary
     N1["Connection Router<br/>Writes -&gt; Primary<br/>Reads -&gt; Replica Pool (round-robin)<br/>Read-after-write -&gt; Primary (5s window)"]
-    class N1 secondary
     N2["write read"]
-    class N2 secondary
     N3["Primary DB Replica Pool<br/>(us-east-1a)<br/>Writes only -&gt; Replica 1 (us-east-1b)<br/>&gt; Replica 2 (us-east-1c)<br/>Promotes to -&gt; Replica 3 (eu-west-1a)<br/>replica on<br/>every commit Health checked, lag<br/>monitored"]
-    class N3 secondary
     N4["Failover: Primary down -&gt; promote Replica 1 -&gt; DNS update<br/>Monitoring: Replication lag, connection count, query time"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

@@ -40,19 +40,11 @@ With archival:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["HOT DATA (0-30 days)<br/>Primary database (PostgreSQL/MySQL)<br/>Fast SSD storage, full indexes<br/>Cost: $$$"]
-    class N0 primary
     N1["WARM DATA (30-90 days)<br/>Read replica or separate DB instance<br/>Accessed occasionally (reports, lookups)<br/>Cost: $$"]
-    class N1 secondary
     N2["COLD DATA (90 days - 7 years)<br/>Object storage (S3 Standard-IA)<br/>Rarely accessed, queryable via Athena/Presto<br/>Cost: $"]
-    class N2 secondary
     N3["FROZEN DATA (7+ years / compliance)<br/>Deep archive (S3 Glacier Deep Archive)<br/>Accessed only for legal/audit<br/>Retrieval: hours<br/>Cost: ¢"]
-    class N3 secondary
     N4["Cost comparison (per TB/month):<br/>PostgreSQL RDS (gp3): ~$115/TB<br/>S3 Standard: ~$23/TB (5× cheaper)<br/>S3 Standard-IA: ~$12.50/TB (9× cheaper)<br/>S3 Glacier: ~$4/TB (29× cheaper)<br/>S3 Glacier Deep: ~$1/TB (115× cheaper)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -242,27 +234,15 @@ GDPR Right to Erasure: User requests data deletion.
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Platform: 10M orders/month, 3 years of data = 360M rows"]
-    class N0 primary
     N1["Current: All in PostgreSQL -&gt; 500 GB, queries slowing down<br/>Goal: Primary DB stays under 50M rows (5 months)"]
-    class N1 secondary
     N2["ARCHIVAL PIPELINE (runs nightly)"]
-    class N2 secondary
     N3["1. IDENTIFY: SELECT * FROM orders<br/>WHERE created_at &lt; now() - interval '5 months'<br/>AND status IN ('completed', 'cancelled')"]
-    class N3 secondary
     N4["2. EXPORT: Write to S3 as Parquet, partitioned<br/>s3://archive/orders/year=2024/month=01/*.parquet"]
-    class N4 secondary
     N5["3. VERIFY: Count rows in S3 = count in DB<br/>Checksum validation"]
-    class N5 secondary
     N6["4. DELETE: Remove archived rows from PostgreSQL<br/>DELETE FROM orders WHERE id IN (archived_ids)<br/>Or: DETACH + DROP partition (if partitioned)"]
-    class N6 secondary
     N7["5. VACUUM: Reclaim space in PostgreSQL"]
-    class N7 secondary
     N8["Results:<br/>PostgreSQL: 50M rows (50 GB) -&gt; fast queries ✓<br/>S3 Archive: 310M rows (30 GB Parquet, compressed) -&gt; cheap ✓<br/>Queryable: AWS Athena for historical reports ✓<br/>Savings: $300/month RDS storage -&gt; $1/month S3 ✓"]
-    class N8 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -281,19 +261,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Primary Database (PostgreSQL)<br/>Hot data: last 5 months"]
-    class N0 primary
     N1["Archival Service Runs nightly via Airflow<br/>Identify old data<br/>Export to Parquet<br/>Verify integrity<br/>Delete from DB"]
-    class N1 secondary
     N2["S3 (Archive)<br/>/orders/year=YYYY/month=MM/*.parquet"]
-    class N2 secondary
     N3["Lifecycle rules:<br/>0-1 yr: Standard-IA<br/>1-7 yr: Glacier<br/>7+ yr: Deep Archive"]
-    class N3 secondary
     N4["Query Layer<br/>Athena / Presto SQL on archived data<br/>API: GET /orders? Routes to DB or Athena<br/>date&lt;5mo -&gt; DB based on date range<br/>date&gt;5mo -&gt; Athena"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

@@ -47,21 +47,12 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["START HERE"]
-    class N0 primary
     N1["Is the bottleneck CPU/RAM on a single machine?<br/>YES -&gt; Try vertical first (simpler)<br/>NO down"]
-    class N1 secondary
     N2["Is the component stateless?<br/>YES -&gt; Horizontal scaling (easy win)<br/>NO down"]
-    class N2 secondary
     N3["Is it a database?<br/>YES -&gt; Vertical first, then read replicas, then sharding<br/>NO down"]
-    class N3 secondary
     N4["Do you need redundancy/HA?<br/>YES -&gt; Must go horizontal (can't be HA with one machine)<br/>NO down"]
-    class N4 secondary
     N5["Is cost a concern at current scale?<br/>YES -&gt; Horizontal (commodity hardware is cheaper)<br/>NO -&gt; Vertical (simpler to manage)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -106,23 +97,13 @@ Real examples:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["HYBRID SCALING"]
-    class N0 primary
     N1["Web/API Layer: HORIZONTAL"]
-    class N1 secondary
     N2["App1 App2 App3 App4 (scale out)"]
-    class N2 secondary
     N3["Cache Layer: HORIZONTAL"]
-    class N3 secondary
     N4["Redis 1 Redis 2 Redis 3 (cluster/scale out)"]
-    class N4 secondary
     N5["Database: VERTICAL + HORIZONTAL"]
-    class N5 secondary
     N6["Primary (BIG) Replica 1 Replica 2<br/>64 cores (reads) (reads)<br/>512 GB RAM<br/>(vertical) (horizontal for reads)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -241,15 +222,9 @@ STAGE 4 — Full Horizontal (1M users):
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Scaling Decision"]
-    class N0 primary
     N1["Component: Web Servers<br/>Current: 3 instances (m5.large)<br/>CPU: 75% avg<br/>Decision: SCALE OUT (+2 instances)"]
-    class N1 secondary
     N2["Component: Database<br/>Current: db.r5.xlarge<br/>CPU: 80%, RAM: 90%<br/>Decision: SCALE UP (db.r5.4xlarge)<br/>Reason: Stateful, can't easily split"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```

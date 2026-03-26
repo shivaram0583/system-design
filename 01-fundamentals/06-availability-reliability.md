@@ -58,23 +58,13 @@ Example: System was up 8,750 hours in a year (total 8,760 hours)
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["SERIES (both must work):"]
-    class N0 primary
     N1["A -&gt; B A(total) = A(a) × A(b)<br/>99.9% 99.9% = 0.999 × 0.999 = 99.8%"]
-    class N1 secondary
     N2["Availability DECREASES with more components in series"]
-    class N2 secondary
     N3["PARALLEL (either can work):"]
-    class N3 secondary
     N4["A<br/>99.9% A(total) = 1 - (1-A(a)) × (1-A(b))<br/>= 1 - 0.001 × 0.001 = 99.9999%"]
-    class N4 secondary
     N5["B<br/>99.9%"]
-    class N5 secondary
     N6["Availability INCREASES with redundancy"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -122,23 +112,13 @@ To improve availability:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["ACTIVE-PASSIVE (Failover):"]
-    class N0 primary
     N1["Primary Standby<br/>(Active) -&gt; (Passive) Standby takes over on failure<br/>Serves sync Idle, Downtime = detection + failover time<br/>traffic ready (typically 30s - 5min)"]
-    class N1 secondary
     N2["ACTIVE-ACTIVE:"]
-    class N2 secondary
     N3["Server 1 Server 2<br/>(Active) &lt;- -&gt; (Active) Both serve traffic<br/>50% load sync 50% load If one fails, other handles 100%<br/>No failover delay"]
-    class N3 secondary
     N4["Load Balancer Routes to both; detects failures"]
-    class N4 secondary
     N5["N+1 REDUNDANCY:<br/>Need N servers to handle load. Deploy N+1."]
-    class N5 secondary
     N6["S1 S2 S3 S4 &lt;- Need 3 to handle load<br/>S4 is the +1 spare<br/>If any one fails, remaining 3 still handle full load."]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -320,19 +300,11 @@ Health check response:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["BLUE-GREEN:"]
-    class N0 primary
     N1["BLUE (v1 - current) GREEN (v2 - new)"]
-    class N1 secondary
     N2["S1 S2 S1 S2"]
-    class N2 secondary
     N3["up<br/>switch -&gt; After validation,<br/>LB LB points to GREEN<br/>BLUE becomes standby"]
-    class N3 secondary
     N4["CANARY:<br/>Traffic: 95% -&gt; v1 (stable)<br/>5% -&gt; v2 (canary)<br/>Monitor canary for errors, latency<br/>If OK: ramp 5% -&gt; 25% -&gt; 50% -&gt; 100%<br/>If bad: rollback canary, 100% -&gt; v1"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -360,27 +332,15 @@ Incident Lifecycle:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["SINGLE AZ (no redundancy):<br/>Availability ≈ 99.9% (AZ SLA)<br/>Risk: AZ failure = total outage"]
-    class N0 primary
     N1["MULTI-AZ (standard production):"]
-    class N1 secondary
     N2["AZ-1 AZ-2"]
-    class N2 secondary
     N3["App App App App"]
-    class N3 secondary
     N4["DB Primary DB Replica"]
-    class N4 secondary
     N5["Availability ≈ 99.99%"]
-    class N5 secondary
     N6["MULTI-REGION (highest availability):"]
-    class N6 secondary
     N7["US-EAST EU-WEST<br/>(Primary) (Secondary)<br/>Full stack &lt;- -&gt; Full stack"]
-    class N7 secondary
     N8["Availability ≈ 99.999%<br/>Cost: 2-3× single region<br/>Complexity: Data replication, conflict resolution"]
-    class N8 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -406,21 +366,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["PAYMENT SERVICE"]
-    class N0 primary
     N1["LB -&gt; App (×3) -&gt; PostgreSQL<br/>(Active- Stateless Primary + 2 Replicas<br/>Active) across Multi-AZ<br/>2 AZs"]
-    class N1 secondary
     N2["Redis Dead Letter<br/>(Cache + Queue (DLQ)<br/>Idempot) Failed txns"]
-    class N2 secondary
     N3["Kafka Audit log + downstream events"]
-    class N3 secondary
     N4["Availability Calculation:<br/>LB: 99.99% (managed, multi-AZ)<br/>App (3 instances): 1-(1-0.999)³ = 99.9999%<br/>DB (primary + auto-failover): 99.99%<br/>Redis (cluster): 99.99%"]
-    class N4 secondary
     N5["Series: 0.9999 × 0.999999 × 0.9999 × 0.9999 = 99.97%<br/>&gt; Need to optimize further: add caching, circuit breakers"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -457,29 +408,16 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Producers (any service)"]
-    class N0 primary
     N1["Order Svc Auth Svc Marketing"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Kafka (Multi-AZ, 3<br/>brokers, replication=3) Durability: messages survive<br/>Topic: notifications broker failure"]
-    class N3 secondary
     N4["down down down"]
-    class N4 secondary
     N5["Push Email SMS Consumer groups (independent)<br/>Worker Worker Worker Each scales independently<br/>(×3) (×3) (×2)"]
-    class N5 secondary
     N6["down down down"]
-    class N6 secondary
     N7["FCM/ SES/ Twilio External providers<br/>APNS SMTP (with fallback providers)"]
-    class N7 secondary
     N8["Notification DB (Postgres) Track delivery status<br/>+ Redis (dedup/rate limit) Idempotency check"]
-    class N8 secondary
     N9["Dead Letter Queue Failed after N retries<br/>+ Alert on DLQ depth Manual investigation"]
-    class N9 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -518,23 +456,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["HealthChecker"]
-    class N0 primary
     N1["checks: List&lt;HealthCheck&gt;<br/>interval: Duration<br/>timeout: Duration"]
-    class N1 secondary
     N2["+ runAll(): HealthReport<br/>+ register(check): void<br/>+ isHealthy(): boolean"]
-    class N2 secondary
     N3["DB Redis Custom<br/>Check Check Check"]
-    class N3 secondary
     N4["FailoverManager"]
-    class N4 secondary
     N5["primary: Endpoint<br/>secondary: Endpoint<br/>healthChecker: HealthChkr<br/>state: PRIMARY|SECONDARY"]
-    class N5 secondary
     N6["+ getCurrentEndpoint()<br/>+ checkAndFailover(): void<br/>+ failback(): void"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

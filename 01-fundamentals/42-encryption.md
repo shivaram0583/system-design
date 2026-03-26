@@ -25,17 +25,10 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Plaintext: &quot;Credit card: 4111-1111-1111-1111&quot;"]
-    class N0 primary
     N1["down Encrypt (key)<br/>Ciphertext: &quot;aGVsbG8gd29ybGQ1Nz...&quot;"]
-    class N1 secondary
     N2["down Decrypt (key)<br/>Plaintext: &quot;Credit card: 4111-1111-1111-1111&quot;"]
-    class N2 secondary
     N3["Without the key -&gt; ciphertext is meaningless gibberish."]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -45,23 +38,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["SYMMETRIC: Same key for encrypt and decrypt."]
-    class N0 primary
     N1["Alice key=&quot;secret123&quot; -&gt; Encrypt -&gt; ciphertext<br/>Bob key=&quot;secret123&quot; -&gt; Decrypt -&gt; plaintext"]
-    class N1 secondary
     N2["Problem: How to share the key securely?<br/>Fast. Used for: data at rest, bulk data encryption.<br/>Algorithms: AES-256, ChaCha20"]
-    class N2 secondary
     N3["ASYMMETRIC: Two keys — public key (encrypt) and private key (decrypt)."]
-    class N3 secondary
     N4["Alice's PUBLIC key: Anyone can encrypt with it<br/>Alice's PRIVATE key: Only Alice can decrypt"]
-    class N4 secondary
     N5["Bob Alice's public key -&gt; Encrypt -&gt; ciphertext<br/>Alice Alice's private key -&gt; Decrypt -&gt; plaintext"]
-    class N5 secondary
     N6["Slow but solves key distribution. Used for: key exchange, digital signatures.<br/>Algorithms: RSA, ECDSA, Ed25519"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -84,23 +67,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["AT REST: Data stored on disk (database, S3, backups)."]
-    class N0 primary
     N1["Database: AES-256 encryption on disk<br/>S3: Server-side encryption (SSE-S3, SSE-KMS)<br/>Backups: Encrypted before writing to storage"]
-    class N1 secondary
     N2["Protects against: stolen hard drives, unauthorized disk access"]
-    class N2 secondary
     N3["IN TRANSIT: Data moving over the network."]
-    class N3 secondary
     N4["Client &lt;- TLS 1.3 -&gt; Server (HTTPS)<br/>Service A &lt;- mTLS -&gt; Service B (service-to-service)"]
-    class N4 secondary
     N5["Protects against: eavesdropping, man-in-the-middle attacks"]
-    class N5 secondary
     N6["BOTH are required for a secure system:<br/>At rest: protects stored data<br/>In transit: protects data on the wire"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -113,33 +86,18 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["TLS secures data in transit (HTTPS = HTTP + TLS)."]
-    class N0 primary
     N1["TLS 1.3 Handshake (simplified):"]
-    class N1 secondary
     N2["Client Server"]
-    class N2 secondary
     N3["ClientHello -&gt; (supported ciphers, random)"]
-    class N3 secondary
     N4["&lt;- ServerHello (chosen cipher, certificate)"]
-    class N4 secondary
     N5["Verify server certificate<br/>(trusted CA? domain match?)"]
-    class N5 secondary
     N6["Key Exchange -&gt; (Diffie-Hellman)"]
-    class N6 secondary
     N7["&lt;- Key Exchange"]
-    class N7 secondary
     N8["Both derive shared secret<br/>(symmetric key for session)"]
-    class N8 secondary
     N9["&lt;- Encrypted data (AES) -&gt; (all subsequent data encrypted)"]
-    class N9 secondary
     N10["TLS uses ASYMMETRIC crypto for key exchange (handshake)<br/>then SYMMETRIC crypto for actual data (fast, bulk encryption)."]
-    class N10 secondary
     N11["mTLS (Mutual TLS): Both client AND server present certificates.<br/>Used for service-to-service auth in service mesh (Istio/Envoy)."]
-    class N11 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -179,25 +137,14 @@ When to use which:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["The encryption is only as strong as the key management."]
-    class N0 primary
     N1["KEY MANAGEMENT SERVICE (KMS):<br/>AWS KMS, Google Cloud KMS, Azure Key Vault, HashiCorp Vault"]
-    class N1 secondary
     N2["ENVELOPE ENCRYPTION:<br/>Don't encrypt data directly with the master key."]
-    class N2 secondary
     N3["1. Generate a Data Encryption Key (DEK)<br/>2. Encrypt data with DEK (fast, symmetric)<br/>3. Encrypt DEK with Master Key (KEK) from KMS<br/>4. Store encrypted DEK alongside encrypted data<br/>5. Discard plaintext DEK from memory"]
-    class N3 secondary
     N4["To decrypt:<br/>1. Send encrypted DEK to KMS<br/>2. KMS decrypts DEK using Master Key<br/>3. Use DEK to decrypt data"]
-    class N4 secondary
     N5["Stored together:<br/>encrypted_data = AES(data, DEK)<br/>encrypted_dek = KMS_Encrypt(DEK, KEK)"]
-    class N5 secondary
     N6["Master Key (KEK) NEVER leaves KMS<br/>Rotate DEKs frequently, KEK rarely"]
-    class N6 secondary
     N7["Why envelope encryption?<br/>Master key never exposed (stays in KMS hardware)<br/>Each record/file can have its own DEK<br/>Rotating DEKs doesn't require re-encrypting all data<br/>KMS only handles small keys, not bulk data"]
-    class N7 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -245,23 +192,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Instead of encrypting the entire database, encrypt specific sensitive fields:"]
-    class N0 primary
     N1["Table: users"]
-    class N1 secondary
     N2["id name ssn (encrypted) email"]
-    class N2 secondary
     N3["1 Alice enc:aGVsbG8gd29y... a@b.com<br/>2 Bob enc:c29ybGQ1Nz... b@c.com"]
-    class N3 secondary
     N4["Only SSN is encrypted. Name and email are plaintext.<br/>Application decrypts SSN only when explicitly needed."]
-    class N4 secondary
     N5["Benefits:<br/>Limits blast radius (compromised DB doesn't expose SSN)<br/>Different keys for different fields (SSN key vs address key)<br/>Meets PCI-DSS, HIPAA requirements for specific fields"]
-    class N5 secondary
     N6["Limitation: Can't query encrypted fields (WHERE ssn = '...' won't work)<br/>Solution: Store a blind index (hash of plaintext) for lookups"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -326,17 +263,10 @@ SOC 2:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Card: 4111... Tokenize<br/>Client -&gt; Payment -&gt; Card Vault<br/>(TLS) Service (HSM-backed)"]
-    class N0 primary
     N1["Stores:<br/>tok_abc -&gt;<br/>enc(4111...)"]
-    class N1 secondary
     N2["Flow:<br/>1. Client sends card number over HTTPS (TLS 1.3)<br/>2. Payment service sends card to vault for tokenization<br/>3. Vault encrypts card (AES-256-GCM) with envelope encryption<br/>4. Vault returns token: &quot;tok_abc123&quot;<br/>5. Payment service stores token (not real card number)<br/>6. To charge: Payment service sends token -&gt; Vault decrypts -&gt; calls Stripe"]
-    class N2 secondary
     N3["Architecture:<br/>Card number NEVER stored in application database<br/>Vault is PCI-DSS compliant (isolated, audited, HSM)<br/>Application only handles tokens (not in PCI scope)<br/>HSM (Hardware Security Module): tamper-proof key storage"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -350,19 +280,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client &lt;- TLS 1.3 -&gt; Load Balancer"]
-    class N0 primary
     N1["Application Services<br/>Field-level encryption for PII<br/>Token-based card handling"]
-    class N1 secondary
     N2["Database (RDS) AWS KMS<br/>Encrypted at rest • Master keys (KEK)<br/>(AES-256) • Key rotation<br/>Encrypted fields • Audit trail<br/>TLS connection • HSM-backed"]
-    class N2 secondary
     N3["S3 (backups) Card Vault<br/>SSE-KMS • PCI-DSS scope<br/>Bucket policy • HSM encryption<br/>Tokenization"]
-    class N3 secondary
     N4["Service-to-service: mTLS (Istio/Envoy sidecar)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

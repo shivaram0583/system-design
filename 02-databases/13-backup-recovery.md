@@ -44,27 +44,15 @@ Disasters happen: hardware failure, accidental deletion, ransomware, software bu
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["RPO (Recovery Point Objective):<br/>Maximum acceptable data loss measured in time.<br/>&quot;How much data can we afford to lose?&quot;"]
-    class N0 primary
     N1["RPO = 1 hour -&gt; backups every hour -&gt; lose at most 1 hour of data<br/>RPO = 0 -&gt; synchronous replication -&gt; no data loss (expensive)"]
-    class N1 secondary
     N2["RTO (Recovery Time Objective):<br/>Maximum acceptable downtime.<br/>&quot;How long can we be down?&quot;"]
-    class N2 secondary
     N3["RTO = 4 hours -&gt; must restore and be operational within 4 hours<br/>RTO = 0 -&gt; hot standby, automatic failover (expensive)"]
-    class N3 secondary
     N4["Cost vs. RPO/RTO"]
-    class N4 secondary
     N5["RPO=24h, RTO=8h -&gt; nightly backup to S3<br/>Cost: $"]
-    class N5 secondary
     N6["RPO=1h, RTO=1h -&gt; hourly backups + replica<br/>Cost: $$"]
-    class N6 secondary
     N7["RPO=1min, RTO=5min -&gt; WAL archiving + hot<br/>standby + auto-failover<br/>Cost: $$$"]
-    class N7 secondary
     N8["RPO=0, RTO=0 -&gt; synchronous multi-region<br/>replication<br/>Cost: $$$$"]
-    class N8 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -115,21 +103,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Scenario: At 3:00 PM, someone runs DELETE FROM orders (no WHERE clause).<br/>All 10M orders deleted. Replicas replicate the delete."]
-    class N0 primary
     N1["Without PITR:<br/>Restore last night's full backup -&gt; lose everything since midnight.<br/>13 hours of data lost!"]
-    class N1 secondary
     N2["With PITR:<br/>1. Restore last full backup (midnight)<br/>2. Replay WAL logs from midnight to 2:59:59 PM<br/>3. Stop before the DELETE statement<br/>4. Result: Recover to exactly 1 second before the disaster"]
-    class N2 secondary
     N3["Timeline:<br/>[Full backup 00:00] WAL WAL WAL [Disaster 15:00]<br/>up<br/>Recover to 14:59:59"]
-    class N3 secondary
     N4["PostgreSQL PITR:<br/>recovery_target_time = '2024-01-15 14:59:59'"]
-    class N4 secondary
     N5["AWS RDS: Automated backups + PITR with 1-second granularity<br/>&quot;Restore to any point in the last 35 days&quot;"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -285,23 +264,13 @@ Challenge: Microservices with 10 databases.
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Requirements:<br/>RPO: 5 minutes (lose at most 5 min of orders)<br/>RTO: 30 minutes (be operational within 30 min)<br/>Retention: 35 days online, 7 years archived<br/>Compliance: PCI-DSS (encrypted, access-controlled)"]
-    class N0 primary
     N1["PRIMARY: PostgreSQL on RDS (us-east-1)"]
-    class N1 secondary
     N2["Automated backups:<br/>Daily snapshot at 2 AM (full backup)<br/>WAL archiving every 5 minutes<br/>PITR: any point in last 35 days<br/>Encrypted: AES-256 (KMS managed key)"]
-    class N2 secondary
     N3["Cross-region:<br/>Daily snapshot replicated to eu-west-1<br/>Enables DR in case of us-east-1 failure"]
-    class N3 secondary
     N4["Long-term:<br/>Monthly snapshots copied to S3 Glacier<br/>Retained for 7 years (SOX compliance)<br/>S3 Object Lock (immutable)"]
-    class N4 secondary
     N5["Verification:<br/>Weekly automated restore test<br/>Quarterly DR drill (restore in eu-west-1)<br/>Alert if backup age &gt; 6 hours"]
-    class N5 secondary
     N6["Recovery procedure:<br/>1. Detect failure (automated health checks)<br/>2. Initiate PITR to latest available point<br/>3. New RDS instance spins up (~15 min)<br/>4. Update Route53 DNS to new instance<br/>5. Verify application connectivity<br/>6. Total RTO: ~25 minutes ✓"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -318,23 +287,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Production (us-east-1)"]
-    class N0 primary
     N1["Primary DB -&gt; Read Replica (HA)<br/>(RDS)"]
-    class N1 secondary
     N2["AWS Backup<br/>Daily snapshots<br/>WAL every 5 min<br/>PITR (35 days)<br/>Encrypted (KMS)"]
-    class N2 secondary
     N3["cross-region copy"]
-    class N3 secondary
     N4["DR Region (eu-west-1)<br/>Daily snapshot copy<br/>Can restore new RDS instance"]
-    class N4 secondary
     N5["Long-Term Archive (S3)<br/>Monthly snapshots -&gt; S3 Glacier<br/>7-year retention<br/>Object Lock (immutable)"]
-    class N5 secondary
     N6["Verification<br/>Weekly restore test (automated)<br/>Quarterly DR drill (manual)<br/>Alert: backup age, size, failures"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

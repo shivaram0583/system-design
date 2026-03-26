@@ -55,12 +55,12 @@ It is the **foundational model** upon which virtually all modern systems are bui
 
 ```mermaid
 flowchart LR
-    subgraph Client-Server
+    subgraph SG1["Client-Server"]
         C1[Client] --> S[Server]
         C2[Client] --> S
         C3[Client] --> S
     end
-    subgraph Peer-to-Peer
+    subgraph SG2["Peer-to-Peer"]
         P1[Peer] <--> P2[Peer]
         P2 <--> P3[Peer]
         P3 <--> P1
@@ -127,7 +127,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    subgraph Single Machine
+    subgraph SG1["Single Machine"]
         UI[UI] --- Logic[Logic] --- DB[DB]
     end
 ```
@@ -203,21 +203,21 @@ As the number of clients grows, a single server becomes a bottleneck. Here's how
 
 ```mermaid
 flowchart LR
-    subgraph Stage 1: Single Server
+    subgraph SG1["Stage 1: Single Server"]
         C1[Client] --> S1[Server + DB]
     end
 ```
 
 ```mermaid
 flowchart LR
-    subgraph Stage 2: Separate DB
+    subgraph SG1["Stage 2: Separate DB"]
         C2[Client] --> S2[Server] --> DB2[DB]
     end
 ```
 
 ```mermaid
 flowchart LR
-    subgraph Stage 3: LB + Multiple Servers
+    subgraph SG1["Stage 3: LB + Multiple Servers"]
         C3[Clients] --> LB3[LB] --> S3a[Server 1] --> DB3[DB]
         LB3 --> S3b[Server 2] --> DB3
         LB3 --> S3c[Server 3] --> DB3
@@ -226,7 +226,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    subgraph Stage 4: Full N-Tier
+    subgraph SG1["Stage 4: Full N-Tier"]
         C4[Client] --> CDN4[CDN] --> LB4[LB] --> Servers4["Servers (N)"]
         Servers4 --> Cache4["Cache (Redis)"] --> DBP["DB (Primary)"]
         Servers4 --> Queue4["Queue (Kafka)"]
@@ -548,7 +548,7 @@ public class CapacityEstimator {
 
 ```mermaid
 flowchart TD
-    subgraph Clients
+    subgraph SG1["Clients"]
         Web["Web (React)"]
         iOS["Mobile (iOS)"]
         Android["Mobile (Android)"]

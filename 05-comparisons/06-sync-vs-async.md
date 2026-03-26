@@ -125,13 +125,13 @@ graph TD
 
 ```mermaid
 flowchart TD
-    subgraph Sync Failures
+    subgraph SG1["Sync Failures"]
         A1[Service B is down] --> B1[Service A gets timeout]
         B1 --> C1[Circuit breaker opens]
         C1 --> D1[Return fallback / error to client]
     end
 
-    subgraph Async Failures
+    subgraph SG2["Async Failures"]
         A2[Service B is down] --> B2[Message stays in queue]
         B2 --> C2[Service B comes back]
         C2 --> D2[Processes backlog]

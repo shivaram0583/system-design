@@ -80,15 +80,9 @@ OUTPUT: Word counts across all files
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["ETL (Extract, Transform, Load):<br/>Source DB -&gt; Extract -&gt; Transform (clean, aggregate) -&gt; Load into warehouse<br/>Transform happens BEFORE loading.<br/>Traditional approach. Good when warehouse storage is expensive."]
-    class N0 primary
     N1["ELT (Extract, Load, Transform):<br/>Source DB -&gt; Extract -&gt; Load raw into warehouse -&gt; Transform in warehouse<br/>Transform happens AFTER loading using warehouse compute (e.g., dbt + BigQuery).<br/>Modern approach. Warehouse handles transformation at scale."]
-    class N1 secondary
     N2["Source -&gt; Raw Layer -&gt; Transform -&gt; Curated tables<br/>DBs EL (data lake) T (Spark/dbt)"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -97,29 +91,16 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["LAMBDA (batch + stream):"]
-    class N0 primary
     N1["Raw Data"]
-    class N1 secondary
     N2["down down<br/>[Batch] [Stream]<br/>(Spark) (Flink)"]
-    class N2 secondary
     N3["down down<br/>[Serving Layer] Merge batch + stream results"]
-    class N3 secondary
     N4["Pros: Accurate (batch) + real-time (stream)<br/>Cons: Two codebases to maintain"]
-    class N4 secondary
     N5["KAPPA (stream only):"]
-    class N5 secondary
     N6["Raw Data"]
-    class N6 secondary
     N7["down<br/>[Stream only]<br/>(Flink/Kafka)"]
-    class N7 secondary
     N8["down<br/>[Serving Layer] Replay Kafka for historical reprocessing"]
-    class N8 secondary
     N9["Pros: Single codebase, simpler<br/>Cons: Replay can be slow for large datasets"]
-    class N9 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -243,17 +224,10 @@ Alerts:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Daily pipeline: Raw events -&gt; Aggregated metrics -&gt; Dashboard"]
-    class N0 primary
     N1["Schedule: 2:00 AM UTC daily (processes previous day)"]
-    class N1 secondary
     N2["S3 Raw -&gt; Spark Job -&gt; Data Warehouse<br/>Events (EMR) (Redshift)<br/>(Parquet)<br/>Extract: Tables:<br/>S3 parquet daily_metrics<br/>10 TB / day Transform: user_cohorts<br/>aggregate revenue_summary<br/>join<br/>clean<br/>Load:<br/>Redshift Looker<br/>Dashboard"]
-    class N2 secondary
     N3["Processing time: ~45 minutes for 10 TB<br/>Cost: ~$15/run (spot instances)<br/>SLA: Results available by 3:00 AM UTC"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -267,23 +241,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Data Sources"]
-    class N0 primary
     N1["App DB Kafka APIs"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Data Lake (S3)<br/>/raw/ (source data)<br/>/staging/ (transformed)<br/>/curated/ (final)"]
-    class N3 secondary
     N4["Spark on EMR / Glue<br/>Orchestrated by Airflow<br/>Scheduled: daily 2 AM"]
-    class N4 secondary
     N5["Data Warehouse<br/>(Redshift / BigQuery)<br/>+ BI tools (Looker)"]
-    class N5 secondary
     N6["Monitoring: Airflow UI + CloudWatch + PagerDuty"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

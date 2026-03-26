@@ -25,19 +25,11 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Single node (no replication):"]
-    class N0 primary
     N1["Database &lt;- If this dies, ALL data is unavailable"]
-    class N1 secondary
     N2["Replicated (3 copies):"]
-    class N2 secondary
     N3["Primary Replica 1 Replica 2<br/>(writes) -&gt; (reads) -&gt; (reads)"]
-    class N3 secondary
     N4["If primary dies -&gt; promote replica -&gt; minimal downtime<br/>Reads can be served from any replica -&gt; 3× read capacity"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -50,17 +42,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Primary All writes go here<br/>(Leader)"]
-    class N0 primary
     N1["replicate"]
-    class N1 secondary
     N2["Replica 1 Replica 2 Reads from any"]
-    class N2 secondary
     N3["Pros: Simple, no write conflicts, strong consistency possible<br/>Cons: Single write bottleneck, leader is SPOF until failover<br/>Used by: PostgreSQL, MySQL, MongoDB (default), Redis"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -70,13 +55,8 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Leader 1 &lt;- -&gt; Leader 2 Both accept writes<br/>(US) (EU) Replicate to each other"]
-    class N0 primary
     N1["Pros: Write availability in multiple regions, low latency for local writes<br/>Cons: Write conflicts! Must resolve (LWW, vector clocks, CRDTs)<br/>Used by: CouchDB, MySQL Group Replication, multi-DC setups"]
-    class N1 secondary
     N0 --> N1
 ```
 
@@ -84,17 +64,10 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Node 1 Node 2 Node 3"]
-    class N0 primary
     N1["Write to W nodes, Read from R nodes<br/>If W + R &gt; N -&gt; guaranteed to read latest write (quorum)"]
-    class N1 secondary
     N2["Example: N=3, W=2, R=2<br/>Write to 2 nodes -&gt; Read from 2 nodes -&gt; at least 1 has latest"]
-    class N2 secondary
     N3["Pros: No single point of failure, high availability<br/>Cons: Complex conflict resolution, weaker consistency<br/>Used by: Cassandra, DynamoDB, Riak"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -218,23 +191,13 @@ Split-brain risk:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Architecture: 1 primary + 3 read replicas"]
-    class N0 primary
     N1["Client -&gt; App Svc -&gt; Primary (writes only)"]
-    class N1 secondary
     N2["async replication"]
-    class N2 secondary
     N3["&gt;<br/>Replica1 Replica 2 Replica 3<br/>(reads)"]
-    class N3 secondary
     N4["Write path: App -&gt; Primary only<br/>Read path: App -&gt; any replica (round-robin LB)"]
-    class N4 secondary
     N5["Read-after-write: After user writes, route their reads to primary for 5s"]
-    class N5 secondary
     N6["Capacity:<br/>Primary: 10K writes/s<br/>Each replica: 10K reads/s<br/>Total read: 30K reads/s (3 replicas)<br/>Read:Write ratio: 3:1 -&gt; well balanced"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -251,21 +214,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["US-EAST (Primary Region)"]
-    class N0 primary
     N1["Primary -&gt; Replica -&gt; Replica<br/>(writes) (reads) (reads)"]
-    class N1 secondary
     N2["async cross-region replication"]
-    class N2 secondary
     N3["EU-WEST (Read-Only Region)"]
-    class N3 secondary
     N4["Replica -&gt; Replica (serve EU reads locally)<br/>(reads) (reads)"]
-    class N4 secondary
     N5["EU writes -&gt; routed to US primary (higher latency)<br/>EU reads -&gt; served locally (low latency)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

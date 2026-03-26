@@ -47,21 +47,12 @@ graph TD
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Problem: Simple hash (key % N) breaks when adding/removing nodes.<br/>hash(&quot;user:123&quot;) % 3 = node 1<br/>Add 4th node: hash(&quot;user:123&quot;) % 4 = node 3 -&gt; DIFFERENT node!<br/>All keys rehash -&gt; massive cache miss storm."]
-    class N0 primary
     N1["Consistent hashing:<br/>Place nodes on a hash ring (0 to 2^32).<br/>For each key: hash(key) -&gt; walk clockwise -&gt; first node = owner."]
-    class N1 secondary
     N2["Ring: 0 Node A (pos 100) Node B (pos 200) Node C (pos 300) 0"]
-    class N2 secondary
     N3["hash(&quot;user:123&quot;) = 150 -&gt; walks clockwise -&gt; Node B<br/>hash(&quot;user:456&quot;) = 250 -&gt; walks clockwise -&gt; Node C"]
-    class N3 secondary
     N4["Add Node D at position 250:<br/>Only keys between 200-250 move from C to D.<br/>Other keys stay on their current node.<br/>Only ~1/N keys rehash (not all keys)."]
-    class N4 secondary
     N5["Virtual nodes: Each physical node has 100-200 virtual positions.<br/>Ensures even distribution of keys.<br/>Node A: positions [10, 45, 120, 189, ...]"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

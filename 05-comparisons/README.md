@@ -20,31 +20,19 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Need ACID transactions + joins? -&gt; SQL (PostgreSQL, MySQL)<br/>Need flexible schema + scale? -&gt; Document DB (MongoDB)<br/>Need simple key-value at speed? -&gt; Key-Value (Redis, DynamoDB)<br/>Need analytics on huge data? -&gt; Columnar (Cassandra, ClickHouse)<br/>Need relationship traversal? -&gt; Graph DB (Neo4j)<br/>Need time-series metrics? -&gt; Time-Series (InfluxDB, TimescaleDB)"]
-    class N0 primary
 ```
 
 ### Communication Protocol
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Public API, CRUD operations? -&gt; REST<br/>Internal service-to-service, low latency? -&gt; gRPC<br/>Mobile/frontend with flexible queries? -&gt; GraphQL<br/>Fire-and-forget, event streaming? -&gt; Kafka / Message Queue<br/>Real-time bidirectional? -&gt; WebSocket"]
-    class N0 primary
 ```
 
 ### Architecture Style
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Small team, early stage, simple domain? -&gt; Monolith<br/>Large team, complex domain, independent scaling? -&gt; Microservices<br/>Need both? -&gt; Start monolith, extract services as needed"]
-    class N0 primary
 ```

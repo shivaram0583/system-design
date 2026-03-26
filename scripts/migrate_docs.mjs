@@ -303,14 +303,10 @@ function createMermaidDiagram(content, title) {
 
   const lines = [
     `flowchart ${direction}`,
-    "    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;",
-    "    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;",
-    "    linkStyle default stroke:#64748b,stroke-width:1.3px;",
   ];
 
   for (const node of nodes) {
     lines.push(`    ${node.id}["${node.label}"]`);
-    lines.push(`    class ${node.id} ${node.klass}`);
   }
 
   if (nodes.length >= 2) {
@@ -322,12 +318,122 @@ function createMermaidDiagram(content, title) {
   return lines.join("\n");
 }
 
+function convertXychartBeta(content) {
+  const lines = splitLinesPreserve(content).map((line) => line.trim()).filter(Boolean);
+  const titleMatch = lines.find((line) => line.startsWith("title "));
+  const xAxisMatch = lines.find((line) => line.startsWith("x-axis "));
+  const seriesLines = lines.filter((line) => /^(line|bar)\b/u.test(line));
+
+  const title = titleMatch ? titleMatch.replace(/^title\s+/u, "").replace(/^"|"$/gu, "") : "Chart";
+  let categories = [];
+  if (xAxisMatch) {
+    const bracketMatch = xAxisMatch.match(/\[(.*)\]/u);
+    if (bracketMatch) {
+      categories = bracketMatch[1]
+        .split(/,\s*/u)
+        .map((item) => item.trim().replace(/^"|"$/gu, ""))
+        .filter(Boolean);
+    }
+  }
+
+  const output = ["flowchart TB"];
+  output.push(`    T["${escapeMermaidLabel(title)}"]`);
+  let previousId = "T";
+
+  if (categories.length > 0) {
+    output.push(`    C["${escapeMermaidLabel(`Categories: ${categories.join(", ")}`)}"]`);
+    output.push(`    ${previousId} --> C`);
+    previousId = "C";
+  }
+
+  if (seriesLines.length === 0) {
+    output.push('    D["Chart data unavailable"]');
+    output.push(`    ${previousId} --> D`);
+    return output.join("\n");
+  }
+
+  seriesLines.forEach((line, index) => {
+    const match = line.match(/^(line|bar)(?:\s+"([^"]+)")?\s+\[(.+)\]$/u);
+    if (!match) {
+      return;
+    }
+    const [, kind, seriesTitle, values] = match;
+    const label = `${seriesTitle || kind}: ${values}`;
+    const nodeId = `S${index}`;
+    output.push(`    ${nodeId}["${escapeMermaidLabel(label)}"]`);
+    output.push(`    ${previousId} --> ${nodeId}`);
+    previousId = nodeId;
+  });
+
+  return output.join("\n");
+}
+
+function convertBlockBeta(content) {
+  const lines = splitLinesPreserve(content);
+  const blocks = [];
+  let currentBlock = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const blockMatch = line.match(/^block:([A-Za-z0-9_]+)\["([^"]+)"\]/u);
+    if (blockMatch) {
+      currentBlock = { title: blockMatch[2], items: [] };
+      blocks.push(currentBlock);
+      continue;
+    }
+    if (line === "end") {
+      currentBlock = null;
+      continue;
+    }
+    if (!currentBlock) {
+      continue;
+    }
+    const itemMatch = line.match(/^[A-Za-z0-9_]+\["([\s\S]+)"\]$/u);
+    if (itemMatch) {
+      currentBlock.items.push(itemMatch[1].replace(/\s+/gu, " ").trim());
+    }
+  }
+
+  const output = ["flowchart LR"];
+  blocks.forEach((block, index) => {
+    const blockId = `B${index}`;
+    const label = [escapeMermaidLabel(block.title), ...block.items.map((item) => escapeMermaidLabel(item))].join("<br/>");
+    output.push(`    ${blockId}["${label}"]`);
+    if (index > 0) {
+      output.push(`    B${index - 1} --> ${blockId}`);
+    }
+  });
+
+  if (blocks.length === 0) {
+    output.push(`    B0["${escapeMermaidLabel("Design levels overview")}"]`);
+  }
+
+  return output.join("\n");
+}
+
 function sanitizeMermaidBlock(content) {
+  const trimmed = content.trimStart();
+  if (trimmed.startsWith("xychart-beta")) {
+    return convertXychartBeta(content);
+  }
+  if (trimmed.startsWith("block-beta")) {
+    return convertBlockBeta(content);
+  }
+
   const sanitizedLines = [];
   const edgePattern = /^(\s*)(.+?)\s+((?:-->|-.->|==>|<-->|<--|<->|---)(?:\|[^|]+\|)?)\s+(.+)$/u;
+  let subgraphCounter = 0;
 
   for (const rawLine of splitLinesPreserve(content)) {
     const line = rawLine.replace(/(\|[^|\n]+)\|>/gu, "$1|");
+    const subgraphMatch = line.match(/^(\s*)subgraph\s+(.+)$/u);
+    if (subgraphMatch && !subgraphMatch[2].includes("[") && !subgraphMatch[2].includes('"')) {
+      const [, indent, title] = subgraphMatch;
+      subgraphCounter += 1;
+      const cleanTitle = title.trim();
+      sanitizedLines.push(`${indent}subgraph SG${subgraphCounter}["${escapeMermaidLabel(cleanTitle)}"]`);
+      continue;
+    }
     if (!/\s&\s/u.test(line)) {
       sanitizedLines.push(line);
       continue;

@@ -41,13 +41,8 @@ Cache hit rate of 95% means:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Level 0: CPU Cache (L1/L2/L3) ~1-10 ns<br/>Level 1: Application Memory ~100 ns<br/>Level 2: Distributed Cache (Redis) ~1 ms<br/>Level 3: CDN Edge Cache ~10 ms<br/>Level 4: Database Query Cache ~5 ms<br/>Level 5: Disk/SSD (origin) ~10-100 ms"]
-    class N0 primary
     N1["Closer to client = faster but smaller and more expensive<br/>Farther from client = slower but larger and cheaper"]
-    class N1 secondary
     N0 --> N1
 ```
 
@@ -163,19 +158,11 @@ Strategies:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Single-node cache (in-process):<br/>Pros: Fastest (no network), simplest<br/>Cons: Limited by server RAM, lost on restart, not shared across instances"]
-    class N0 primary
     N1["Distributed cache (Redis/Memcached):"]
-    class N1 secondary
     N2["App1 App2 App3"]
-    class N2 secondary
     N3["Redis Shared across all app instances<br/>Cluster Persistent (optional), replicated"]
-    class N3 secondary
     N4["Redis Cluster (sharded):<br/>Key -&gt; hash slot (0-16383) -&gt; node<br/>Node 1: slots 0-5460<br/>Node 2: slots 5461-10922<br/>Node 3: slots 10923-16383"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -300,23 +287,13 @@ Performance:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client"]
-    class N0 primary
     N1["down<br/>CDN (edge cache) &lt;- static assets, images (TTL: hours)"]
-    class N1 secondary
     N2["down<br/>API Gateway &lt;- response cache for GET endpoints"]
-    class N2 secondary
     N3["down<br/>Application<br/>&lt;- in-process cache (Caffeine/Guava, TTL: seconds)"]
-    class N3 secondary
     N4["down<br/>Redis Cluster &lt;- distributed cache (TTL: minutes)"]
-    class N4 secondary
     N5["down<br/>Database &lt;- query result cache (TTL: varies)"]
-    class N5 secondary
     N6["down<br/>Disk / SSD (origin data)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

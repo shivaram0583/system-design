@@ -199,21 +199,12 @@ Problem: Data lives in PostgreSQL. Search index in Elasticsearch.
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Architecture:"]
-    class N0 primary
     N1["Client -&gt; Search -&gt; Elasticsearch<br/>API (3 nodes)"]
-    class N1 secondary
     N2["up<br/>CDC (Debezium)"]
-    class N2 secondary
     N3["PostgreSQL<br/>(source of<br/>truth)"]
-    class N3 secondary
     N4["Index mapping:<br/>products: {<br/>name: text (analyzed, boosted ×3)<br/>description: text (analyzed)<br/>brand: keyword (exact match + aggregation)<br/>category: keyword (faceted search)<br/>price: float (range filter)<br/>rating: float (sort/filter)<br/>in_stock: boolean (filter)<br/>}"]
-    class N4 secondary
     N5["Query: &quot;nike running shoes&quot; with filters: price &lt; $100, in_stock = true<br/>&gt; Match &quot;nike running shoes&quot; in name (boosted) + description<br/>&gt; Filter: price &lt; 100 AND in_stock = true<br/>&gt; Sort by relevance score<br/>&gt; Return top 20 with facets (brands, categories, price ranges)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -229,21 +220,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Clients"]
-    class N0 primary
     N1["API Gateway"]
-    class N1 secondary
     N2["Search Service -&gt; Elasticsearch Cluster<br/>(query builder, 3 data nodes<br/>caching, auth) 2 master nodes<br/>1 coordinating node"]
-    class N2 secondary
     N3["CDC"]
-    class N3 secondary
     N4["Product Service -&gt; PostgreSQL (primary)<br/>(CRUD) Source of truth"]
-    class N4 secondary
     N5["Redis: Cache popular search queries (5 min TTL)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

@@ -194,19 +194,11 @@ With index: B-tree lookup, orders of magnitude faster
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["mongos Router: directs queries to correct shard<br/>(router)"]
-    class N0 primary
     N1["Shard A Shard B Shard C<br/>user_id user_id user_id<br/>A-H I-P Q-Z<br/>(replica (replica (replica<br/>set) set) set)"]
-    class N1 secondary
     N2["Shard key: Determines data distribution"]
-    class N2 secondary
     N3["Good shard keys:<br/>✓ High cardinality (many unique values)<br/>✓ Even distribution (no hot shards)<br/>✓ Matches query patterns (queries target 1 shard)"]
-    class N3 secondary
     N4["Bad shard keys:<br/>✗ Low cardinality (status: &quot;active&quot;/&quot;inactive&quot;)<br/>✗ Monotonically increasing (timestamps -&gt; all writes to last shard)<br/>✗ Not in query patterns (queries scatter to all shards)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -300,23 +292,13 @@ E-commerce product catalog with varying attributes per category:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Clients"]
-    class N0 primary
     N1["API Gateway"]
-    class N1 secondary
     N2["Product Service"]
-    class N2 secondary
     N3["MongoDB Cluster (Sharded)"]
-    class N3 secondary
     N4["Shard Key: category + product_id (hashed)"]
-    class N4 secondary
     N5["Shard 1 Shard 2 Shard 3<br/>Primary Primary Primary<br/>+2 Replicas +2 Replicas +2 Replicas"]
-    class N5 secondary
     N6["Cache: Redis (popular products, 5 min TTL)<br/>Search: Elasticsearch (synced via Change Streams)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

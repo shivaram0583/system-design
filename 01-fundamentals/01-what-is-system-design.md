@@ -45,29 +45,10 @@ Think of it like architecture for buildings — before you lay a single brick, y
 ### The Two Levels of System Design
 
 ```mermaid
-block-beta
-  columns 2
-  block:HLD["High-Level Design (HLD)"]:1
-    columns 1
-    A["Architecture"]
-    B["Components"]
-    C["Data Flow"]
-    D["APIs"]
-    E["DB Choices"]
-    F["Scaling Strategy"]
-    G["Trade-offs"]
-  end
-  block:LLD["Low-Level Design (LLD)"]:1
-    columns 1
-    H["Classes
-    Objects"]
-    I["Interfaces"]
-    J["Data Models"]
-    K["Algorithms"]
-    L["Design Patterns"]
-    M["Error Handling"]
-    N["Sequence Diagrams"]
-  end
+flowchart LR
+    B0["High-Level Design (HLD)<br/>Architecture<br/>Components<br/>Data Flow<br/>APIs<br/>DB Choices<br/>Scaling Strategy<br/>Trade-offs"]
+    B1["Low-Level Design (LLD)<br/>Classes &amp; Objects<br/>Interfaces<br/>Data Models<br/>Algorithms<br/>Design Patterns<br/>Error Handling<br/>Sequence Diagrams"]
+    B0 --> B1
 ```
 
 > **HLD** = "WHAT components exist and how they connect" | **LLD** = "HOW each component works internally"

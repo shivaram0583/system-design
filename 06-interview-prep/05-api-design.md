@@ -35,13 +35,8 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["https://api.example.com/v1/resource_name"]
-    class N0 primary
     N1["version plural noun (never verbs)"]
-    class N1 secondary
     N0 --> N1
 ```
 

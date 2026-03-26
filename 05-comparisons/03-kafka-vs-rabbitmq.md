@@ -25,7 +25,7 @@ flowchart TD
 
 ```mermaid
 graph LR
-    subgraph Kafka
+    subgraph SG1["Kafka"]
         P1[Producer] -->|append| T[Topic Partition 0]
         P2[Producer] -->|append| T2[Topic Partition 1]
         T --> C1[Consumer Group A]
@@ -37,7 +37,7 @@ graph LR
 
 ```mermaid
 graph LR
-    subgraph RabbitMQ
+    subgraph SG1["RabbitMQ"]
         P3[Producer] -->|publish| E[Exchange]
         E -->|route| Q1[Queue 1]
         E -->|route| Q2[Queue 2]

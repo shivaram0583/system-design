@@ -25,17 +25,10 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["POINT-TO-POINT (Queue):<br/>Producer -&gt; Queue -&gt; ONE Consumer gets each message"]
-    class N0 primary
     N1["PUB-SUB (Topic):<br/>Publisher -&gt; Topic -&gt; ALL Subscribers get every message"]
-    class N1 secondary
     N2["Publisher event -&gt; Topic event -&gt; Subscriber A<br/>&quot;orders&quot; event -&gt; Subscriber B<br/>event -&gt; Subscriber C"]
-    class N2 secondary
     N3["Publisher doesn't know who subscribes.<br/>New subscribers can be added without changing the publisher."]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -55,17 +48,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["A single event needs to trigger multiple independent actions:"]
-    class N0 primary
     N1["Order Created Event"]
-    class N1 secondary
     N2["&gt; Payment Service (charge card)<br/>&gt; Inventory Service (reserve stock)<br/>&gt; Email Service (send confirmation)<br/>&gt; Analytics Service (track conversion)<br/>&gt; Fraud Service (check for fraud)"]
-    class N2 secondary
     N3["Without pub-sub: Order Service calls each one (tight coupling, slow)<br/>With pub-sub: Order Service publishes once, 5 subscribers react independently"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -139,17 +125,10 @@ Within a group, messages are load-balanced (queue behavior).
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["The standard AWS pattern for reliable fan-out:"]
-    class N0 primary
     N1["Producer -&gt; SNS -&gt; SQS (A) -&gt; Consumer A<br/>Topic -&gt; SQS (B) -&gt; Consumer B<br/>&gt; SQS (C) -&gt; Consumer C"]
-    class N1 secondary
     N2["SNS: Fire-and-forget pub-sub (no retention)<br/>SQS: Durable queue per subscriber (with DLQ, retry, visibility timeout)"]
-    class N2 secondary
     N3["Why not just SNS?<br/>SNS is push-based. If subscriber is down, message is lost.<br/>SQS buffers messages. Subscriber processes at its own pace."]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -177,25 +156,14 @@ Google Pub/Sub: Supports server-side filtering
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Events:<br/>user.followed, post.liked, post.commented, order.shipped"]
-    class N0 primary
     N1["Various Services publish events to SNS topics"]
-    class N1 secondary
     N2["SNS Topic: &quot;user-events&quot;"]
-    class N2 secondary
     N3["&gt; SQS: push-notification-queue<br/>&gt; Push Notification Worker (FCM/APNS)"]
-    class N3 secondary
     N4["&gt; SQS: email-queue<br/>&gt; Email Worker (SES)"]
-    class N4 secondary
     N5["&gt; SQS: in-app-notification-queue<br/>&gt; In-App Worker (writes to notification DB)"]
-    class N5 secondary
     N6["&gt; SQS: analytics-queue<br/>&gt; Analytics Worker (writes to data lake)"]
-    class N6 secondary
     N7["Each queue has its own DLQ and scaling policy"]
-    class N7 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -213,19 +181,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Producers (any service)"]
-    class N0 primary
     N1["Order User Pay"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Event Bus (Kafka)<br/>Topics: orders, users, payments<br/>Partitions: 12 each<br/>Retention: 7 days"]
-    class N3 secondary
     N4["CG: payment CG: inv CG: notif CG: analytics<br/>(3 inst) (3 inst) (2 inst) (1 inst)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

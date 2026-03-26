@@ -23,21 +23,12 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["FORWARD PROXY (acts on behalf of CLIENTS):"]
-    class N0 primary
     N1["Client -&gt; Forward -&gt; Server<br/>Proxy"]
-    class N1 secondary
     N2["Client knows it's using a proxy.<br/>Server sees proxy's IP, not client's.<br/>Use: Corporate firewalls, content filtering, anonymity (VPN/Tor)."]
-    class N2 secondary
     N3["REVERSE PROXY (acts on behalf of SERVERS):"]
-    class N3 secondary
     N4["Client -&gt; Reverse -&gt; Server<br/>Proxy"]
-    class N4 secondary
     N5["Client doesn't know there's a proxy.<br/>Client sees proxy's IP, not server's.<br/>Use: Load balancing, SSL termination, caching, security."]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -172,15 +163,9 @@ server {
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client -&gt; Nginx (Reverse Backend Services<br/>Proxy) -&gt;<br/>/api/users -&gt; :8081"]
-    class N0 primary
     N1["SSL termination /api/orders -&gt; :8082<br/>Rate limiting /api/products -&gt; :8083<br/>Compression /static -&gt; S3"]
-    class N1 secondary
     N2["Access logging"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -193,15 +178,9 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Internet -&gt; CDN (Cloudflare) -&gt; Nginx (Reverse Proxy)"]
-    class N0 primary
     N1["Nginx handles:<br/>SSL termination, rate limiting, routing"]
-    class N1 secondary
     N2["Routes:<br/>/api/* -&gt; API Service cluster (port 8080)<br/>/auth/* -&gt; Auth Service cluster (port 8081)<br/>/ws/* -&gt; WebSocket cluster (port 8082)<br/>/static/* -&gt; S3 bucket<br/>/health -&gt; 200 OK (self)"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```

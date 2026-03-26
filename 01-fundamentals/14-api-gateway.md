@@ -25,17 +25,10 @@ An **API Gateway** is a single entry point for all client requests in a microser
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["WITHOUT API Gateway:<br/>Client must know every service URL:<br/>&gt; user-service:8081/users<br/>Client -&gt; order-service:8082/orders<br/>&gt; product-service:8083/products<br/>&gt; payment-service:8084/payments<br/>Problems: Client complexity, CORS, auth in every service, no central control"]
-    class N0 primary
     N1["WITH API Gateway:"]
-    class N1 secondary
     N2["Client -&gt; API Gateway -&gt; user-service<br/>api.app.com -&gt; order-service<br/>&gt; product-service<br/>&gt; payment-service"]
-    class N2 secondary
     N3["Single URL, single auth, centralized control"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -75,23 +68,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Different clients need different API shapes:"]
-    class N0 primary
     N1["Mobile App: Needs compact responses, fewer fields, different auth<br/>Web App: Needs full responses, SSR support<br/>3rd Party: Needs rate-limited, versioned, documented API"]
-    class N1 secondary
     N2["BFF Pattern — One gateway per client type:"]
-    class N2 secondary
     N3["Mobile -&gt; Mobile BFF"]
-    class N3 secondary
     N4["&gt; Microservices"]
-    class N4 secondary
     N5["Web -&gt; Web BFF"]
-    class N5 secondary
     N6["Each BFF:<br/>Tailors response format for its client<br/>Handles client-specific auth<br/>Aggregates exactly the fields needed<br/>Can be maintained by the frontend team"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -169,13 +152,8 @@ DO:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client [10s timeout] -&gt; Gateway [5s timeout] -&gt; Service A<br/>[3s timeout] -&gt; Service B<br/>[2s timeout] -&gt; Service C"]
-    class N0 primary
     N1["Rules:<br/>Gateway timeout &lt; Client timeout<br/>Individual service timeout &lt; Gateway timeout<br/>Set different timeouts per service based on expected latency<br/>Return partial response if some services timeout"]
-    class N1 secondary
     N0 --> N1
 ```
 
@@ -185,17 +163,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["API Gateway (Kong)"]
-    class N0 primary
     N1["Auth: JWT verification (plugin)<br/>Rate limit: 100 req/s per user (plugin)<br/>Logging: All requests -&gt; Kafka -&gt; ELK (plugin)"]
-    class N1 secondary
     N2["Routes:<br/>GET /api/v1/products/* -&gt; product-svc (cache 60s)<br/>POST /api/v1/orders/* -&gt; order-svc (no cache)<br/>GET /api/v1/users/* -&gt; user-svc<br/>POST /api/v1/payments/* -&gt; payment-svc (strict)<br/>GET /api/v1/search/* -&gt; search-svc (cache 30s)"]
-    class N2 secondary
     N3["Composition:<br/>GET /api/v1/homepage<br/>&gt; product-svc/featured (parallel)<br/>&gt; user-svc/recommendations (parallel)<br/>&gt; order-svc/recent (parallel)<br/>&gt; Merge results -&gt; Single response"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -209,21 +180,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Internet"]
-    class N0 primary
     N1["Client"]
-    class N1 secondary
     N2["ALB (L7) &lt;- HA for the gateway itself"]
-    class N2 secondary
     N3["API Gateway (×3) Config DB (etcd)<br/>(Kong / Custom) Routes, rate limits"]
-    class N3 secondary
     N4["Service Discovery (Consul)<br/>Knows all service instances + health"]
-    class N4 secondary
     N5["Users Orders Products Payments<br/>(×3) (×5) (×3) (×2)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

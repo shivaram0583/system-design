@@ -25,13 +25,8 @@ The **leader-follower** (also called primary-replica or master-slave) pattern de
 
 ```mermaid
 flowchart LR
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Leader -&gt; Follower 1<br/>(writes) -&gt; Follower 2<br/>(decides) -&gt; Follower 3"]
-    class N0 primary
     N1["Leader: Accepts writes, makes decisions, coordinates<br/>Followers: Replicate leader's state, serve reads, ready for promotion"]
-    class N1 secondary
     N0 --> N1
 ```
 
@@ -101,19 +96,11 @@ TERM NUMBERS prevent stale leaders:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Network partition splits cluster in half:"]
-    class N0 primary
     N1["Partition 1 Partition 2<br/>Node A (leader) Node C<br/>Node B Node D<br/>Node E"]
-    class N1 secondary
     N2["Partition 1: A is still leader (2 nodes)<br/>Partition 2: Elects new leader (3 nodes, has majority) -&gt; Node C becomes leader"]
-    class N2 secondary
     N3["TWO LEADERS! (split-brain)"]
-    class N3 secondary
     N4["Raft solution: Only majority side can commit writes<br/>Partition 1 (2 nodes): Can't commit (need 3 votes) -&gt; read-only/unavailable<br/>Partition 2 (3 nodes): Can commit -&gt; continues operating<br/>When partition heals: A steps down (lower term) -&gt; follows C"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -213,21 +200,12 @@ Alerts:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["PostgreSQL with Patroni (leader election via etcd):"]
-    class N0 primary
     N1["Normal operation:"]
-    class N1 secondary
     N2["pg-1 pg-2 pg-3<br/>PRIMARY -&gt; REPLICA -&gt; REPLICA<br/>(leader) (follower) (follower)"]
-    class N2 secondary
     N3["etcd Stores leader info, manages lease<br/>cluster"]
-    class N3 secondary
     N4["Failover:<br/>1. pg-1 crashes -&gt; etcd lease expires (30s)<br/>2. Patroni on pg-2 and pg-3 compete for leadership<br/>3. pg-2 wins election (lowest replication lag)<br/>4. pg-2 promoted to PRIMARY<br/>5. pg-3 reconfigured to follow pg-2<br/>6. Connection pool (PgBouncer) updated to point to pg-2<br/>7. Total downtime: ~30-60 seconds"]
-    class N4 secondary
     N5["When pg-1 recovers:<br/>&gt; Detects it's no longer leader<br/>&gt; Rejoins as replica following pg-2"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -243,19 +221,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Application Nodes"]
-    class N0 primary
     N1["Node 1 Node 2 Node 3 Node 4<br/>Leader Follow Follow Follow"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Election Coordinator<br/>(etcd / ZooKeeper)<br/>3-5 node cluster"]
-    class N3 secondary
     N4["/election/leader = &quot;node1&quot;<br/>lease TTL = 15s"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

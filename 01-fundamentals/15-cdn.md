@@ -25,15 +25,9 @@ A **Content Delivery Network** is a geographically distributed network of server
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["WITHOUT CDN:<br/>User in Tokyo 200ms -&gt; Origin in Virginia<br/>Every request travels across the globe."]
-    class N0 primary
     N1["WITH CDN:<br/>User in Tokyo 10ms -&gt; CDN Edge (Tokyo)<br/>cache miss?<br/>down<br/>Origin (Virginia)<br/>(only on first request)"]
-    class N1 secondary
     N2["Subsequent users in Tokyo get content from the Tokyo edge = 10ms"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -156,23 +150,13 @@ Typical pricing (CloudFront):
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Architecture:"]
-    class N0 primary
     N1["Client -&gt; CloudFront -&gt; S3 (Origin)<br/>(Tokyo) Edge (Tokyo) (us-east-1)"]
-    class N1 secondary
     N2["Upload flow:<br/>App Server -&gt; S3 (original) -&gt; Lambda (resize) -&gt; S3 (variants)"]
-    class N2 secondary
     N3["S3 stores: /images/123/original.jpg (5 MB)<br/>/images/123/thumb_200.jpg (20 KB)<br/>/images/123/medium_800.jpg (100 KB)"]
-    class N3 secondary
     N4["Request flow:<br/>GET https://cdn.example.com/images/123/thumb_200.jpg<br/>&gt; CloudFront edge (Tokyo): Cache HIT -&gt; return 20 KB in 10ms<br/>&gt; Cache MISS -&gt; fetch from S3 -&gt; cache -&gt; return"]
-    class N4 secondary
     N5["Cache-Control: public, max-age=86400, immutable<br/>(Images are immutable — new version = new URL)"]
-    class N5 secondary
     N6["Performance:<br/>Without CDN: 200ms (Tokyo -&gt; Virginia round trip)<br/>With CDN: 10ms (Tokyo edge) + 99% cache hit rate<br/>Origin load reduction: 99% fewer requests to S3"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -189,19 +173,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Users (Global)"]
-    class N0 primary
     N1["DNS (Route53) -&gt; cdn.example.com -&gt; CloudFront"]
-    class N1 secondary
     N2["CloudFront CDN<br/>400+ edge PoPs"]
-    class N2 secondary
     N3["Cache behaviors:<br/>/static/* -&gt; S3 (1 day TTL)<br/>/api/* -&gt; ALB (0 TTL, passthrough)<br/>/* -&gt; S3 (5 min TTL, SPA fallback)"]
-    class N3 secondary
     N4["S3 ALB<br/>Static -&gt; API"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

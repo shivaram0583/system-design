@@ -25,19 +25,11 @@
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["BEFORE sharding (single DB):"]
-    class N0 primary
     N1["Database (1 server)<br/>100M users, 500 GB<br/>10K writes/s (maxed out)"]
-    class N1 secondary
     N2["AFTER sharding (4 shards):"]
-    class N2 secondary
     N3["Shard 0 Shard 1 Shard 2 Shard 3<br/>25M users 25M users 25M users 25M users<br/>125 GB 125 GB 125 GB 125 GB<br/>2.5K w/s 2.5K w/s 2.5K w/s 2.5K w/s"]
-    class N3 secondary
     N4["Total: 10K writes/s distributed across 4 servers<br/>Each server handles 25% of the load"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -79,21 +71,12 @@ Best for: Key-value lookups, user data
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Hash ring: nodes placed at hash positions on a circle"]
-    class N0 primary
     N1["Node A Node B"]
-    class N1 secondary
     N2["Node D Node C"]
-    class N2 secondary
     N3["hash(&quot;key1&quot;) -&gt; lands between A and B -&gt; goes to B<br/>hash(&quot;key2&quot;) -&gt; lands between C and D -&gt; goes to D"]
-    class N3 secondary
     N4["Adding Node E between B and C:<br/>Only keys between B and E move to E<br/>All other keys stay -&gt; minimal data movement!"]
-    class N4 secondary
     N5["Pros: Minimal redistribution when adding/removing nodes<br/>Cons: Can be uneven; use virtual nodes for better distribution<br/>Best for: Distributed caches (Redis, Memcached), DynamoDB"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -150,19 +133,11 @@ BAD shard keys:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Query: &quot;Find all orders over $100 across all users&quot;"]
-    class N0 primary
     N1["With shard key = user_id:<br/>Order data is split by user across shards.<br/>&gt; Must query ALL shards -&gt; merge results -&gt; slow!"]
-    class N1 secondary
     N2["Shard 0 Shard 1 Shard 2<br/>Query... Query... Query..."]
-    class N2 secondary
     N3["Merge &lt;- Scatter-gather pattern<br/>Results"]
-    class N3 secondary
     N4["Strategies:<br/>1. Denormalize: Store data redundantly so queries hit one shard<br/>2. Secondary index service: Elasticsearch for cross-shard search<br/>3. Materialized views: Pre-compute aggregations<br/>4. Avoid: Design schema so most queries use the shard key"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -224,21 +199,12 @@ Scaling path BEFORE sharding:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Problem: You have 4 shards but need 8."]
-    class N0 primary
     N1["Hash-based: hash(key) % 4 ≠ hash(key) % 8 -&gt; most keys move!"]
-    class N1 secondary
     N2["Solutions:<br/>1. Consistent hashing: Add 4 virtual nodes -&gt; only ~25% of keys move<br/>2. Double-and-migrate:<br/>New shard mapping: shard = hash(key) % 8<br/>Old data: migrate in background while serving reads from old shard<br/>Use dual-read: check new shard first, fall back to old<br/>3. Logical sharding: Start with 256 logical shards on 4 physical nodes<br/>To add nodes: move logical shards (no rehashing)"]
-    class N2 secondary
     N3["256 logical shards on 4 physical nodes"]
-    class N3 secondary
     N4["Node 1: shards 0-63<br/>Node 2: shards 64-127<br/>Node 3: shards 128-191<br/>Node 4: shards 192-255"]
-    class N4 secondary
     N5["Add Node 5: move shards 192-223 -&gt; 5<br/>No rehashing! Just move shard files."]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -280,17 +246,10 @@ Design:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Application Layer"]
-    class N0 primary
     N1["Shard Router / Proxy<br/>(Vitess / ProxySQL)"]
-    class N1 secondary
     N2["Shard0 Shard1 Shard2 Shard3<br/>Master Master Master Master<br/>+2 rep +2 rep +2 rep +2 rep"]
-    class N2 secondary
     N3["Config DB: shard mapping (which key -&gt; which shard)<br/>Elasticsearch: cross-shard search index"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

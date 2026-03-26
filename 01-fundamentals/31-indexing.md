@@ -245,21 +245,12 @@ After: Query 1 takes 2ms (index scan, pre-sorted)
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Application"]
-    class N0 primary
     N1["Query Router<br/>Analyzes query -&gt; picks index"]
-    class N1 secondary
     N2["PostgreSQL"]
-    class N2 secondary
     N3["Table: orders (50M rows, 20 GB)"]
-    class N3 secondary
     N4["Indexes:<br/>idx_orders_pkey (B-tree, id) 1.2 GB<br/>idx_orders_user (B-tree, user_id) 800 MB<br/>idx_orders_email (Hash, email) 600 MB<br/>idx_orders_date (BRIN, created_at) 10 MB<br/>idx_orders_search (GIN, JSONB) 2 GB"]
-    class N4 secondary
     N5["Total index size: 4.6 GB (23% of table)"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

@@ -65,23 +65,13 @@ Scenario: User clicks "Pay" button
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client generates a unique key per operation and sends it with the request:"]
-    class N0 primary
     N1["POST /payments<br/>Idempotency-Key: pay_abc123<br/>{ &quot;amount&quot;: 100, &quot;to&quot;: &quot;merchant_456&quot; }"]
-    class N1 secondary
     N2["Server flow:<br/>1. Check if idempotency key &quot;pay_abc123&quot; exists in store<br/>2a. EXISTS -&gt; return stored response (no re-processing)<br/>2b. NOT EXISTS -&gt; process payment -&gt; store result with key -&gt; return response"]
-    class N2 secondary
     N3["Client pay_abc123 -&gt; Server"]
-    class N3 secondary
     N4["1. Check -&gt; Redis: EXISTS pay_abc123?"]
-    class N4 secondary
     N5["2a. Yes -&gt; Return stored result<br/>2b. No -&gt; Process -&gt; Store -&gt; Return"]
-    class N5 secondary
     N6["Key generation (client-side):<br/>UUID v4: &quot;550e8400-e29b-41d4-a716-446655440000&quot;<br/>Deterministic: hash(user_id + action + timestamp_minute)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -169,17 +159,10 @@ CREATE UNIQUE INDEX idx_idempotency ON payments (idempotency_key);
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client POST /pay -&gt; Payment API<br/>Key: abc123<br/>1. Check Redis -&gt; EXISTS abc123?<br/>2. Process YES -&gt; return stored<br/>3. Store NO -&gt; process -&gt; store"]
-    class N0 primary
     N1["Request 1 (first attempt):<br/>Key: abc123 not in Redis -&gt; charge card -&gt; store {key: abc123, result: success} -&gt; return 200"]
-    class N1 secondary
     N2["Request 2 (retry, same key):<br/>Key: abc123 found in Redis -&gt; return stored result -&gt; 200 (no double charge)"]
-    class N2 secondary
     N3["Request 3 (different payment):<br/>Key: def456 not in Redis -&gt; charge card -&gt; store -&gt; return 200"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -193,15 +176,9 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client -&gt; API GW -&gt; Idempotency -&gt; Business<br/>(key) Middleware Logic"]
-    class N0 primary
     N1["Check Redis"]
-    class N1 secondary
     N2["Redis &lt;-<br/>(keys)"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```

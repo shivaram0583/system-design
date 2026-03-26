@@ -67,17 +67,10 @@ GET /api/v1/stats/{short_code}
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Table: urls"]
-    class N0 primary
     N1["short_code VARCHAR(7), PRIMARY KEY<br/>long_url TEXT, NOT NULL<br/>user_id UUID (nullable, for registered users)<br/>created_at TIMESTAMP<br/>expires_at TIMESTAMP (nullable)<br/>click_count BIGINT DEFAULT 0"]
-    class N1 secondary
     N2["Database choice:<br/>Primary store: DynamoDB or Cassandra<br/>Key-value access pattern (lookup by short_code)<br/>High read throughput<br/>Horizontal scaling"]
-    class N2 secondary
     N3["Alternative: PostgreSQL + read replicas<br/>If analytics/reporting is important<br/>ACID for URL creation"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

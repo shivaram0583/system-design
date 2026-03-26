@@ -71,23 +71,13 @@ Byzantine Generals Problem:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Raft splits consensus into 3 sub-problems:"]
-    class N0 primary
     N1["1. LEADER ELECTION (covered in Topic 29)<br/>&gt; One leader at a time per term"]
-    class N1 secondary
     N2["2. LOG REPLICATION<br/>Client -&gt; Leader: &quot;Set X=5&quot;<br/>Leader appends to its log: [index:7, term:3, cmd:&quot;Set X=5&quot;]<br/>Leader sends AppendEntries to followers<br/>Follower appends to its log -&gt; ACK<br/>When majority ACK -&gt; Leader commits -&gt; applies to state machine<br/>Leader notifies followers to commit"]
-    class N2 secondary
     N3["Leader Follow 1 Follow 2<br/>Log: Log: Log:<br/>[1][2][3 -&gt; [1][2][3 [1][2]<br/>] ]"]
-    class N3 secondary
     N4["Majority (2/3) have entry 3 -&gt; COMMITTED"]
-    class N4 secondary
     N5["3. SAFETY<br/>Only a node with ALL committed entries can become leader.<br/>Prevents losing committed data during leader changes."]
-    class N5 secondary
     N6["New leader candidate: &quot;My last log entry is index 7, term 3&quot;<br/>Voter checks: &quot;My last entry is index 6, term 3&quot; -&gt; candidate is more up-to-date -&gt; VOTE YES<br/>Voter checks: &quot;My last entry is index 8, term 3&quot; -&gt; I'm more up-to-date -&gt; VOTE NO"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -219,19 +209,11 @@ Multi-Raft (CockroachDB, TiKV):
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["etcd cluster (3 nodes) for service configuration:"]
-    class N0 primary
     N1["etcd 1 &lt;- -&gt; etcd 2 &lt;- -&gt; etcd 3<br/>(Leader) (Follower) (Follower)"]
-    class N1 secondary
     N2["Write: PUT /config/db_host = &quot;10.0.1.5&quot;<br/>1. Client sends to leader (etcd 1)<br/>2. Leader appends to log<br/>3. Leader replicates to etcd 2 and etcd 3<br/>4. etcd 2 ACKs -&gt; majority (2/3) -&gt; committed<br/>5. Leader applies to state machine -&gt; returns success to client"]
-    class N2 secondary
     N3["Read (linearizable):<br/>Client -&gt; Leader -&gt; read from state machine -&gt; return<br/>(Guaranteed to see latest committed value)"]
-    class N3 secondary
     N4["Read (serializable, faster):<br/>Client -&gt; any node -&gt; read from local state machine -&gt; return<br/>(May return slightly stale value if follower is behind)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -246,23 +228,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Clients"]
-    class N0 primary
     N1["App 1 App 2 App 3"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Consensus Group (Raft)"]
-    class N3 secondary
     N4["Node 1 Node 2 Node 3<br/>Leader Follower Follower"]
-    class N4 secondary
     N5["Log: Log: Log:<br/>[1..N] [1..N] [1..N]"]
-    class N5 secondary
     N6["State State State<br/>Machine Machine Machine"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

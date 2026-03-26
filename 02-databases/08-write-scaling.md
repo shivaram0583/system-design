@@ -109,21 +109,12 @@ Split data across multiple database instances by a shard key:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["CQRS (Command Query Responsibility Segregation):<br/>Separate the write model from the read model."]
-    class N0 primary
     N1["Commands (writes)<br/>Application -&gt; Write Store<br/>(PostgreSQL)<br/>Normalized"]
-    class N1 secondary
     N2["events<br/>Queries (reads)<br/>Event Bus<br/>(Kafka)"]
-    class N2 secondary
     N3["Read Store &lt;- Projector<br/>(Elasticsearch / Materialized (builds read<br/>Redis / DynamoDB) views models)<br/>Denormalized"]
-    class N3 secondary
     N4["Write store: optimized for writes (normalized, ACID)<br/>Read store: optimized for reads (denormalized, fast lookups)"]
-    class N4 secondary
     N5["Pros: Independent scaling of reads and writes<br/>Cons: Eventual consistency, complexity, dual data stores"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -135,19 +126,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Multiple nodes accept writes (contrast with single-leader):"]
-    class N0 primary
     N1["Leader A &lt;- -&gt; Leader B &lt;- -&gt; Leader C<br/>(US) (EU) (Asia)"]
-    class N1 secondary
     N2["Each leader accepts writes for its region.<br/>Changes replicated asynchronously to other leaders."]
-    class N2 secondary
     N3["Conflict resolution (same row updated on two leaders):<br/>Last-writer-wins (LWW): Latest timestamp wins (simple, data loss risk)<br/>Merge: Combine changes (complex, application-specific)<br/>Custom resolution: Application decides on conflict"]
-    class N3 secondary
     N4["Used by: CockroachDB, YugabyteDB, Cassandra, DynamoDB Global Tables"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -279,23 +262,13 @@ Adding shards without downtime:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Analytics platform: 100K events/second write throughput"]
-    class N0 primary
     N1["App/SDK -&gt; Kafka Buffer events<br/>(events) (10 partns)"]
-    class N1 secondary
     N2["Consumers Batch writes<br/>(10 workers)"]
-    class N2 secondary
     N3["batch INSERT (1000 rows/batch)"]
-    class N3 secondary
     N4["Sharded PostgreSQL (8 shards)<br/>Shard key: hash(event_id) % 8<br/>Each shard: ~12.5K writes/s<br/>Each shard: primary + 2 replicas"]
-    class N4 secondary
     N5["Total write capacity: 8 × 12.5K = 100K events/s<br/>Kafka absorbs traffic spikes (burst to 500K/s, consumers drain at 100K/s)"]
-    class N5 secondary
     N6["Read path (CQRS):<br/>Events -&gt; Kafka -&gt; ClickHouse (analytics queries)<br/>Events -&gt; Kafka -&gt; Elasticsearch (search)<br/>Events -&gt; Kafka -&gt; Redis (real-time counters)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -312,23 +285,13 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Write Path<br/>Clients -&gt; API Gateway -&gt; Kafka (buffer)"]
-    class N0 primary
     N1["Consumers"]
-    class N1 secondary
     N2["shard router"]
-    class N2 secondary
     N3["Shard 0 Shard 1 Shard 2 ...<br/>Primary Primary Primary<br/>+2 Replica +2 Replica +2 Replica"]
-    class N3 secondary
     N4["Read Path<br/>Clients -&gt; API Gateway -&gt; Read Service"]
-    class N4 secondary
     N5["Read Stores<br/>Redis (cache)<br/>ES (search)<br/>ClickHouse<br/>(analytics)"]
-    class N5 secondary
     N6["Sync: Kafka CDC from shards -&gt; Read stores"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

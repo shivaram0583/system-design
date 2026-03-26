@@ -52,23 +52,13 @@ STATEFUL SERVER:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Pattern: Externalize State"]
-    class N0 primary
     N1["BEFORE (stateful):"]
-    class N1 secondary
     N2["Server 1 &lt;- User A's session lives here<br/>session: If server 1 dies, session is LOST<br/>{user: A}"]
-    class N2 secondary
     N3["AFTER (stateless with external store):"]
-    class N3 secondary
     N4["Server 1 Server 2 &lt;- Both servers are identical<br/>(no state) (no state) Any can serve any user"]
-    class N4 secondary
     N5["Redis &lt;- Session data lives here<br/>{A: {...}} Shared, persistent, replicated"]
-    class N5 secondary
     N6["Request flow:<br/>1. Client sends request with session_id cookie<br/>2. ANY server receives request<br/>3. Server looks up session_id in Redis<br/>4. Server processes request<br/>5. Server returns response"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -222,13 +212,8 @@ STATELESS (externalized cart):
 
 ```mermaid
 flowchart LR
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client -&gt; LB -&gt; App Servers (×N)<br/>JWT Stateless"]
-    class N0 primary
     N1["Redis S3 Postgres<br/>Sessions Files Data<br/>+ Cart"]
-    class N1 secondary
     N0 --> N1
 ```
 

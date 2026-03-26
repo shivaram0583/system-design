@@ -25,15 +25,9 @@ A **timeout** sets the maximum time a client waits for a response before giving 
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["WITHOUT timeout:<br/>Service A request -&gt; Service B (stuck forever)<br/>Thread hangs indefinitely -&gt; thread pool exhaustion -&gt; A crashes"]
-    class N0 primary
     N1["WITH timeout:<br/>Service A request (timeout: 3s) -&gt; Service B<br/>After 3s with no response -&gt; timeout error -&gt; A can respond/retry"]
-    class N1 secondary
     N2["Types:<br/>Connection timeout: Max time to establish TCP connection (1-5s)<br/>Read/Response timeout: Max time to receive response (3-30s)<br/>Overall timeout: Total time for the entire operation (5-60s)"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -93,15 +87,9 @@ Full jitter provides the best spread (recommended by AWS).
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Order of application (outside -&gt; inside):"]
-    class N0 primary
     N1["1. TIMEOUT (outermost) Don't wait forever<br/>2. RETRY + BACKOFF Try again on transient failure<br/>3. CIRCUIT BREAKER Stop trying if dependency is down<br/>4. BULKHEAD Limit concurrent calls<br/>5. ACTUAL CALL (innermost)"]
-    class N1 secondary
     N2["call = timeout(10s,<br/>retry(3, exponential_backoff_with_jitter,<br/>circuit_breaker(threshold=5,<br/>bulkhead(max_concurrent=20,<br/>actual_http_call()))))"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -216,15 +204,9 @@ Order Service calls Payment Service:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Each service has a sidecar proxy (Envoy/Istio)<br/>that handles retry, timeout, and circuit breaking"]
-    class N0 primary
     N1["Svc A Envoy net -&gt; Envoy Svc B<br/>Sidecar Sidecar<br/>3s timeout<br/>2 retries<br/>exp backoff<br/>CB: 5 fail"]
-    class N1 secondary
     N2["Config managed centrally (Istio control plane)<br/>No code changes needed in services"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```

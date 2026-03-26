@@ -166,19 +166,11 @@ Wide-column: Row key → many dynamic columns
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Central FACT table surrounded by DIMENSION tables:"]
-    class N0 primary
     N1["dim_date<br/>date_id<br/>year<br/>quarter<br/>month"]
-    class N1 secondary
     N2["dim_product fact_sales dim_store<br/>product_id -&gt; date_id &lt;- store_id<br/>name product_id city<br/>category store_id region<br/>brand customer_id<br/>quantity<br/>revenue<br/>cost dim_cust<br/>&gt; cust_id<br/>segment"]
-    class N2 secondary
     N3["Query: Revenue by product category and region for Q4 2024<br/>SELECT p.category, s.region, SUM(f.revenue)<br/>FROM fact_sales f<br/>JOIN dim_product p ON f.product_id = p.product_id<br/>JOIN dim_store s ON f.store_id = s.store_id<br/>JOIN dim_date d ON f.date_id = d.date_id<br/>WHERE d.quarter = 'Q4' AND d.year = 2024<br/>GROUP BY p.category, s.region"]
-    class N3 secondary
     N4["Fact table: millions/billions of rows (events, transactions)<br/>Dimension tables: thousands of rows (products, stores, dates)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -236,21 +228,12 @@ BigQuery pricing: $5 per TB scanned
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["E-commerce analytics: track events, compute metrics, serve dashboards."]
-    class N0 primary
     N1["Event sources (web, mobile, API)"]
-    class N1 secondary
     N2["Kafka Event stream<br/>(raw events)"]
-    class N2 secondary
     N3["ClickHouse 10B events, 30-day retention<br/>(3 shards, Partitioned by day<br/>2 replicas) Ordered by event_type, user_id"]
-    class N3 secondary
     N4["Grafana Real-time dashboards<br/>dashboards Sub-second query latency"]
-    class N4 secondary
     N5["ClickHouse query (executes in &lt;1 second on 10B rows):<br/>SELECT<br/>toStartOfHour(event_time) AS hour,<br/>countIf(event_type = 'page_view') AS views,<br/>countIf(event_type = 'add_to_cart') AS adds,<br/>countIf(event_type = 'purchase') AS purchases,<br/>purchases / views AS conversion_rate<br/>FROM events<br/>WHERE event_date = today()<br/>GROUP BY hour<br/>ORDER BY hour"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -266,19 +249,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["OLTP (Source of Truth)<br/>PostgreSQL (orders, users, products)"]
-    class N0 primary
     N1["CDC / ETL Debezium -&gt; Kafka -&gt; Spark<br/>(nightly + or Fivetran / Airbyte<br/>real-time)"]
-    class N1 secondary
     N2["OLAP (Analytics)"]
-    class N2 secondary
     N3["Data Warehouse (Redshift / BigQuery / Snowflake)<br/>fact_orders (partitioned by date)<br/>fact_events (partitioned by date)<br/>dim_users, dim_products, dim_dates<br/>Materialized views for common dashboards"]
-    class N3 secondary
     N4["BI Layer Looker, Metabase, Tableau, Grafana<br/>(dashboards,<br/>reports)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

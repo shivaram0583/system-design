@@ -58,23 +58,13 @@ Every read returns the most recent write. The system behaves as if there's only 
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["STRONG CONSISTENCY:"]
-    class N0 primary
     N1["Time -&gt;"]
-    class N1 secondary
     N2["Client A: WRITE(X=5) -&gt;"]
-    class N2 secondary
     N3["Server 1: X=5 -&gt;<br/>Server 2: X=5 -&gt; (waits for ack)<br/>Server 3: X=5 -&gt;"]
-    class N3 secondary
     N4["Client B: READ(X) -&gt; returns 5 ✓"]
-    class N4 secondary
     N5["Write doesn't return &quot;success&quot; until ALL replicas confirm.<br/>Any read after the write returns the new value."]
-    class N5 secondary
     N6["Cost: Higher latency (must wait for all replicas)<br/>Lower availability (if any replica is down, writes block)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -89,21 +79,12 @@ After a write, replicas will **eventually** converge to the same value, but read
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["EVENTUAL CONSISTENCY:"]
-    class N0 primary
     N1["Time -&gt;"]
-    class N1 secondary
     N2["Client A: WRITE(X=5) ACK -&gt;<br/>(returns immediately)<br/>Server 1: X=5 -&gt;<br/>Server 2: X=3 X=5 -&gt; (replication lag)<br/>Server 3: X=3 X=5 -&gt; (more lag)"]
-    class N2 secondary
     N3["Client B: READ -&gt; X=3 ✗ (stale!)<br/>Client C: READ -&gt; X=5 ✓ (caught up)"]
-    class N3 secondary
     N4["Write returns immediately (only primary confirms).<br/>Reads may be stale for a short window."]
-    class N4 secondary
     N5["Benefit: Lower latency, higher availability<br/>Cost: Clients may see stale data temporarily"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -115,17 +96,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["STRONG EVENTUAL<br/>CONSISTENCY CONSISTENCY"]
-    class N0 primary
     N1["Reads correct? Always ✓ Sometimes stale ✗<br/>Write latency? High (wait for replicas) Low (primary only)<br/>Availability? Lower (blocked if replica down) Higher (always writable)<br/>User experience? Predictable Surprising edge cases"]
-    class N1 secondary
     N2["Strong &lt;- SPECTRUM -&gt; Eventual"]
-    class N2 secondary
     N3["Banking E-commerce Social media DNS<br/>Inventory Shopping cart Likes/views CDN<br/>Distributed Order status Comments Caches<br/>locks"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -171,19 +145,11 @@ A practical approach to tunable consistency:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["N = total replicas = 3<br/>W = write quorum (how many must confirm a write)<br/>R = read quorum (how many must respond to a read)"]
-    class N0 primary
     N1["STRONG CONSISTENCY: W + R &gt; N<br/>Example: W=2, R=2, N=3<br/>Write to 2 of 3 replicas -&gt; At least 1 replica in every read has latest data"]
-    class N1 secondary
     N2["Write:<br/>A ✓ B ✓ C ✗ (2 of 3 confirmed = success)"]
-    class N2 secondary
     N3["Read:<br/>A ✓ B C ✓ (read from 2: at least one has latest)"]
-    class N3 secondary
     N4["Common configs:<br/>W=N, R=1 -&gt; Strong writes, fast reads (read from any replica)<br/>W=1, R=N -&gt; Fast writes, strong reads (read from all)<br/>W=⌈N/2⌉+1, R=⌈N/2⌉+1 -&gt; Balanced<br/>W=1, R=1 -&gt; Eventual consistency (fastest, weakest)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -334,15 +300,9 @@ Resolution (CRDT - Add-Wins Set):
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["US Region EU Region<br/>async<br/>Cart &lt;- -&gt; -&gt; Cart<br/>Service replicate Service"]
-    class N0 primary
     N1["DynamoDB &lt;- global -&gt; -&gt; DynamoDB<br/>Local tables Local"]
-    class N1 secondary
     N2["Consistency model: Eventual with CRDT merge<br/>Read: Always from local region (fast, &lt;5ms)<br/>Write: To local region, async replicate<br/>Conflict: Merge using union (add-wins)"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -364,17 +324,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client SDK<br/>consistency_level = STRONG | EVENTUAL | LOCAL"]
-    class N0 primary
     N1["Router Routes based on key hash + consistency"]
-    class N1 secondary
     N2["Node 1 Node 2 Node 3 (3 replicas per key)<br/>R1 R2 R3"]
-    class N2 secondary
     N3["STRONG read: Read from quorum (2 of 3), return latest<br/>STRONG write: Write to quorum (2 of 3), then ACK<br/>EVENTUAL read: Read from any 1 replica (fastest)<br/>EVENTUAL write: Write to 1 replica, async replicate<br/>LOCAL read: Read from nearest replica"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

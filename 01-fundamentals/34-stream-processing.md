@@ -197,21 +197,12 @@ Kafka Streams: Consumer lag monitoring → auto-scale
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Payment -&gt; Kafka Topic -&gt; Flink Fraud<br/>Service transactions Detection Job"]
-    class N0 primary
     N1["Rules:<br/>&gt;$5K in 1 min<br/>&gt;10 txns/min<br/>New country"]
-    class N1 secondary
     N2["fraud_alerts<br/>(Kafka topic)"]
-    class N2 secondary
     N3["down down down"]
-    class N3 secondary
     N4["Block Alert Dashboard<br/>Payment Team (Grafana)"]
-    class N4 secondary
     N5["Processing time: &lt;500ms from transaction to alert"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -227,21 +218,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Data Sources"]
-    class N0 primary
     N1["Click Txn IoT<br/>Stream Stream Stream"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Kafka (ingestion layer)<br/>Topics: clicks, txns, iot"]
-    class N3 secondary
     N4["Flink (processing layer)<br/>Job 1: Fraud detection<br/>Job 2: Click aggregation<br/>Job 3: IoT anomaly detect<br/>State: RocksDB + S3 ckpt"]
-    class N4 secondary
     N5["Output (serving layer)<br/>Kafka -&gt; Alerts<br/>Redis -&gt; Real-time metrics<br/>S3 -&gt; Data lake (archive)<br/>PostgreSQL -&gt; Aggregates"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

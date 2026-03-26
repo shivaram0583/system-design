@@ -313,27 +313,15 @@ CREATE UNIQUE INDEX idx_orders_tracking ON orders(tracking_number)
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Query Analysis Pipeline"]
-    class N0 primary
     N1["pg_stat_ Slow query Application<br/>statements log query logs"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Query Analyzer<br/>Group similar<br/>Rank by cost<br/>EXPLAIN each"]
-    class N3 secondary
     N4["down"]
-    class N4 secondary
     N5["Index Advisor<br/>Suggest new<br/>Find unused<br/>Find dupes"]
-    class N5 secondary
     N6["down"]
-    class N6 secondary
     N7["Review + Apply<br/>CREATE INDEX<br/>CONCURRENTLY"]
-    class N7 secondary
     N8["Monitoring: Index usage, bloat, size -&gt; Grafana dashboard"]
-    class N8 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

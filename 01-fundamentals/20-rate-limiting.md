@@ -214,17 +214,10 @@ Apply different limits at different levels:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Challenge: Multiple API servers need shared rate limit state."]
-    class N0 primary
     N1["API1 API2 API3 All check the SAME counter"]
-    class N1 secondary
     N2["Redis Atomic increment: INCR user:123:minute:1700000<br/>TTL auto-expires old keys"]
-    class N2 secondary
     N3["Redis Lua script for atomic token bucket:<br/>local tokens = redis.call('get', KEYS[1])<br/>if tokens == false then tokens = ARGV[1] end -- bucket capacity<br/>if tonumber(tokens) &gt; 0 then<br/>redis.call('decr', KEYS[1])<br/>return 1 -- allowed<br/>else<br/>return 0 -- denied<br/>end"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -236,17 +229,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Plan-based limits:<br/>Free: 100 req/min, 1000 req/day<br/>Starter: 500 req/min, 10K req/day<br/>Pro: 2000 req/min, 100K req/day<br/>Enterprise: Custom, 1M+ req/day"]
-    class N0 primary
     N1["Architecture:"]
-    class N1 secondary
     N2["Client -&gt; API Gateway -&gt; Backend<br/>(Rate Limit) Services"]
-    class N2 secondary
     N3["Redis Rate limit counters"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -260,17 +246,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Clients"]
-    class N0 primary
     N1["API Gateway<br/>(Nginx/Kong) check -&gt; Rate Limit<br/>&lt;- allow/deny Service"]
-    class N1 secondary
     N2["Redis<br/>Backend Cluster<br/>Services"]
-    class N2 secondary
     N3["Config DB: rate limit rules per plan/endpoint<br/>Dashboard: real-time rate limit metrics"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

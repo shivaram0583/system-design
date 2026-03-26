@@ -38,17 +38,10 @@ WITH OAuth:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["RESOURCE OWNER: The user who owns the data (e.g., you)<br/>CLIENT: The application requesting access (e.g., a todo app)<br/>AUTHORIZATION SERVER: Issues tokens after user consent (e.g., Google Auth)<br/>RESOURCE SERVER: Hosts the protected data (e.g., Google Calendar API)"]
-    class N0 primary
     N1["Resource consent Authorization Server<br/>Owner (User) -&gt; (Google Accounts)"]
-    class N1 secondary
     N2["token"]
-    class N2 secondary
     N3["Client &lt;-<br/>(Todo App)<br/>token -&gt;<br/>&lt;- data Resource Server<br/>(Google Calendar)"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -293,17 +286,10 @@ Rotate signing keys periodically without downtime:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["1. Click &quot;Login with Google&quot;<br/>Browser -&gt; Your App<br/>Server<br/>2. Redirect to Google<br/>&lt;-"]
-    class N0 primary
     N1["3. Login at Google<br/>&gt;<br/>4. Approve scopes Google<br/>&lt;- Auth<br/>5. Redirect with auth code<br/>&gt;"]
-    class N1 secondary
     N2["code -&gt;<br/>Your App<br/>Server<br/>6. Exchange code for tokens down<br/>(server-to-server) Google<br/>token EP<br/>down<br/>7. Get user info from ID token Create<br/>or /userinfo endpoint session"]
-    class N2 secondary
     N3["8. Set session cookie<br/>&lt;-"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -317,21 +303,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client (Browser / Mobile)"]
-    class N0 primary
     N1["API Gateway Identity Providers<br/>(validates JWT) • Google (OIDC)<br/>GitHub (OAuth)<br/>Internal (OIDC)"]
-    class N1 secondary
     N2["Auth Service &lt;-"]
-    class N2 secondary
     N3["OAuth flows<br/>Token issuance -&gt; PostgreSQL<br/>JWKS endpoint • users<br/>User creation • oauth_connections"]
-    class N3 secondary
     N4["Refresh tokens -&gt;<br/>Sessions Redis"]
-    class N4 secondary
     N5["JWKS: https://auth.yourapp.com/.well-known/jwks.json<br/>Discovery: /.well-known/openid-configuration"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

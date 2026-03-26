@@ -36,15 +36,9 @@ RELATIONAL DB:              BLOB/OBJECT STORAGE:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Bucket: my-app-uploads"]
-    class N0 primary
     N1["images/profile/user_123.jpg (200 KB)<br/>images/profile/user_456.jpg (150 KB)<br/>videos/upload_789.mp4 (500 MB)<br/>backups/db_2024_01_15.sql.gz (2 GB)<br/>logs/2024/01/15/app.log.gz (50 MB)"]
-    class N1 secondary
     N2["Each object:<br/>Key: &quot;images/profile/user_123.jpg&quot;<br/>Data: Binary content (the actual image)<br/>Metadata: Content-Type, size, upload date, custom headers<br/>URL: https://my-app-uploads.s3.amazonaws.com/images/profile/user_123.jpg"]
-    class N2 secondary
     N0 --> N1
     N1 --> N2
 ```
@@ -181,23 +175,13 @@ Automate cost optimization:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["1. Request upload URL<br/>Client -&gt; API<br/>&lt;- Server<br/>2. Pre-signed PUT URL"]
-    class N0 primary
     N1["3. PUT image directly<br/>&gt;<br/>S3<br/>Bucket"]
-    class N1 secondary
     N2["S3 Event"]
-    class N2 secondary
     N3["Lambda 4. Resize image<br/>(resize) (thumb, medium, large)"]
-    class N3 secondary
     N4["Save variants"]
-    class N4 secondary
     N5["S3<br/>(output)"]
-    class N5 secondary
     N6["CloudFront 5. Serve via CDN<br/>(CDN)"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -214,19 +198,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client<br/>upload download<br/>down down"]
-    class N0 primary
     N1["API Svc CDN (cache + serve)<br/>(signed CloudFront<br/>URLs)<br/>origin"]
-    class N1 secondary
     N2["S3 Bucket<br/>/uploads/raw/ (original)<br/>/uploads/thumb/ (200px)<br/>/uploads/medium/ (800px)<br/>/uploads/large/ (1920px)"]
-    class N2 secondary
     N3["Metadata DB (PostgreSQL):<br/>files (id, user_id, s3_key, size, content_type,<br/>upload_status, created_at)"]
-    class N3 secondary
     N4["Processing: S3 Event -&gt; Lambda -&gt; resize + virus scan<br/>Lifecycle: Standard -&gt; IA (30d) -&gt; Glacier (90d)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

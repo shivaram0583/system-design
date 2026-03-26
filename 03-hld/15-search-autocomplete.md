@@ -60,19 +60,11 @@ graph TD
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Trie: Tree where each node is a character, paths form words."]
-    class N0 primary
     N1["Root<br/>i<br/>p<br/>h<br/>o<br/>n<br/>e [*] (count: 50M) -&gt; &quot;iphone&quot;<br/>1<br/>5 [*] (count: 20M) -&gt; &quot;iphone 15&quot;<br/>6 [*] (count: 8M) -&gt; &quot;iphone 16&quot;<br/>a<br/>d [*] (count: 30M) -&gt; &quot;ipad&quot;"]
-    class N1 secondary
     N2["Query &quot;iph&quot; -&gt; traverse to node 'h' -&gt; return top-K descendants:<br/>1. &quot;iphone&quot; (50M)<br/>2. &quot;ipad&quot; (30M) -- wait, this doesn't match &quot;iph&quot;"]
-    class N2 secondary
     N3["Corrected: &quot;iph&quot; matches &quot;iphone&quot;, &quot;iphone 15&quot;, &quot;iphone 16&quot;"]
-    class N3 secondary
     N4["Optimization: Store top-K results at each node<br/>Node 'h' caches: [&quot;iphone&quot;, &quot;iphone 15&quot;, &quot;iphone 16&quot;, &quot;iphoto&quot;, ...]<br/>No need to traverse subtree at query time -&gt; O(prefix_length) lookup"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

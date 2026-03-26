@@ -103,23 +103,13 @@ Intentionally adding redundancy to speed up reads.
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["NoSQL: Start with queries, design schema to serve them."]
-    class N0 primary
     N1["Access patterns for a chat app:<br/>1. Get messages for chat X, sorted by time (most recent first)<br/>2. Get all chats for user Y<br/>3. Get unread count for user Y"]
-    class N1 secondary
     N2["DynamoDB design:"]
-    class N2 secondary
     N3["Table: Messages<br/>PK: chat_id SK: timestamp#message_id"]
-    class N3 secondary
     N4["chat_id SK sender content<br/>chat_123 2024-01-15T10:00#m1 alice hello<br/>chat_123 2024-01-15T10:01#m2 bob hi"]
-    class N4 secondary
     N5["GSI (Global Secondary Index) for pattern 2:<br/>GSI-PK: user_id GSI-SK: last_message_time<br/>&gt; Get all chats for a user, sorted by most recent"]
-    class N5 secondary
     N6["Pattern 3: Store unread_count as an attribute on the chat item<br/>Increment atomically on new message, reset on read"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -322,25 +312,14 @@ CREATE TABLE reviews (
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Step 1: IDENTIFY ENTITIES<br/>Users, Products, Orders, Reviews, Categories"]
-    class N0 primary
     N1["Step 2: DEFINE RELATIONSHIPS<br/>User 1:N Orders, Order N:M Products, Product 1:N Reviews"]
-    class N1 secondary
     N2["Step 3: LIST ACCESS PATTERNS<br/>Get user profile by ID<br/>Get orders for user (sorted by date)<br/>Get products by category (with filters)<br/>Get reviews for product (sorted by date)<br/>Search products by name<br/>Get order with all items and product details"]
-    class N2 secondary
     N3["Step 4: CHOOSE DATABASE<br/>SQL (PostgreSQL): Transactions, JOINs, structured data<br/>+ JSONB for flexible attributes"]
-    class N3 secondary
     N4["Step 5: NORMALIZE (3NF baseline)<br/>Separate tables for each entity"]
-    class N4 secondary
     N5["Step 6: DENORMALIZE FOR PERFORMANCE<br/>unit_price snapshot on order_items<br/>avg_rating on products (materialized)<br/>user_name on orders (for listing without JOIN)"]
-    class N5 secondary
     N6["Step 7: ADD INDEXES<br/>Based on access patterns (WHERE, ORDER BY, JOIN columns)"]
-    class N6 secondary
     N7["Step 8: PLAN MIGRATIONS<br/>Schema changes must be backward-compatible"]
-    class N7 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

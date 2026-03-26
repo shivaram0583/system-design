@@ -107,11 +107,12 @@ Example: 100 requests, sorted by latency:
 - Tail latency matters because high-value customers often trigger complex queries (more data, more items, more history) → they experience p99
 
 ```mermaid
-xychart-beta
-    title "Latency Percentile Distribution"
-    x-axis ["p10", "p25", "p50", "p75", "p90", "p95", "p99", "p100"]
-    y-axis "Latency (ms)" 0 --> 2500
-    bar [10, 20, 45, 80, 120, 250, 800, 2500]
+flowchart TB
+    T["Latency Percentile Distribution"]
+    C["Categories: p10, p25, p50, p75, p90, p95, p99, p100"]
+    T --> C
+    S0["bar: 10, 20, 45, 80, 120, 250, 800, 2500"]
+    C --> S0
 ```
 
 > **Most users** (p50 and below) get fast responses. The **tail** (p99+) experiences 10-50x worse latency — and these are often your highest-value customers.
@@ -121,11 +122,12 @@ xychart-beta
 Latency and throughput are **often inversely related** under load:
 
 ```mermaid
-xychart-beta
-    title "Latency vs Throughput Curve"
-    x-axis "Throughput (% of Max)" ["10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"]
-    y-axis "Latency (ms)" 0 --> 500
-    line [10, 12, 15, 20, 30, 50, 90, 180, 350, 500]
+flowchart TB
+    T["Latency vs Throughput Curve"]
+    C["Categories: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100%"]
+    T --> C
+    S0["line: 10, 12, 15, 20, 30, 50, 90, 180, 350, 500"]
+    C --> S0
 ```
 
 > As throughput increases → latency stays flat initially → then rises gradually → then **EXPLODES** near capacity. **Rule of thumb**: Operate at 50-70% of max throughput to keep latency reasonable.
@@ -293,19 +295,11 @@ For complex systems, break down the **latency budget** per component:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Total Budget: 200ms (p99)"]
-    class N0 primary
     N1["API Request"]
-    class N1 secondary
     N2["Network to LB: 5ms<br/>LB to App Server: 1ms<br/>Auth middleware: 5ms (JWT validation)<br/>Business logic: 10ms<br/>Cache lookup: 1ms (Redis)<br/>DB query (on miss): 30ms (PostgreSQL)<br/>External API call: 80ms (payment gateway)<br/>Response serialization: 3ms<br/>Network back: 5ms"]
-    class N2 secondary
     N3["Total: 140ms (within 200ms)<br/>Buffer: 60ms (for spikes)"]
-    class N3 secondary
     N4["If any component exceeds its budget, the whole request is at risk."]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -563,23 +557,13 @@ flowchart TD
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Request arrives:"]
-    class N0 primary
     N1["1. Check CDN cache (edge)<br/>HIT -&gt; Return (5ms) Miss rate: ~30%<br/>MISS down"]
-    class N1 secondary
     N2["2. Check L1 cache (in-process, per server)<br/>HIT -&gt; Return (0.01ms) Miss rate: ~50%<br/>MISS down"]
-    class N2 secondary
     N3["3. Check L2 cache (Redis, shared)<br/>HIT -&gt; Return (0.5ms) Miss rate: ~10%<br/>MISS down"]
-    class N3 secondary
     N4["4. Query DB read replica<br/>Return + populate L2 + L1 (5-20ms)"]
-    class N4 secondary
     N5["Overall cache hit rate: ~97%<br/>Only ~3% of requests hit the database"]
-    class N5 secondary
     N6["Effective avg latency:<br/>0.70 × 5ms (CDN) + 0.15 × 0.5ms (L1) + 0.12 × 1ms (L2) + 0.03 × 15ms (DB)<br/>= 3.5 + 0.075 + 0.12 + 0.45<br/>≈ 4.1ms average"]
-    class N6 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -628,27 +612,15 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["LatencyTracker"]
-    class N0 primary
     N1["histogram: HDRHistogram<br/>windowSize: Duration<br/>serviceName: string<br/>operationName: string"]
-    class N1 secondary
     N2["+ recordLatency(ms: float): void<br/>+ getP50(): float<br/>+ getP95(): float<br/>+ getP99(): float<br/>+ getP999(): float<br/>+ getMean(): float<br/>+ getMax(): float<br/>+ getThroughput(): float<br/>+ reset(): void<br/>+ snapshot(): LatencySnapshot"]
-    class N2 secondary
     N3["Timer Throughput SLO<br/>Middleware Counter Checker"]
-    class N3 secondary
     N4["Wraps Count req Compare<br/>handlers per second against<br/>to auto targets<br/>record<br/>latency Alert if<br/>violated"]
-    class N4 secondary
     N5["LatencySnapshot"]
-    class N5 secondary
     N6["timestamp: datetime<br/>p50: float<br/>p95: float<br/>p99: float<br/>p999: float<br/>mean: float<br/>max: float<br/>count: int<br/>throughput: float<br/>errorRate: float"]
-    class N6 secondary
     N7["SLOConfig"]
-    class N7 secondary
     N8["p99Target: float (ms)<br/>p95Target: float (ms)<br/>throughputMin: float (req/sec)<br/>errorRateMax: float (%)<br/>windowSize: Duration"]
-    class N8 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -833,25 +805,14 @@ public class TimerMiddleware {
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Client LB TimerMW Handler Cache DB"]
-    class N0 primary
     N1["GET /item -&gt;<br/>forward -&gt;<br/>start_timer"]
-    class N1 secondary
     N2["handler() -&gt;<br/>GET key -&gt;<br/>&lt;- MISS"]
-    class N2 secondary
     N3["SELECT -&gt;<br/>&lt;- row data"]
-    class N3 secondary
     N4["SET cache -&gt;"]
-    class N4 secondary
     N5["&lt;- response"]
-    class N5 secondary
     N6["stop_timer<br/>latency = 23ms<br/>tracker.record(<br/>&quot;GET /item&quot;, 23)"]
-    class N6 secondary
     N7["&lt;- response<br/>&lt;- 200 OK<br/>(23ms)"]
-    class N7 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

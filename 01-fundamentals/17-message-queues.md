@@ -25,17 +25,10 @@ A **message queue** is middleware that enables asynchronous communication betwee
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["SYNCHRONOUS (without queue):<br/>Order Service wait 5s -&gt; Email Service<br/>User waits for email to be sent before getting order confirmation."]
-    class N0 primary
     N1["ASYNCHRONOUS (with queue):<br/>Order Service -&gt; [Queue] -&gt; Email Service<br/>User gets instant confirmation. Email sent in background."]
-    class N1 secondary
     N2["Producer -&gt; Message -&gt; Consumer<br/>(Order) Queue (Email)"]
-    class N2 secondary
     N3["M M M M"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -56,17 +49,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["QUEUE (Point-to-Point):<br/>Each message consumed by exactly ONE consumer."]
-    class N0 primary
     N1["Producer -&gt; Queue -&gt; Consumer 1 &lt;- Gets message A<br/>A,B,C -&gt; Consumer 2 &lt;- Gets message B<br/>&gt; Consumer 3 &lt;- Gets message C<br/>Use: Task distribution, work queues"]
-    class N1 secondary
     N2["TOPIC (Pub-Sub):<br/>Each message delivered to ALL subscribers."]
-    class N2 secondary
     N3["Producer -&gt; Topic -&gt; Subscriber 1 &lt;- Gets ALL messages<br/>A,B,C -&gt; Subscriber 2 &lt;- Gets ALL messages<br/>&gt; Subscriber 3 &lt;- Gets ALL messages<br/>Use: Event broadcasting, notifications"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -97,17 +83,10 @@ AT-LEAST-ONCE flow:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["When a message can't be processed after N retries:"]
-    class N0 primary
     N1["Producer -&gt; Main -&gt; Consumer<br/>Queue"]
-    class N1 secondary
     N2["(failed N times)"]
-    class N2 secondary
     N3["DLQ &lt;- Messages that couldn't be processed<br/>(Dead Investigate manually or re-process later<br/>Letter) Alert if DLQ depth &gt; threshold"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -206,19 +185,11 @@ Alerts:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Order -&gt; Kafka Topic: -&gt; Payment<br/>Service order.created Consumer"]
-    class N0 primary
     N1["&gt;<br/>Inventory<br/>Consumer"]
-    class N1 secondary
     N2["&gt;<br/>Notification<br/>Consumer"]
-    class N2 secondary
     N3["&gt;<br/>Analytics<br/>Consumer"]
-    class N3 secondary
     N4["Each consumer is a different consumer group:<br/>Payment: Must process every order (at-least-once)<br/>Inventory: Must process every order (at-least-once)<br/>Notification: Best-effort (at-most-once OK)<br/>Analytics: Can tolerate delay, replays welcome"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -233,21 +204,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["API Gateway"]
-    class N0 primary
     N1["Order Svc Validates + saves order + publishes<br/>(Postgres)"]
-    class N1 secondary
     N2["Kafka (3 brokers, RF=3)<br/>Topic: orders (6 partitions)"]
-    class N2 secondary
     N3["Pay Inv Notif Analyt<br/>(×3) (×3) (×2) (×1)"]
-    class N3 secondary
     N4["Stripe Redis SES/FCM"]
-    class N4 secondary
     N5["DLQ: orders.dlq -&gt; Alert + manual retry"]
-    class N5 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3

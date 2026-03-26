@@ -185,12 +185,14 @@ graph TD
 #### 1. Development Velocity
 
 ```mermaid
-xychart-beta
-    title "Development Velocity vs Team Size"
-    x-axis ["Small Team", "Growing", "Medium", "Large Team"]
-    y-axis "Velocity" 0 --> 100
-    line "Monolith" [80, 70, 50, 30]
-    line "Microservices" [30, 50, 70, 90]
+flowchart TB
+    T["Development Velocity vs Team Size"]
+    C["Categories: Small Team, Growing, Medium, Large Team"]
+    T --> C
+    S0["Monolith: 80, 70, 50, 30"]
+    C --> S0
+    S1["Microservices: 30, 50, 70, 90"]
+    S0 --> S1
 ```
 
 > **Insight**: Monolith wins for small teams (simpler, faster to start). Microservices win for large teams (teams work independently).

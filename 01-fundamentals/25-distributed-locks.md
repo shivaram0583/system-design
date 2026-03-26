@@ -205,17 +205,10 @@ Alerts:
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["E-commerce: Reserve last item"]
-    class N0 primary
     N1["Order -&gt; Redis -&gt; Inventory<br/>Service Lock DB"]
-    class N1 secondary
     N2["Flow:<br/>1. Acquire lock: SET lock:product_456 {owner} NX EX 10<br/>2. Read inventory: SELECT stock FROM products WHERE id = 456<br/>3. If stock &gt; 0: UPDATE products SET stock = stock - 1 WHERE id = 456<br/>4. Release lock: DEL lock:product_456 (with owner check)"]
-    class N2 secondary
     N3["Better approach (no lock needed):<br/>UPDATE products SET stock = stock - 1 WHERE id = 456 AND stock &gt; 0;<br/>If rows_affected = 0 -&gt; out of stock (atomic, no lock!)"]
-    class N3 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -229,19 +222,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
-    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
-    linkStyle default stroke:#64748b,stroke-width:1.3px;
     N0["Clients (multiple services)"]
-    class N0 primary
     N1["Svc A Svc B Svc C"]
-    class N1 secondary
     N2["down"]
-    class N2 secondary
     N3["Lock Service API<br/>POST /lock/acquire<br/>POST /lock/release<br/>POST /lock/extend"]
-    class N3 secondary
     N4["Redis Cluster<br/>(3 masters, 3 replicas)"]
-    class N4 secondary
     N0 --> N1
     N1 --> N2
     N2 --> N3
