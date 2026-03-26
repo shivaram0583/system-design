@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="980" viewBox="0 0 1480 980" role="img" aria-labelledby="title desc">
+  <title id="title">Tier Models from Local Apps to Production Systems</title>
+  <desc id="desc">High-fidelity system design visual for the client-server architecture section.</desc>
+  <defs>
+    <linearGradient id="page" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff" />
+      <stop offset="100%" stop-color="#eef4ff" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f6fed" />
+      <stop offset="100%" stop-color="#1944b9" />
+    </linearGradient>
+    <linearGradient id="accentTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17b8a6" />
+      <stop offset="100%" stop-color="#0e8e7e" />
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcd57" />
+      <stop offset="100%" stop-color="#f59f0a" />
+    </linearGradient>
+    <linearGradient id="accentRose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b8f" />
+      <stop offset="100%" stop-color="#df5170" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#adc3e6" flood-opacity="0.38" />
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#274690"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#5a78c8"/>
+    </marker>
+    <style>
+      .bg { fill: url(#page); }
+      .panel { fill: #ffffff; stroke: #d7e3fb; stroke-width: 1.4; filter: url(#shadow); }
+      .soft { fill: #f8fbff; stroke: #d7e3fb; stroke-width: 1.2; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #0f254e; }
+      .subtitle { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #496288; }
+      .cardTitle { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #102a56; }
+      .cardBody { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+      .small { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #496288; text-transform: uppercase; letter-spacing: 1px; }
+      .tiny { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #6a7fa2; letter-spacing: 0.4px; }
+      .labelDark { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #143160; }
+      .node { fill: #ffffff; stroke: #bed2f4; stroke-width: 1.4; }
+      .nodeBlue { fill: #edf4ff; stroke: #95b8ff; stroke-width: 1.4; }
+      .nodeTeal { fill: #ebfffb; stroke: #76d8cc; stroke-width: 1.4; }
+      .nodeGold { fill: #fff8e7; stroke: #f4c55d; stroke-width: 1.4; }
+      .nodeRose { fill: #fff1f4; stroke: #f0a1b4; stroke-width: 1.4; }
+      .accentBlue { fill: url(#accentBlue); }
+      .accentTeal { fill: url(#accentTeal); }
+      .accentGold { fill: url(#accentGold); }
+      .accentRose { fill: url(#accentRose); }
+      .white { fill: #ffffff; font: 700 18px "Segoe UI", Arial, sans-serif; }
+      .line { stroke: #274690; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .lineSoft { stroke: #5a78c8; stroke-width: 3; fill: none; marker-end: url(#arrowSoft); }
+      .guide { stroke: #bfd0f1; stroke-width: 2; fill: none; }
+      .guideSoft { stroke: #dce7fb; stroke-width: 1.6; fill: none; stroke-dasharray: 10 8; }
+      .dashed { stroke-dasharray: 12 10; }
+      .stepLabel { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1480" height="980" rx="28" />
+  <text x="48" y="58" class="title">Tier Models from Local Apps to Production Systems</text>
+  <text x="48" y="86" class="subtitle">GitHub-safe SVG infographic for cleaner documentation rendering</text>
+  
+  
+  <rect x="70" y="150" width="1320" height="760" rx="24" class="panel" />
+  <text x="90" y="184" class="small">Architecture Families</text>
+  
+  
+  <rect x="110" y="218" width="260" height="180" rx="24" class="nodeBlue" />
+  <text x="130" y="252" class="small">1-Tier</text>
+  <text x="130" y="282" class="cardBody">UI, logic, and storage</text>
+<text x="130" y="306" class="cardBody">live on one machine</text>
+<text x="130" y="330" class="cardBody">Example: desktop app + SQLite</text>
+  
+  <rect x="430" y="218" width="260" height="180" rx="24" class="nodeGold" />
+  <text x="450" y="252" class="small">2-Tier</text>
+  <text x="450" y="282" class="cardBody">Client talks directly</text>
+<text x="450" y="306" class="cardBody">to an application or DB server</text>
+<text x="450" y="330" class="cardBody">Good for simple internal tools</text>
+  
+  <rect x="750" y="218" width="260" height="180" rx="24" class="nodeTeal" />
+  <text x="770" y="252" class="small">3-Tier</text>
+  <text x="770" y="282" class="cardBody">Presentation -&gt; business logic -&gt; data</text>
+<text x="770" y="306" class="cardBody">Most common web app pattern</text>
+<text x="770" y="330" class="cardBody">Scales each tier independently</text>
+  
+  <rect x="1070" y="218" width="260" height="180" rx="24" class="nodeRose" />
+  <text x="1090" y="252" class="small">N-Tier</text>
+  <text x="1090" y="282" class="cardBody">Adds CDN, load balancers, queues,</text>
+<text x="1090" y="306" class="cardBody">caches, auth layers, and analytics</text>
+<text x="1090" y="330" class="cardBody">Typical interview-ready production view</text>
+
+  
+  <rect x="136" y="470" width="210" height="110" rx="24" class="soft" />
+  <text x="156" y="504" class="small">Single Machine</text>
+  <text x="156" y="534" class="cardBody">UI | Logic | DB</text>
+  
+  <rect x="452" y="470" width="210" height="110" rx="24" class="soft" />
+  <text x="472" y="504" class="small">Client &lt;-&gt; Server</text>
+  <text x="472" y="534" class="cardBody">UI + some logic</text>
+<text x="472" y="558" class="cardBody">talks to remote backend</text>
+  
+  <rect x="772" y="450" width="220" height="150" rx="24" class="soft" />
+  <text x="792" y="484" class="small">Client &lt;-&gt; App &lt;-&gt; DB</text>
+  <text x="792" y="514" class="cardBody">Clear concern boundaries</text>
+<text x="792" y="538" class="cardBody">clean scaling story</text>
+  
+  <rect x="1092" y="430" width="220" height="190" rx="24" class="soft" />
+  <text x="1112" y="464" class="small">Client -&gt; CDN -&gt; LB -&gt; App -&gt; Cache -&gt; DB</text>
+  <text x="1112" y="494" class="cardBody">Security, elasticity, and performance</text>
+<text x="1112" y="518" class="cardBody">become first-class design goals</text>
+
+  
+  <path d="M 346 525 L 430 525" class="line" />
+  
+  
+  <path d="M 662 525 L 750 525" class="line" />
+  
+  
+  <path d="M 992 525 L 1092 525" class="line" />
+  
+  
+  <rect x="120" y="690" width="1240" height="120" rx="24" class="soft" />
+  <text x="140" y="724" class="small">How to Read the Progression</text>
+  <text x="140" y="754" class="cardBody">Every step adds a clearer separation of responsibilities and a better scaling story. The trade-off is more infrastructure, more coordination, and more operational complexity.</text>
+  
+</svg>

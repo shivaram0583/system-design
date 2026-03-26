@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Client-Server at a Glance</title>
+  <desc id="desc">High-fidelity system design visual for the client-server architecture section.</desc>
+  <defs>
+    <linearGradient id="page" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff" />
+      <stop offset="100%" stop-color="#eef4ff" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f6fed" />
+      <stop offset="100%" stop-color="#1944b9" />
+    </linearGradient>
+    <linearGradient id="accentTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17b8a6" />
+      <stop offset="100%" stop-color="#0e8e7e" />
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcd57" />
+      <stop offset="100%" stop-color="#f59f0a" />
+    </linearGradient>
+    <linearGradient id="accentRose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b8f" />
+      <stop offset="100%" stop-color="#df5170" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#adc3e6" flood-opacity="0.38" />
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#274690"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#5a78c8"/>
+    </marker>
+    <style>
+      .bg { fill: url(#page); }
+      .panel { fill: #ffffff; stroke: #d7e3fb; stroke-width: 1.4; filter: url(#shadow); }
+      .soft { fill: #f8fbff; stroke: #d7e3fb; stroke-width: 1.2; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #0f254e; }
+      .subtitle { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #496288; }
+      .cardTitle { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #102a56; }
+      .cardBody { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+      .small { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #496288; text-transform: uppercase; letter-spacing: 1px; }
+      .tiny { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #6a7fa2; letter-spacing: 0.4px; }
+      .labelDark { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #143160; }
+      .node { fill: #ffffff; stroke: #bed2f4; stroke-width: 1.4; }
+      .nodeBlue { fill: #edf4ff; stroke: #95b8ff; stroke-width: 1.4; }
+      .nodeTeal { fill: #ebfffb; stroke: #76d8cc; stroke-width: 1.4; }
+      .nodeGold { fill: #fff8e7; stroke: #f4c55d; stroke-width: 1.4; }
+      .nodeRose { fill: #fff1f4; stroke: #f0a1b4; stroke-width: 1.4; }
+      .accentBlue { fill: url(#accentBlue); }
+      .accentTeal { fill: url(#accentTeal); }
+      .accentGold { fill: url(#accentGold); }
+      .accentRose { fill: url(#accentRose); }
+      .white { fill: #ffffff; font: 700 18px "Segoe UI", Arial, sans-serif; }
+      .line { stroke: #274690; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .lineSoft { stroke: #5a78c8; stroke-width: 3; fill: none; marker-end: url(#arrowSoft); }
+      .guide { stroke: #bfd0f1; stroke-width: 2; fill: none; }
+      .guideSoft { stroke: #dce7fb; stroke-width: 1.6; fill: none; stroke-dasharray: 10 8; }
+      .dashed { stroke-dasharray: 12 10; }
+      .stepLabel { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1280" height="760" rx="28" />
+  <text x="48" y="58" class="title">Client-Server at a Glance</text>
+  <text x="48" y="86" class="subtitle">GitHub-safe SVG infographic for cleaner documentation rendering</text>
+  
+  
+  <rect x="58" y="160" width="300" height="230" rx="24" class="panel" />
+  <text x="78" y="194" class="small">Client</text>
+  <text x="78" y="224" class="cardBody">Browser, mobile app, CLI, or script</text>
+<text x="78" y="248" class="cardBody">Initiates requests and renders results</text>
+<text x="78" y="272" class="cardBody">Handles UI, local state, and caching</text>
+  
+  <rect x="922" y="160" width="300" height="230" rx="24" class="panel" />
+  <text x="942" y="194" class="small">Server</text>
+  <text x="942" y="224" class="cardBody">Accepts requests over HTTP/gRPC/WebSocket</text>
+<text x="942" y="248" class="cardBody">Runs authentication, business logic, and data access</text>
+<text x="942" y="272" class="cardBody">Returns a response or streamed updates</text>
+  
+  <rect x="432" y="144" width="420" height="120" rx="24" class="soft" />
+  <text x="452" y="178" class="small">Network Contract</text>
+  <text x="452" y="208" class="cardBody">DNS -&gt; TCP/TLS -&gt; HTTP or another application protocol</text>
+<text x="452" y="232" class="cardBody">A request asks for work; a response carries data or status</text>
+  
+  <rect x="432" y="320" width="420" height="180" rx="24" class="soft" />
+  <text x="452" y="354" class="small">Why This Model Wins</text>
+  <text x="452" y="384" class="cardBody">Centralized data and policy enforcement</text>
+<text x="452" y="408" class="cardBody">Independent scaling for clients and servers</text>
+<text x="452" y="432" class="cardBody">One backend serving web, mobile, and partner APIs</text>
+<text x="452" y="456" class="cardBody">Security boundaries stay on the server side</text>
+  
+  <rect x="146" y="458" width="128" height="48" rx="24" class="accentBlue" />
+  <text x="210" y="488" text-anchor="middle" class="white">Request</text>
+  
+  <rect x="1008" y="458" width="128" height="48" rx="24" class="accentTeal" />
+  <text x="1072" y="488" text-anchor="middle" class="white">Response</text>
+  
+  <path d="M 360 278 L 430 278" class="line" />
+  <text x="395" y="268" text-anchor="middle" class="stepLabel">Send</text>
+  
+  <path d="M 850 420 L 790 420" class="lineSoft" />
+  <text x="820" y="410" text-anchor="middle" class="stepLabel">Return</text>
+  
+  <rect x="432" y="562" width="420" height="124" rx="24" class="nodeBlue" />
+  <text x="452" y="596" class="small">Typical Examples</text>
+  <text x="452" y="626" class="cardBody">Web app page loads</text>
+<text x="452" y="650" class="cardBody">API requests from mobile apps</text>
+<text x="452" y="674" class="cardBody">Service-to-service calls in microservices</text>
+  
+</svg>

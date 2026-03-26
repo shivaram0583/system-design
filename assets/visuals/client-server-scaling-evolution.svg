@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="920" viewBox="0 0 1480 920" role="img" aria-labelledby="title desc">
+  <title id="title">How a Server Tier Evolves Under Load</title>
+  <desc id="desc">High-fidelity system design visual for the client-server architecture section.</desc>
+  <defs>
+    <linearGradient id="page" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff" />
+      <stop offset="100%" stop-color="#eef4ff" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f6fed" />
+      <stop offset="100%" stop-color="#1944b9" />
+    </linearGradient>
+    <linearGradient id="accentTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17b8a6" />
+      <stop offset="100%" stop-color="#0e8e7e" />
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcd57" />
+      <stop offset="100%" stop-color="#f59f0a" />
+    </linearGradient>
+    <linearGradient id="accentRose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b8f" />
+      <stop offset="100%" stop-color="#df5170" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#adc3e6" flood-opacity="0.38" />
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#274690"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#5a78c8"/>
+    </marker>
+    <style>
+      .bg { fill: url(#page); }
+      .panel { fill: #ffffff; stroke: #d7e3fb; stroke-width: 1.4; filter: url(#shadow); }
+      .soft { fill: #f8fbff; stroke: #d7e3fb; stroke-width: 1.2; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #0f254e; }
+      .subtitle { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #496288; }
+      .cardTitle { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #102a56; }
+      .cardBody { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+      .small { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #496288; text-transform: uppercase; letter-spacing: 1px; }
+      .tiny { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #6a7fa2; letter-spacing: 0.4px; }
+      .labelDark { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #143160; }
+      .node { fill: #ffffff; stroke: #bed2f4; stroke-width: 1.4; }
+      .nodeBlue { fill: #edf4ff; stroke: #95b8ff; stroke-width: 1.4; }
+      .nodeTeal { fill: #ebfffb; stroke: #76d8cc; stroke-width: 1.4; }
+      .nodeGold { fill: #fff8e7; stroke: #f4c55d; stroke-width: 1.4; }
+      .nodeRose { fill: #fff1f4; stroke: #f0a1b4; stroke-width: 1.4; }
+      .accentBlue { fill: url(#accentBlue); }
+      .accentTeal { fill: url(#accentTeal); }
+      .accentGold { fill: url(#accentGold); }
+      .accentRose { fill: url(#accentRose); }
+      .white { fill: #ffffff; font: 700 18px "Segoe UI", Arial, sans-serif; }
+      .line { stroke: #274690; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .lineSoft { stroke: #5a78c8; stroke-width: 3; fill: none; marker-end: url(#arrowSoft); }
+      .guide { stroke: #bfd0f1; stroke-width: 2; fill: none; }
+      .guideSoft { stroke: #dce7fb; stroke-width: 1.6; fill: none; stroke-dasharray: 10 8; }
+      .dashed { stroke-dasharray: 12 10; }
+      .stepLabel { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1480" height="920" rx="28" />
+  <text x="48" y="58" class="title">How a Server Tier Evolves Under Load</text>
+  <text x="48" y="86" class="subtitle">GitHub-safe SVG infographic for cleaner documentation rendering</text>
+  
+  
+  <rect x="74" y="152" width="1328" height="700" rx="24" class="panel" />
+  <text x="94" y="186" class="small">From one box to many specialized layers</text>
+  
+  
+  <rect x="106" y="228" width="250" height="190" rx="24" class="nodeBlue" />
+  <text x="126" y="262" class="small">Stage 1</text>
+  <text x="126" y="292" class="cardBody">Client -&gt; single server</text>
+<text x="126" y="316" class="cardBody">Simple and cheap</text>
+<text x="126" y="340" class="cardBody">Fails once traffic spikes</text>
+  
+  <rect x="432" y="228" width="250" height="190" rx="24" class="nodeGold" />
+  <text x="452" y="262" class="small">Stage 2</text>
+  <text x="452" y="292" class="cardBody">Application server separated</text>
+<text x="452" y="316" class="cardBody">from the database</text>
+<text x="452" y="340" class="cardBody">Lets each part scale independently</text>
+  
+  <rect x="758" y="228" width="250" height="190" rx="24" class="nodeTeal" />
+  <text x="778" y="262" class="small">Stage 3</text>
+  <text x="778" y="292" class="cardBody">Load balancer + multiple</text>
+<text x="778" y="316" class="cardBody">stateless app servers</text>
+<text x="778" y="340" class="cardBody">Database remains central</text>
+  
+  <rect x="1084" y="228" width="250" height="190" rx="24" class="nodeRose" />
+  <text x="1104" y="262" class="small">Stage 4</text>
+  <text x="1104" y="292" class="cardBody">CDN, cache, queue, read replicas,</text>
+<text x="1104" y="316" class="cardBody">and horizontally scaled services</text>
+<text x="1104" y="340" class="cardBody">Full production posture</text>
+
+  
+  <rect x="118" y="500" width="226" height="106" rx="24" class="soft" />
+  <text x="138" y="534" class="small">Client -&gt; Server + DB</text>
+  
+  
+  <rect x="444" y="500" width="226" height="106" rx="24" class="soft" />
+  <text x="464" y="534" class="small">Client -&gt; Server -&gt; DB</text>
+  
+  
+  <rect x="770" y="480" width="226" height="146" rx="24" class="soft" />
+  <text x="790" y="514" class="small">Clients -&gt; LB -&gt; Servers -&gt; DB</text>
+  <text x="790" y="544" class="cardBody">LB fans out traffic</text>
+  
+  <rect x="1096" y="460" width="226" height="186" rx="24" class="soft" />
+  <text x="1116" y="494" class="small">Client -&gt; CDN -&gt; LB -&gt; Servers</text>
+  <text x="1116" y="524" class="cardBody">Servers -&gt; Cache</text>
+<text x="1116" y="548" class="cardBody">Servers -&gt; Primary DB</text>
+<text x="1116" y="572" class="cardBody">Primary -&gt; Read Replica</text>
+
+  
+  <path d="M 356 552 L 432 552" class="line" />
+  
+  
+  <path d="M 682 552 L 758 552" class="line" />
+  
+  
+  <path d="M 1008 552 L 1084 552" class="line" />
+  
+  
+  <rect x="120" y="724" width="1240" height="90" rx="24" class="soft" />
+  <text x="140" y="758" class="small">Rule of Thumb</text>
+  <text x="140" y="788" class="cardBody">Introduce the next layer only when the previous one becomes the bottleneck: optimize first, then separate concerns, then add horizontal scale and specialized infrastructure.</text>
+  
+</svg>

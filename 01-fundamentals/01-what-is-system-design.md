@@ -133,7 +133,8 @@ flowchart TD
     S7["Step 7: Address Trade-offs"]
     S7a["Consistency vs Availability<br/>Latency vs Throughput<br/>Cost vs Performance"]
 
-    S1 --> S1a & S1b
+    S1 --> S1a
+    S1 --> S1b
     S1 --> S2 --> S2a
     S2 --> S3 --> S3a
     S3 --> S4 --> S4a

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="860" viewBox="0 0 1480 860" role="img" aria-labelledby="title desc">
+  <title id="title">Timeouts and Retries Need a Tight Budget</title>
+  <desc id="desc">High-fidelity system design visual for the client-server architecture section.</desc>
+  <defs>
+    <linearGradient id="page" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff" />
+      <stop offset="100%" stop-color="#eef4ff" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f6fed" />
+      <stop offset="100%" stop-color="#1944b9" />
+    </linearGradient>
+    <linearGradient id="accentTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17b8a6" />
+      <stop offset="100%" stop-color="#0e8e7e" />
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcd57" />
+      <stop offset="100%" stop-color="#f59f0a" />
+    </linearGradient>
+    <linearGradient id="accentRose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b8f" />
+      <stop offset="100%" stop-color="#df5170" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#adc3e6" flood-opacity="0.38" />
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#274690"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#5a78c8"/>
+    </marker>
+    <style>
+      .bg { fill: url(#page); }
+      .panel { fill: #ffffff; stroke: #d7e3fb; stroke-width: 1.4; filter: url(#shadow); }
+      .soft { fill: #f8fbff; stroke: #d7e3fb; stroke-width: 1.2; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #0f254e; }
+      .subtitle { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #496288; }
+      .cardTitle { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #102a56; }
+      .cardBody { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+      .small { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #496288; text-transform: uppercase; letter-spacing: 1px; }
+      .tiny { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #6a7fa2; letter-spacing: 0.4px; }
+      .labelDark { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #143160; }
+      .node { fill: #ffffff; stroke: #bed2f4; stroke-width: 1.4; }
+      .nodeBlue { fill: #edf4ff; stroke: #95b8ff; stroke-width: 1.4; }
+      .nodeTeal { fill: #ebfffb; stroke: #76d8cc; stroke-width: 1.4; }
+      .nodeGold { fill: #fff8e7; stroke: #f4c55d; stroke-width: 1.4; }
+      .nodeRose { fill: #fff1f4; stroke: #f0a1b4; stroke-width: 1.4; }
+      .accentBlue { fill: url(#accentBlue); }
+      .accentTeal { fill: url(#accentTeal); }
+      .accentGold { fill: url(#accentGold); }
+      .accentRose { fill: url(#accentRose); }
+      .white { fill: #ffffff; font: 700 18px "Segoe UI", Arial, sans-serif; }
+      .line { stroke: #274690; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .lineSoft { stroke: #5a78c8; stroke-width: 3; fill: none; marker-end: url(#arrowSoft); }
+      .guide { stroke: #bfd0f1; stroke-width: 2; fill: none; }
+      .guideSoft { stroke: #dce7fb; stroke-width: 1.6; fill: none; stroke-dasharray: 10 8; }
+      .dashed { stroke-dasharray: 12 10; }
+      .stepLabel { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1480" height="860" rx="28" />
+  <text x="48" y="58" class="title">Timeouts and Retries Need a Tight Budget</text>
+  <text x="48" y="86" class="subtitle">GitHub-safe SVG infographic for cleaner documentation rendering</text>
+  
+  
+  <rect x="72" y="154" width="1336" height="640" rx="24" class="panel" />
+  <text x="92" y="188" class="small">Retry Timeline</text>
+  
+  
+  <rect x="134" y="250" width="172" height="54" rx="27" class="accentBlue" />
+  <text x="220" y="283" text-anchor="middle" class="white">Initial request</text>
+  
+  <rect x="382" y="250" width="184" height="54" rx="27" class="accentRose" />
+  <text x="474" y="283" text-anchor="middle" class="white">250 ms timeout</text>
+  
+  <rect x="642" y="250" width="178" height="54" rx="27" class="accentGold" />
+  <text x="731" y="283" text-anchor="middle" class="white">100 ms backoff</text>
+  
+  <rect x="892" y="250" width="152" height="54" rx="27" class="accentTeal" />
+  <text x="968" y="283" text-anchor="middle" class="white">Retry once</text>
+  
+  <rect x="1116" y="250" width="192" height="54" rx="27" class="accentBlue" />
+  <text x="1212" y="283" text-anchor="middle" class="white">Serve response</text>
+  
+  <path d="M 306 278 L 382 278" class="line" />
+  
+  
+  <path d="M 566 278 L 642 278" class="line" />
+  
+  
+  <path d="M 820 278 L 892 278" class="line" />
+  
+  
+  <path d="M 1044 278 L 1116 278" class="line" />
+  
+  
+  <rect x="134" y="402" width="246" height="128" rx="24" class="nodeBlue" />
+  <text x="154" y="436" class="small">Attempt 1</text>
+  <text x="154" y="466" class="cardBody">Client sends request</text>
+<text x="154" y="490" class="cardBody">server is slow or unreachable</text>
+  
+  <rect x="414" y="402" width="246" height="128" rx="24" class="nodeRose" />
+  <text x="434" y="436" class="small">Fail fast</text>
+  <text x="434" y="466" class="cardBody">timeout fires</text>
+<text x="434" y="490" class="cardBody">client stops waiting</text>
+  
+  <rect x="694" y="402" width="246" height="128" rx="24" class="nodeGold" />
+  <text x="714" y="436" class="small">Pause briefly</text>
+  <text x="714" y="466" class="cardBody">small backoff</text>
+<text x="714" y="490" class="cardBody">avoid instant retry storm</text>
+  
+  <rect x="974" y="402" width="246" height="128" rx="24" class="nodeTeal" />
+  <text x="994" y="436" class="small">Attempt 2</text>
+  <text x="994" y="466" class="cardBody">retry with same idempotent key</text>
+<text x="994" y="490" class="cardBody">success or final failure</text>
+  
+  <path d="M 258 530 L 538 530" class="line" />
+  <text x="398" y="520" text-anchor="middle" class="stepLabel">budget</text>
+  
+  <path d="M 818 530 L 1098 530" class="line" />
+  <text x="958" y="520" text-anchor="middle" class="stepLabel">bounded retry</text>
+  
+  <rect x="180" y="622" width="1120" height="116" rx="24" class="soft" />
+  <text x="200" y="656" class="small">Production guidance</text>
+  <text x="200" y="686" class="cardBody">Use short timeouts, a tiny retry count, backoff with jitter, and idempotency keys so retries do not multiply server-side side effects.</text>
+  
+</svg>

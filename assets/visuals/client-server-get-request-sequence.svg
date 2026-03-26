@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="960" viewBox="0 0 1560 960" role="img" aria-labelledby="title desc">
+  <title id="title">Handling a GET Request Through the Stack</title>
+  <desc id="desc">High-fidelity system design visual for the client-server architecture section.</desc>
+  <defs>
+    <linearGradient id="page" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff" />
+      <stop offset="100%" stop-color="#eef4ff" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f6fed" />
+      <stop offset="100%" stop-color="#1944b9" />
+    </linearGradient>
+    <linearGradient id="accentTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17b8a6" />
+      <stop offset="100%" stop-color="#0e8e7e" />
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcd57" />
+      <stop offset="100%" stop-color="#f59f0a" />
+    </linearGradient>
+    <linearGradient id="accentRose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b8f" />
+      <stop offset="100%" stop-color="#df5170" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#adc3e6" flood-opacity="0.38" />
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#274690"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#5a78c8"/>
+    </marker>
+    <style>
+      .bg { fill: url(#page); }
+      .panel { fill: #ffffff; stroke: #d7e3fb; stroke-width: 1.4; filter: url(#shadow); }
+      .soft { fill: #f8fbff; stroke: #d7e3fb; stroke-width: 1.2; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #0f254e; }
+      .subtitle { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #496288; }
+      .cardTitle { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #102a56; }
+      .cardBody { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+      .small { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #496288; text-transform: uppercase; letter-spacing: 1px; }
+      .tiny { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #6a7fa2; letter-spacing: 0.4px; }
+      .labelDark { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #143160; }
+      .node { fill: #ffffff; stroke: #bed2f4; stroke-width: 1.4; }
+      .nodeBlue { fill: #edf4ff; stroke: #95b8ff; stroke-width: 1.4; }
+      .nodeTeal { fill: #ebfffb; stroke: #76d8cc; stroke-width: 1.4; }
+      .nodeGold { fill: #fff8e7; stroke: #f4c55d; stroke-width: 1.4; }
+      .nodeRose { fill: #fff1f4; stroke: #f0a1b4; stroke-width: 1.4; }
+      .accentBlue { fill: url(#accentBlue); }
+      .accentTeal { fill: url(#accentTeal); }
+      .accentGold { fill: url(#accentGold); }
+      .accentRose { fill: url(#accentRose); }
+      .white { fill: #ffffff; font: 700 18px "Segoe UI", Arial, sans-serif; }
+      .line { stroke: #274690; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .lineSoft { stroke: #5a78c8; stroke-width: 3; fill: none; marker-end: url(#arrowSoft); }
+      .guide { stroke: #bfd0f1; stroke-width: 2; fill: none; }
+      .guideSoft { stroke: #dce7fb; stroke-width: 1.6; fill: none; stroke-dasharray: 10 8; }
+      .dashed { stroke-dasharray: 12 10; }
+      .stepLabel { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1560" height="960" rx="28" />
+  <text x="48" y="58" class="title">Handling a GET Request Through the Stack</text>
+  <text x="48" y="86" class="subtitle">GitHub-safe SVG infographic for cleaner documentation rendering</text>
+  
+  
+  <rect x="74" y="154" width="1412" height="760" rx="24" class="panel" />
+  <text x="94" y="188" class="small">Request Sequence</text>
+  
+  <text x="138" y="244" text-anchor="middle" class="small">Client</text>
+  <text x="332" y="244" text-anchor="middle" class="small">Load Balancer</text>
+  <text x="540" y="244" text-anchor="middle" class="small">Server</text>
+  <text x="756" y="244" text-anchor="middle" class="small">Middleware</text>
+  <text x="970" y="244" text-anchor="middle" class="small">Handler</text>
+  <text x="1186" y="244" text-anchor="middle" class="small">Cache</text>
+  <text x="1394" y="244" text-anchor="middle" class="small">Database</text>
+
+  <line x1="138" y1="266" x2="138" y2="826" class="guideSoft" />
+  <line x1="332" y1="266" x2="332" y2="826" class="guideSoft" />
+  <line x1="540" y1="266" x2="540" y2="826" class="guideSoft" />
+  <line x1="756" y1="266" x2="756" y2="826" class="guideSoft" />
+  <line x1="970" y1="266" x2="970" y2="826" class="guideSoft" />
+  <line x1="1186" y1="266" x2="1186" y2="826" class="guideSoft" />
+  <line x1="1394" y1="266" x2="1394" y2="826" class="guideSoft" />
+
+  
+  <path d="M 138 330 L 332 330" class="line" />
+  <text x="235" y="320" text-anchor="middle" class="stepLabel">GET /users/42</text>
+  
+  <path d="M 332 386 L 540 386" class="line" />
+  <text x="436" y="376" text-anchor="middle" class="stepLabel">forward</text>
+  
+  <path d="M 540 442 L 756 442" class="line" />
+  <text x="648" y="432" text-anchor="middle" class="stepLabel">auth</text>
+  
+  <path d="M 756 498 L 540 498" class="lineSoft" />
+  <text x="648" y="488" text-anchor="middle" class="stepLabel">next()</text>
+  
+  <path d="M 540 554 L 756 554" class="line" />
+  <text x="648" y="544" text-anchor="middle" class="stepLabel">log</text>
+  
+  <path d="M 756 610 L 540 610" class="lineSoft" />
+  <text x="648" y="600" text-anchor="middle" class="stepLabel">next()</text>
+  
+  <path d="M 540 666 L 970 666" class="line" />
+  <text x="755" y="656" text-anchor="middle" class="stepLabel">route match</text>
+  
+  <path d="M 970 722 L 1186 722" class="line" />
+  <text x="1078" y="712" text-anchor="middle" class="stepLabel">cache lookup</text>
+  
+  <path d="M 1186 778 L 970 778" class="lineSoft" />
+  <text x="1078" y="768" text-anchor="middle" class="stepLabel">miss</text>
+  
+  <path d="M 970 834 L 1394 834" class="line" />
+  <text x="1182" y="824" text-anchor="middle" class="stepLabel">select user</text>
+
+  
+  <rect x="120" y="848" width="1320" height="54" rx="24" class="soft" />
+  <text x="140" y="882" class="small">Outcome</text>
+  <text x="140" y="912" class="cardBody">The handler misses cache, fetches from the database, populates cache, and returns the assembled response back through the stack.</text>
+  
+</svg>

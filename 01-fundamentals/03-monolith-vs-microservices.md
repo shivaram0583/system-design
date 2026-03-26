@@ -26,10 +26,19 @@ A **monolith** is an application where all features, modules, and logic are buil
 ```mermaid
 graph TD
     subgraph MONO["MONOLITH — Single Codebase, Single Deployment"]
-        A["Auth Module"] & B["Orders Module"] & C["Payments Module"]
-        D["User Module"] & E["Inventory Module"] & F["Notifications Module"]
+        A["Auth Module"]
+        B["Orders Module"]
+        C["Payments Module"]
+        D["User Module"]
+        E["Inventory Module"]
+        F["Notifications Module"]
         DB[("Shared Database — Single")]
-        A & B & C & D & E & F --> DB
+        A --> DB
+        B --> DB
+        C --> DB
+        D --> DB
+        E --> DB
+        F --> DB
     end
 ```
 
@@ -443,10 +452,23 @@ You're building an e-commerce platform. Let's compare both architectures.
 ```mermaid
 graph TD
     subgraph MONO["E-COMMERCE MONOLITH — Django / Rails"]
-        A["Auth"] & B["Catalog"] & C["Orders"] & D["Payments"]
-        E["Inventory"] & F["Search"] & G["Cart"] & H["Notifications"]
+        A["Auth"]
+        B["Catalog"]
+        C["Orders"]
+        D["Payments"]
+        E["Inventory"]
+        F["Search"]
+        G["Cart"]
+        H["Notifications"]
         DB[("PostgreSQL — Single DB<br/>users | products | orders | payments | inventory")]
-        A & B & C & D & E & F & G & H --> DB
+        A --> DB
+        B --> DB
+        C --> DB
+        D --> DB
+        E --> DB
+        F --> DB
+        G --> DB
+        H --> DB
     end
 ```
 
@@ -465,7 +487,8 @@ graph TD
     GW --> Inv["Inventory Service<br/>PostgreSQL"]
     GW --> Search["Search Service<br/>Elasticsearch"]
     GW --> Cart["Cart Service<br/>Redis"]
-    Ord & Pay --> Kafka["Message Broker<br/>Kafka / RabbitMQ"]
+    Ord --> Kafka["Message Broker<br/>Kafka / RabbitMQ"]
+    Pay --> Kafka
     Kafka --> Notif
     Kafka --> Inv
 ```
@@ -625,7 +648,9 @@ flowchart TD
     Pay --> PayDB["PostgreSQL"]
     Notif --> NotifDB["Redis + SQS"]
 
-    Ord & Pay & Notif --> Kafka["Kafka Cluster<br/>Event Bus"]
+    Ord --> Kafka["Kafka Cluster<br/>Event Bus"]
+    Pay --> Kafka
+    Notif --> Kafka
 ```
 
 #### Scaling Approach

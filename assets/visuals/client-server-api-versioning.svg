@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="860" viewBox="0 0 1440 860" role="img" aria-labelledby="title desc">
+  <title id="title">API Versioning in a Live Client-Server System</title>
+  <desc id="desc">High-fidelity system design visual for the client-server architecture section.</desc>
+  <defs>
+    <linearGradient id="page" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7fbff" />
+      <stop offset="100%" stop-color="#eef4ff" />
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f6fed" />
+      <stop offset="100%" stop-color="#1944b9" />
+    </linearGradient>
+    <linearGradient id="accentTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17b8a6" />
+      <stop offset="100%" stop-color="#0e8e7e" />
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcd57" />
+      <stop offset="100%" stop-color="#f59f0a" />
+    </linearGradient>
+    <linearGradient id="accentRose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b8f" />
+      <stop offset="100%" stop-color="#df5170" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#adc3e6" flood-opacity="0.38" />
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#274690"/>
+    </marker>
+    <marker id="arrowSoft" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#5a78c8"/>
+    </marker>
+    <style>
+      .bg { fill: url(#page); }
+      .panel { fill: #ffffff; stroke: #d7e3fb; stroke-width: 1.4; filter: url(#shadow); }
+      .soft { fill: #f8fbff; stroke: #d7e3fb; stroke-width: 1.2; }
+      .title { font: 700 32px "Segoe UI", Arial, sans-serif; fill: #0f254e; }
+      .subtitle { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #496288; }
+      .cardTitle { font: 700 20px "Segoe UI", Arial, sans-serif; fill: #102a56; }
+      .cardBody { font: 500 15px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+      .small { font: 600 13px "Segoe UI", Arial, sans-serif; fill: #496288; text-transform: uppercase; letter-spacing: 1px; }
+      .tiny { font: 600 12px "Segoe UI", Arial, sans-serif; fill: #6a7fa2; letter-spacing: 0.4px; }
+      .labelDark { font: 700 16px "Segoe UI", Arial, sans-serif; fill: #143160; }
+      .node { fill: #ffffff; stroke: #bed2f4; stroke-width: 1.4; }
+      .nodeBlue { fill: #edf4ff; stroke: #95b8ff; stroke-width: 1.4; }
+      .nodeTeal { fill: #ebfffb; stroke: #76d8cc; stroke-width: 1.4; }
+      .nodeGold { fill: #fff8e7; stroke: #f4c55d; stroke-width: 1.4; }
+      .nodeRose { fill: #fff1f4; stroke: #f0a1b4; stroke-width: 1.4; }
+      .accentBlue { fill: url(#accentBlue); }
+      .accentTeal { fill: url(#accentTeal); }
+      .accentGold { fill: url(#accentGold); }
+      .accentRose { fill: url(#accentRose); }
+      .white { fill: #ffffff; font: 700 18px "Segoe UI", Arial, sans-serif; }
+      .line { stroke: #274690; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .lineSoft { stroke: #5a78c8; stroke-width: 3; fill: none; marker-end: url(#arrowSoft); }
+      .guide { stroke: #bfd0f1; stroke-width: 2; fill: none; }
+      .guideSoft { stroke: #dce7fb; stroke-width: 1.6; fill: none; stroke-dasharray: 10 8; }
+      .dashed { stroke-dasharray: 12 10; }
+      .stepLabel { font: 700 14px "Segoe UI", Arial, sans-serif; fill: #35527f; }
+    </style>
+  </defs>
+  <rect class="bg" width="1440" height="860" rx="28" />
+  <text x="48" y="58" class="title">API Versioning in a Live Client-Server System</text>
+  <text x="48" y="86" class="subtitle">GitHub-safe SVG infographic for cleaner documentation rendering</text>
+  
+  
+  <rect x="72" y="154" width="1296" height="640" rx="24" class="panel" />
+  <text x="92" y="188" class="small">Version Compatibility</text>
+  
+  
+  <rect x="110" y="250" width="220" height="110" rx="24" class="nodeBlue" />
+  <text x="130" y="284" class="small">Client v1</text>
+  <text x="130" y="314" class="cardBody">Legacy mobile release</text>
+  
+  <rect x="110" y="406" width="220" height="110" rx="24" class="nodeGold" />
+  <text x="130" y="440" class="small">Client v2</text>
+  <text x="130" y="470" class="cardBody">Current web app</text>
+  
+  <rect x="110" y="562" width="220" height="110" rx="24" class="nodeRose" />
+  <text x="130" y="596" class="small">Client v3</text>
+  <text x="130" y="626" class="cardBody">Newest partner SDK</text>
+  
+  <rect x="420" y="278" width="310" height="52" rx="26" class="accentBlue" />
+  <text x="575" y="310" text-anchor="middle" class="white">GET /api/v1/users</text>
+  
+  <rect x="420" y="434" width="310" height="52" rx="26" class="accentGold" />
+  <text x="575" y="466" text-anchor="middle" class="white">GET /api/v2/users</text>
+  
+  <rect x="420" y="590" width="310" height="52" rx="26" class="accentRose" />
+  <text x="575" y="622" text-anchor="middle" class="white">GET /api/v3/users</text>
+  
+  <rect x="840" y="226" width="420" height="470" rx="24" class="soft" />
+  <text x="860" y="260" class="small">Server Contract</text>
+  <text x="860" y="290" class="cardBody">One backend can keep multiple API contracts alive at the same time.</text>
+<text x="860" y="314" class="cardBody">The router maps each version to the right serialization and validation path.</text>
+<text x="860" y="338" class="cardBody">Older clients keep working while newer clients adopt better fields and behavior.</text>
+  
+  <rect x="890" y="330" width="320" height="110" rx="24" class="nodeTeal" />
+  <text x="910" y="364" class="small">Version Router</text>
+  <text x="910" y="394" class="cardBody">v1 controller</text>
+<text x="910" y="418" class="cardBody">v2 controller</text>
+<text x="910" y="442" class="cardBody">v3 controller</text>
+  
+  <rect x="890" y="494" width="320" height="110" rx="24" class="nodeBlue" />
+  <text x="910" y="528" class="small">Shared Core Services</text>
+  <text x="910" y="558" class="cardBody">auth</text>
+<text x="910" y="582" class="cardBody">business logic</text>
+<text x="910" y="606" class="cardBody">data access</text>
+  
+  <path d="M 330 306 L 420 306" class="line" />
+  
+  
+  <path d="M 330 462 L 420 462" class="line" />
+  
+  
+  <path d="M 330 618 L 420 618" class="line" />
+  
+  
+  <path d="M 730 306 L 890 384" class="line" />
+  <text x="810" y="335" text-anchor="middle" class="stepLabel">route</text>
+  
+  <path d="M 730 462 L 890 462" class="line" />
+  <text x="810" y="452" text-anchor="middle" class="stepLabel">route</text>
+  
+  <path d="M 730 618 L 890 540" class="line" />
+  <text x="810" y="569" text-anchor="middle" class="stepLabel">route</text>
+  
+  <path d="M 1050 440 L 1050 494" class="lineSoft" />
+  <text x="1050" y="457" text-anchor="middle" class="stepLabel">reuse</text>
+  
+  <rect x="176" y="718" width="1088" height="76" rx="24" class="soft" />
+  <text x="196" y="752" class="small">Practical rule</text>
+  <text x="196" y="782" class="cardBody">Version the API contract at the edge, but keep the core business logic shared whenever possible.</text>
+  
+</svg>
