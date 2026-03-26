@@ -23,26 +23,14 @@
 
 A **monolith** is an application where all features, modules, and logic are built, deployed, and run as **a single unit**.
 
-```
-┌──────────────────────────────────────────────────┐
-│                   MONOLITH                        │
-│                                                   │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
-│  │   Auth   │ │  Orders  │ │    Payments      │  │
-│  │  Module  │ │  Module  │ │    Module        │  │
-│  └──────────┘ └──────────┘ └──────────────────┘  │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
-│  │   User   │ │Inventory │ │  Notifications   │  │
-│  │  Module  │ │  Module  │ │    Module        │  │
-│  └──────────┘ └──────────┘ └──────────────────┘  │
-│                                                   │
-│  ┌──────────────────────────────────────────┐     │
-│  │         Shared Database (Single)         │     │
-│  └──────────────────────────────────────────┘     │
-│                                                   │
-│  Single codebase. Single deployment. Single       │
-│  process. Single binary/artifact.                 │
-└──────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph MONO["MONOLITH — Single Codebase, Single Deployment"]
+        A["Auth Module"] & B["Orders Module"] & C["Payments Module"]
+        D["User Module"] & E["Inventory Module"] & F["Notifications Module"]
+        DB[("Shared Database — Single")]
+        A & B & C & D & E & F --> DB
+    end
 ```
 
 **Key characteristics:**
@@ -56,33 +44,24 @@ A **monolith** is an application where all features, modules, and logic are buil
 
 **Microservices** is an architecture where the application is composed of **small, independent services**, each responsible for a single business capability, deployed and scaled independently.
 
+```mermaid
+graph TD
+    Client["Client"] --> GW["API Gateway"]
+    GW --> AuthSvc["Auth Service"]
+    GW --> OrderSvc["Orders Service"]
+    GW --> PaySvc["Payments Service"]
+    AuthSvc --> DB1[("DB 1")]
+    OrderSvc --> DB2[("DB 2")]
+    PaySvc --> DB3[("DB 3")]
 ```
-┌────────────┐  ┌────────────┐  ┌────────────┐
-│   Auth     │  │   Orders   │  │  Payments  │
-│  Service   │  │  Service   │  │  Service   │
-│  ┌──────┐  │  │  ┌──────┐  │  │  ┌──────┐  │
-│  │ DB 1 │  │  │  │ DB 2 │  │  │  │ DB 3 │  │
-│  └──────┘  │  │  └──────┘  │  │  └──────┘  │
-└─────┬──────┘  └──────┬─────┘  └──────┬─────┘
-      │                │               │
-      └────────────────┼───────────────┘
-                       │
-              ┌────────┴────────┐
-              │   API Gateway   │
-              └────────┬────────┘
-                       │
-              ┌────────┴────────┐
-              │     Client      │
-              └─────────────────┘
 
-Each service:
-  ✓ Own codebase (possibly own repo)
-  ✓ Own database (database-per-service)
-  ✓ Own deployment pipeline
-  ✓ Communicates via network (HTTP/gRPC/messaging)
-  ✓ Can be written in different languages
+Each service: 
+  ✓ Own codebase 
+  ✓ Own database 
+  ✓ Own deployment pipeline 
+  ✓ Communicates via network (HTTP/gRPC/messaging) 
+  ✓ Can be written in different languages 
   ✓ Can scale independently
-```
 
 ### Head-to-Head Comparison
 
@@ -142,59 +121,38 @@ Each service:
 
 Most real systems are NOT purely one or the other. There's a spectrum:
 
-```
-Simple                                                      Complex
-Monolith                                                    Microservices
+```mermaid
+graph LR
+    A["Classic Monolith<br/><i>Single tangled codebase</i>"] --> B["Modular Monolith<br/><i>Well-defined modules,<br/>still one deployment</i>"]
+    B --> C["Service-Oriented<br/><i>A few large services,<br/>shared or separate DBs</i>"]
+    C --> D["Full Microservices<br/><i>Many small independently<br/>deployable services</i>"]
 
-┌───────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐
-│  Classic  │  │   Modular    │  │    Service-  │  │     Full       │
-│ Monolith  │  │  Monolith    │  │   Oriented   │  │ Microservices  │
-│           │  │              │  │  Architecture│  │                │
-│ Single    │  │ Well-defined │  │  A few large │  │ Many small     │
-│ tangled   │  │ modules with │  │  services    │  │ independently  │
-│ codebase  │  │ clear        │  │  with shared │  │ deployable     │
-│           │  │ boundaries   │  │  or separate │  │ services       │
-│           │  │ (still one   │  │  databases   │  │ (own DB each)  │
-│           │  │  deployment) │  │              │  │                │
-└───────────┘  └──────────────┘  └──────────────┘  └────────────────┘
-
-      ◄── Recommended migration path ──►
-      Start here, evolve as needed
+    style A fill:#e8f5e9
+    style D fill:#fff3e0
 ```
+
+> **← Simple** ... **Complex →** | Recommended: start left, evolve as needed
 
 ### The Modular Monolith — The Best of Both Worlds?
 
 A **Modular Monolith** is a monolith with well-defined internal boundaries:
 
+```mermaid
+graph TD
+    subgraph MM["MODULAR MONOLITH — One Deployment"]
+        subgraph Auth["Auth Module"]
+            A1["Public API"] --> A2["Internal Logic"] --> A3[("Own Tables")]
+        end
+        subgraph Order["Order Module"]
+            B1["Public API"] --> B2["Internal Logic"] --> B3[("Own Tables")]
+        end
+        subgraph Payment["Payment Module"]
+            C1["Public API"] --> C2["Internal Logic"] --> C3[("Own Tables")]
+        end
+    end
 ```
-┌──────────────────────────────────────────────────────┐
-│                  MODULAR MONOLITH                      │
-│                                                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐  │
-│  │  Auth Module  │  │ Order Module │  │Payment Module│  │
-│  │  ┌────────┐   │  │ ┌────────┐   │  │ ┌────────┐  │  │
-│  │  │Public  │   │  │ │Public  │   │  │ │Public  │  │  │
-│  │  │  API   │   │  │ │  API   │   │  │ │  API   │  │  │
-│  │  └────────┘   │  │ └────────┘   │  │ └────────┘  │  │
-│  │  ┌────────┐   │  │ ┌────────┐   │  │ ┌────────┐  │  │
-│  │  │Internal│   │  │ │Internal│   │  │ │Internal│  │  │
-│  │  │ Logic  │   │  │ │ Logic  │   │  │ │ Logic  │  │  │
-│  │  └────────┘   │  │ └────────┘   │  │ └────────┘  │  │
-│  │  ┌────────┐   │  │ ┌────────┐   │  │ ┌────────┐  │  │
-│  │  │ Schema │   │  │ │ Schema │   │  │ │ Schema │  │  │
-│  │  │(own    │   │  │ │(own    │   │  │ │(own    │  │  │
-│  │  │tables) │   │  │ │tables) │   │  │ │tables) │  │  │
-│  │  └────────┘   │  │ └────────┘   │  │ └────────┘  │  │
-│  └──────────────┘  └──────────────┘  └─────────────┘  │
-│                                                        │
-│  Rules:                                                │
-│  • Modules communicate ONLY through public APIs        │
-│  • No direct DB access across module boundaries        │
-│  • Each module owns its own tables                     │
-│  • Still ONE deployment                                │
-│  • Easy to extract into microservice later              │
-└──────────────────────────────────────────────────────┘
-```
+
+> **Rules**: Modules communicate ONLY through public APIs · No direct DB access across boundaries · Each module owns its tables · Still ONE deployment · Easy to extract into microservice later
 
 **Why it matters:** This gives you clean boundaries without distributed system complexity. If you later need to extract a service, the module already has a clear API.
 
@@ -354,63 +312,26 @@ This is one of the **most commonly discussed topics** in system design interview
 
 > "Organizations which design systems are constrained to produce designs which are copies of the communication structures of these organizations." — Melvin Conway
 
+```mermaid
+graph LR
+    subgraph Teams["TEAM STRUCTURE"]
+        T1["Team Auth"]
+        T2["Team Orders"]
+        T3["Team Payments"]
+    end
+    subgraph Services["SYSTEM ARCHITECTURE"]
+        S1["Auth Service"]
+        S2["Order Service"]
+        S3["Payment Service"]
+    end
+    T1 -->|"owns"| S1
+    T2 -->|"owns"| S2
+    T3 -->|"owns"| S3
 ```
-TEAM STRUCTURE                     SYSTEM ARCHITECTURE
 
-┌─────────────┐                    ┌─────────────┐
-│  Team Auth  │  ───────────────►  │Auth Service │
-└─────────────┘                    └─────────────┘
-
-┌─────────────┐                    ┌─────────────┐
-│ Team Orders │  ───────────────►  │Order Service│
-└─────────────┘                    └─────────────┘
-
-┌─────────────┐                    ┌─────────────┐
-│Team Payments│  ───────────────►  │Payment Svc  │
-└─────────────┘                    └─────────────┘
-
-The architecture WILL mirror the team structure.
-Plan teams and services together, not separately.
-```
+> The architecture WILL mirror the team structure. Plan teams and services together, not separately.
 
 **Practical implication**: If you want microservices, you need small autonomous teams (2-pizza teams / squads). If you have one big team, microservices will create coordination overhead.
-
-### Service Boundaries — Domain-Driven Design (DDD)
-
-The hardest part of microservices is **where to draw the boundaries**. DDD provides the framework:
-
-```
-┌──────────────────────────────────────────────────┐
-│              E-COMMERCE DOMAIN                    │
-│                                                   │
-│  ┌──────────────┐  ┌──────────────────────────┐  │
-│  │ Bounded       │  │ Bounded Context:          │  │
-│  │ Context:      │  │ ORDER MANAGEMENT          │  │
-│  │ USER IDENTITY │  │                           │  │
-│  │               │  │ • Order                   │  │
-│  │ • User        │  │ • OrderItem               │  │
-│  │ • Auth        │  │ • OrderStatus             │  │
-│  │ • Profile     │  │ • Shipping                │  │
-│  └──────────────┘  └──────────────────────────┘  │
-│                                                   │
-│  ┌──────────────┐  ┌──────────────────────────┐  │
-│  │ Bounded       │  │ Bounded Context:          │  │
-│  │ Context:      │  │ PAYMENTS                  │  │
-│  │ CATALOG       │  │                           │  │
-│  │               │  │ • Payment                 │  │
-│  │ • Product     │  │ • Refund                  │  │
-│  │ • Category    │  │ • PaymentMethod           │  │
-│  │ • Review      │  │ • Invoice                 │  │
-│  └──────────────┘  └──────────────────────────┘  │
-│                                                   │
-│  Each bounded context = candidate microservice    │
-└──────────────────────────────────────────────────┘
-```
-
-**Rules for good boundaries:**
-- **High cohesion** within service (related things together)
-- **Loose coupling** between services (minimal dependencies)
-- **Aligned to business capability** (not technical layers)
 - **Owns its data** (no shared databases)
 - **Can be developed by one team** (2-pizza team size)
 
@@ -418,36 +339,24 @@ The hardest part of microservices is **where to draw the boundaries**. DDD provi
 
 Named after a vine that grows around a tree, eventually replacing it.
 
-```
-Phase 1: Identify a module to extract
-┌──────────────────────────────┐
-│         MONOLITH             │
-│  ┌──────┐ ┌──────┐ ┌──────┐ │
-│  │ Auth │ │Orders│ │ Pay  │ │  ← All traffic goes to monolith
-│  └──────┘ └──────┘ └──────┘ │
-└──────────────────────────────┘
-
-Phase 2: Build new service, route traffic via proxy
-┌──────────────────────────────┐    ┌──────────────┐
-│         MONOLITH             │    │  New Auth    │
-│  ┌──────┐ ┌──────┐ ┌──────┐ │    │  Service     │
-│  │ Auth │ │Orders│ │ Pay  │ │    │  ┌────────┐  │
-│  │(dead)│ └──────┘ └──────┘ │    │  │ Auth DB│  │
-│  └──────┘                    │    │  └────────┘  │
-└──────────┬───────────────────┘    └──────┬───────┘
-           │                               │
-      ┌────┴───────────────────────────────┴────┐
-      │              API Gateway / Proxy         │
-      │  /auth/* → New Auth Service              │
-      │  /* → Monolith                           │
-      └─────────────────────────────────────────┘
-
-Phase 3: Repeat for each module until monolith is empty
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│  Auth    │  │  Orders  │  │ Payments │
-│ Service  │  │ Service  │  │ Service  │
-└──────────┘  └──────────┘  └──────────┘
-      ↑ Monolith is now decommissioned
+```mermaid
+graph TD
+    subgraph Phase1["Phase 1: All traffic to monolith"]
+        M1["MONOLITH<br/>Auth | Orders | Pay"]
+    end
+    subgraph Phase2["Phase 2: Route via proxy"]
+        GW["API Gateway / Proxy"]
+        M2["MONOLITH<br/>Auth dead | Orders | Pay"]
+        NEW["New Auth Service + Auth DB"]
+        GW -->|/auth/*| NEW
+        GW -->|/*| M2
+    end
+    subgraph Phase3["Phase 3: Monolith decommissioned"]
+        S1["Auth Service"]
+        S2["Orders Service"]
+        S3["Payments Service"]
+    end
+    Phase1 --> Phase2 --> Phase3
 ```
 
 ### Operational Concerns
@@ -522,103 +431,66 @@ You're building an e-commerce platform. Let's compare both architectures.
 
 ### Monolith Version
 
+```mermaid
+graph TD
+    subgraph MONO["E-COMMERCE MONOLITH — Django / Rails"]
+        A["Auth"] & B["Catalog"] & C["Orders"] & D["Payments"]
+        E["Inventory"] & F["Search"] & G["Cart"] & H["Notifications"]
+        DB[("PostgreSQL — Single DB<br/>users | products | orders | payments | inventory")]
+        A & B & C & D & E & F & G & H --> DB
+    end
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    E-COMMERCE MONOLITH                     │
-│                     (Django / Rails)                       │
-│                                                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
-│  │   Auth   │  │ Catalog  │  │  Orders  │  │ Payments │ │
-│  │ Module   │  │ Module   │  │ Module   │  │ Module   │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘ │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
-│  │Inventory │  │  Search  │  │  Cart    │  │ Notif.   │ │
-│  │ Module   │  │ Module   │  │ Module   │  │ Module   │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘ │
-│                                                           │
-│  ┌──────────────────────────────────────────────────┐    │
-│  │            PostgreSQL (Single DB)                  │    │
-│  │  users | products | orders | payments | inventory  │    │
-│  └──────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────┘
 
-Place Order Flow (single transaction):
-  BEGIN
-    1. Validate cart items
-    2. Check inventory → decrement stock
-    3. Create order record
-    4. Process payment
-    5. Send confirmation notification
-  COMMIT
-  
-  → Clean, simple, all in one transaction
-  → If payment fails, everything rolls back automatically
-```
+**Place Order Flow** (single ACID transaction): Validate cart → Check inventory → Create order → Process payment → Send notification → COMMIT. If payment fails, everything rolls back automatically.
 
 ### Microservices Version
 
-```
-                         ┌──────────────┐
-                         │    Client    │
-                         └──────┬───────┘
-                                │
-                         ┌──────┴───────┐
-                         │ API Gateway  │
-                         │(Kong/Nginx)  │
-                         └──────┬───────┘
-                                │
-        ┌───────────┬───────────┼───────────┬───────────┐
-        │           │           │           │           │
-  ┌─────┴─────┐ ┌───┴───┐ ┌────┴────┐ ┌────┴────┐ ┌───┴────┐
-  │   Auth    │ │Catalog│ │  Order  │ │ Payment │ │  Notif │
-  │  Service  │ │Service│ │ Service │ │ Service │ │Service │
-  │  ┌─────┐  │ │┌─────┐│ │ ┌─────┐ │ │ ┌─────┐ │ │┌─────┐│
-  │  │Redis│  │ ││Mongo││ │ │Postgres│ │ │Postgres│ │││Redis││
-  │  │+JWT │  │ ││     ││ │ │     │ │ │ │     │ │ ││+SQS ││
-  │  └─────┘  │ │└─────┘│ │ └─────┘ │ │ └─────┘ │ │└─────┘│
-  └───────────┘ └───────┘ └────┬────┘ └────┬────┘ └───────┘
-                               │           │
-                          ┌────┴───────────┴────┐
-                          │   Message Broker     │
-                          │   (Kafka / RabbitMQ) │
-                          └─────────────────────┘
-
-  Also needed:
-  ┌──────────┐  ┌──────────┐  ┌──────────┐
-  │Inventory │  │  Search  │  │  Cart    │
-  │ Service  │  │ Service  │  │ Service  │
-  │ ┌──────┐ │  │┌────────┐│  │ ┌──────┐ │
-  │ │Postgres│ │  ││Elastic ││  │ │Redis │ │
-  │ └──────┘ │  │└────────┘│  │ └──────┘ │
-  └──────────┘  └──────────┘  └──────────┘
+```mermaid
+graph TD
+    Client["Client"] --> GW["API Gateway<br/>Kong / Nginx"]
+    GW --> Auth["Auth Service<br/>Redis + JWT"]
+    GW --> Cat["Catalog Service<br/>MongoDB"]
+    GW --> Ord["Order Service<br/>PostgreSQL"]
+    GW --> Pay["Payment Service<br/>PostgreSQL"]
+    GW --> Notif["Notification Service<br/>Redis + SQS"]
+    GW --> Inv["Inventory Service<br/>PostgreSQL"]
+    GW --> Search["Search Service<br/>Elasticsearch"]
+    GW --> Cart["Cart Service<br/>Redis"]
+    Ord & Pay --> Kafka["Message Broker<br/>Kafka / RabbitMQ"]
+    Kafka --> Notif
+    Kafka --> Inv
 ```
 
 ### Place Order Flow (Saga Pattern)
 
-```
-Step 1: Order Service creates order (status: PENDING)
-   │
-   ├──► Publishes: "OrderCreated" event to Kafka
-   │
-Step 2: Inventory Service consumes "OrderCreated"
-   │     → Reserves stock
-   │     → Publishes: "InventoryReserved" event
-   │     (If out of stock → Publishes: "InventoryFailed"
-   │      → Order Service marks order CANCELLED)
-   │
-Step 3: Payment Service consumes "InventoryReserved"
-   │     → Charges payment
-   │     → Publishes: "PaymentCompleted" event
-   │     (If payment fails → Publishes: "PaymentFailed"
-   │      → Inventory Service releases stock
-   │      → Order Service marks order CANCELLED)
-   │
-Step 4: Order Service consumes "PaymentCompleted"
-   │     → Updates order status to CONFIRMED
-   │     → Publishes: "OrderConfirmed" event
-   │
-Step 5: Notification Service consumes "OrderConfirmed"
-         → Sends email/push notification to user
+```mermaid
+sequenceDiagram
+    participant O as Order Service
+    participant K as Kafka
+    participant I as Inventory Service
+    participant P as Payment Service
+    participant N as Notification Service
+
+    O->>K: OrderCreated (PENDING)
+    K->>I: Consume OrderCreated
+    alt Stock available
+        I->>K: InventoryReserved
+        K->>P: Consume InventoryReserved
+        alt Payment succeeds
+            P->>K: PaymentCompleted
+            K->>O: Consume PaymentCompleted
+            O->>K: OrderConfirmed
+            K->>N: Consume OrderConfirmed
+            N-->>N: Send email/push
+        else Payment fails
+            P->>K: PaymentFailed
+            K->>I: Release stock
+            K->>O: Mark CANCELLED
+        end
+    else Out of stock
+        I->>K: InventoryFailed
+        K->>O: Mark CANCELLED
+    end
 ```
 
 ### Side-by-Side Decision

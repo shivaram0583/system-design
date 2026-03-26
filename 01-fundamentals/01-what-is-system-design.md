@@ -44,27 +44,32 @@ Think of it like architecture for buildings — before you lay a single brick, y
 
 ### The Two Levels of System Design
 
+```mermaid
+block-beta
+  columns 2
+  block:HLD["High-Level Design (HLD)"]:1
+    columns 1
+    A["Architecture"]
+    B["Components"]
+    C["Data Flow"]
+    D["APIs"]
+    E["DB Choices"]
+    F["Scaling Strategy"]
+    G["Trade-offs"]
+  end
+  block:LLD["Low-Level Design (LLD)"]:1
+    columns 1
+    H["Classes & Objects"]
+    I["Interfaces"]
+    J["Data Models"]
+    K["Algorithms"]
+    L["Design Patterns"]
+    M["Error Handling"]
+    N["Sequence Diagrams"]
+  end
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    SYSTEM DESIGN                         │
-│                                                          │
-│  ┌─────────────────────┐  ┌────────────────────────┐    │
-│  │  High-Level Design  │  │   Low-Level Design     │    │
-│  │       (HLD)         │  │       (LLD)            │    │
-│  │                     │  │                        │    │
-│  │ • Architecture      │  │ • Classes & Objects    │    │
-│  │ • Components        │  │ • Interfaces           │    │
-│  │ • Data Flow         │  │ • Data Models          │    │
-│  │ • APIs              │  │ • Algorithms           │    │
-│  │ • DB Choices        │  │ • Design Patterns      │    │
-│  │ • Scaling Strategy  │  │ • Error Handling       │    │
-│  │ • Trade-offs        │  │ • Sequence Diagrams    │    │
-│  └─────────────────────┘  └────────────────────────┘    │
-│                                                          │
-│  "WHAT components exist     "HOW each component          │
-│   and how they connect"      works internally"           │
-└─────────────────────────────────────────────────────────┘
-```
+
+> **HLD** = "WHAT components exist and how they connect" | **LLD** = "HOW each component works internally"
 
 ### When Do You Need System Design?
 
@@ -88,88 +93,53 @@ Think of it like architecture for buildings — before you lay a single brick, y
 
 Every system design revolves around balancing these pillars:
 
-```
-                    ┌──────────────┐
-                    │  PERFORMANCE │
-                    │  (Latency &  │
-                    │  Throughput) │
-                    └──────┬───────┘
-                           │
-           ┌───────────────┼───────────────┐
-           │               │               │
-    ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
-    │ SCALABILITY │ │ AVAILABILITY│ │ CONSISTENCY │
-    │             │ │             │ │             │
-    │ Can it      │ │ Is it       │ │ Does every  │
-    │ handle      │ │ always      │ │ user see    │
-    │ growth?     │ │ up?         │ │ same data?  │
-    └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-           │               │               │
-           └───────────────┼───────────────┘
-                           │
-                    ┌──────┴───────┐
-                    │  RELIABILITY │
-                    │  (Data       │
-                    │  Durability) │
-                    └──────┬───────┘
-                           │
-                    ┌──────┴───────┐
-                    │   COST &     │
-                    │  MAINTAINA-  │
-                    │  BILITY      │
-                    └──────────────┘
+```mermaid
+graph TD
+    PERF["🎯 PERFORMANCE<br/>Latency & Throughput"]
+    SCALE["📈 SCALABILITY<br/>Can it handle growth?"]
+    AVAIL["🟢 AVAILABILITY<br/>Is it always up?"]
+    CONSIST["🔄 CONSISTENCY<br/>Does every user see same data?"]
+    REL["💾 RELIABILITY<br/>Data Durability"]
+    COST["💰 COST & MAINTAINABILITY"]
+
+    PERF --> SCALE
+    PERF --> AVAIL
+    PERF --> CONSIST
+    SCALE --> REL
+    AVAIL --> REL
+    CONSIST --> REL
+    REL --> COST
 ```
 
 **Key insight**: You can NEVER optimize all pillars simultaneously. System design is about making **informed trade-offs**.
 
 ### The System Design Process (Step by Step)
 
-```
-Step 1: Understand Requirements
-    │
-    ├── Functional Requirements (what the system does)
-    │   └── "Users can upload photos and share them"
-    │
-    └── Non-Functional Requirements (how the system behaves)
-        └── "99.9% uptime, <200ms latency, 10M users"
-    │
-Step 2: Capacity Estimation
-    │
-    ├── Traffic: requests/second
-    ├── Storage: total data size
-    ├── Bandwidth: data transfer/second
-    └── Memory: cache size needed
-    │
-Step 3: API Design
-    │
-    ├── Define endpoints
-    ├── Request/response formats
-    └── Authentication model
-    │
-Step 4: Data Model & Database
-    │
-    ├── Schema design
-    ├── SQL vs NoSQL
-    └── Indexing strategy
-    │
-Step 5: High-Level Architecture
-    │
-    ├── Components (services, DBs, caches, queues)
-    ├── Data flow between components
-    └── Communication protocols
-    │
-Step 6: Deep Dive into Components
-    │
-    ├── Scaling strategy for each component
-    ├── Failure handling
-    └── Bottleneck identification
-    │
-Step 7: Address Trade-offs
-    │
-    ├── Consistency vs Availability
-    ├── Latency vs Throughput
-    ├── Cost vs Performance
-    └── Simplicity vs Flexibility
+```mermaid
+flowchart TD
+    S1["Step 1: Understand Requirements"]
+    S1a["Functional: what the system does"]
+    S1b["Non-Functional: uptime, latency, scale"]
+    S2["Step 2: Capacity Estimation"]
+    S2a["Traffic · Storage · Bandwidth · Memory"]
+    S3["Step 3: API Design"]
+    S3a["Endpoints · Request/Response · Auth"]
+    S4["Step 4: Data Model & Database"]
+    S4a["Schema · SQL vs NoSQL · Indexing"]
+    S5["Step 5: High-Level Architecture"]
+    S5a["Components · Data Flow · Protocols"]
+    S6["Step 6: Deep Dive into Components"]
+    S6a["Scaling · Failure Handling · Bottlenecks"]
+    S7["Step 7: Address Trade-offs"]
+    S7a["Consistency vs Availability<br/>Latency vs Throughput<br/>Cost vs Performance"]
+
+    S1 --> S1a & S1b
+    S1 --> S2 --> S2a
+    S2 --> S3 --> S3a
+    S3 --> S4 --> S4a
+    S4 --> S5 --> S5a
+    S5 --> S6 --> S6a
+    S6 --> S7 --> S7a
 ```
 
 ### Common Mistakes in System Design
@@ -245,13 +215,12 @@ This opening alone puts you ahead of 70% of candidates.
 
 In production, system design isn't a one-time activity — it's continuous:
 
-```
-┌─────────┐    ┌──────────┐    ┌────────────┐    ┌──────────┐
-│ Design   │───►│  Build   │───►│  Observe   │───►│  Iterate │──┐
-│ Document │    │  & Ship  │    │  & Measure  │    │  & Fix   │  │
-└─────────┘    └──────────┘    └────────────┘    └──────────┘  │
-     ▲                                                          │
-     └──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    A["📝 Design Document"] --> B["🔨 Build & Ship"]
+    B --> C["👁️ Observe & Measure"]
+    C --> D["🔄 Iterate & Fix"]
+    D --> A
 ```
 
 ### Design Documents (Design Docs)
@@ -335,23 +304,16 @@ Storage (5 years):
 
 ### Step 3: High-Level Architecture
 
+```mermaid
+graph LR
+    Client["🌐 Client<br/>Browser"] --> API["⚙️ API Server<br/>Stateless"]
+    API --> DB[("🗄️ Database<br/>URL Store")]
+    API --> Cache[("⚡ Cache<br/>Redis")]
 ```
-┌──────────┐     ┌─────────────┐     ┌──────────────┐
-│  Client   │────►│  API Server │────►│   Database   │
-│ (Browser) │     │  (Stateless)│     │  (URL Store) │
-└──────────┘     └──────┬──────┘     └──────────────┘
-                        │
-                 ┌──────┴──────┐
-                 │    Cache    │
-                 │   (Redis)   │
-                 └─────────────┘
 
-Write Flow:
-  Client → API Server → Generate Short Code → Store in DB → Return Short URL
+**Write Flow:** Client → API Server → Generate Short Code → Store in DB → Return Short URL
 
-Read Flow:
-  Client → API Server → Check Cache → (Miss?) → Query DB → Redirect
-```
+**Read Flow:** Client → API Server → Check Cache → (Miss?) → Query DB → Redirect
 
 ### Step 4: Key Decisions
 
@@ -402,24 +364,18 @@ At the LLD level, system design is about:
 
 ### Relationship Between HLD and LLD
 
-```
-HLD: "We need an API Server, a Database, and a Cache"
-                    │
-                    ▼
-LLD: "The API Server has these classes:
-      - URLController (handles HTTP requests)
-      - URLService (business logic)
-      - URLRepository (DB access)
-      - CacheManager (Redis operations)
-      - CodeGenerator (creates short codes)
-
-      URLController.createShortURL(request):
-        1. Validate input
-        2. Call URLService.shorten(longURL)
-        3. URLService calls CodeGenerator.generate()
-        4. URLService calls URLRepository.save(code, longURL)
-        5. URLService calls CacheManager.put(code, longURL)
-        6. Return response with short URL"
+```mermaid
+flowchart TD
+    subgraph HLD["HLD: Components"]
+        A1["API Server"] --- A2["Database"] --- A3["Cache"]
+    end
+    subgraph LLD["LLD: API Server Classes"]
+        B1["URLController"] -->|"1. validate"| B2["URLService"]
+        B2 -->|"2. generate"| B3["CodeGenerator"]
+        B2 -->|"3. save"| B4["URLRepository"]
+        B2 -->|"4. cache"| B5["CacheManager"]
+    end
+    HLD --> LLD
 ```
 
 ---
