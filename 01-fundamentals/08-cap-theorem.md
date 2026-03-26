@@ -1,4 +1,4 @@
-# Topic 8: CAP Theorem
+﻿# Topic 8: CAP Theorem
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -55,34 +55,7 @@ You can pick TWO:
 
 In any real distributed system, **network partitions are inevitable** — cables get cut, switches fail, cloud AZs lose connectivity. Therefore:
 
-```
-REALITY: P (Partition Tolerance) is NOT optional.
-
-Since P is required, the real choice is:
-
-  CP: When partition happens → BLOCK requests until partition heals
-      (maintain consistency, sacrifice availability)
-  
-  AP: When partition happens → SERVE requests with possibly stale data
-      (maintain availability, sacrifice consistency)
-
-┌──────────────────────────────────────────────────────────────┐
-│  NETWORK PARTITION OCCURS:                                    │
-│                                                                │
-│  ┌────────┐         ✗ ✗ ✗        ┌────────┐                  │
-│  │Node A  │ ════════╳═╳═╳════════│ Node B │                  │
-│  │Data: X=5│   can't communicate  │Data: X=3│                  │
-│  └────────┘                      └────────┘                  │
-│                                                                │
-│  Client asks Node B for X:                                    │
-│                                                                │
-│  CP choice: "Sorry, I can't confirm X is up to date.         │
-│              Returning error 503." (Unavailable but consistent)│
-│                                                                │
-│  AP choice: "X = 3. (It might be stale, but here's a         │
-│              response.)" (Available but potentially stale)     │
-└──────────────────────────────────────────────────────────────┘
-```
+![Why You Must Choose P diagram](../assets/generated/01-fundamentals-08-cap-theorem-diagram-01.svg)
 
 ### CA — The Impossible Choice
 
@@ -360,27 +333,7 @@ Payment (for premium features): CP
 
 ### Architecture
 
-```
-┌───────────────────────────────────────────┐
-│          Chat Application                  │
-│                                            │
-│  Messages: ──► Cassandra (AP)             │
-│                Eventual consistency         │
-│                Multi-region replication     │
-│                                            │
-│  Presence:  ──► Redis Cluster (AP)        │
-│                Async replication            │
-│                TTL-based (auto-expire)     │
-│                                            │
-│  Groups:    ──► PostgreSQL (CP)           │
-│                Sync replication             │
-│                Single-region primary       │
-│                                            │
-│  Payments:  ──► PostgreSQL (CP)           │
-│                Synchronous writes           │
-│                Strict consistency           │
-└───────────────────────────────────────────┘
-```
+![Architecture diagram](../assets/generated/01-fundamentals-08-cap-theorem-diagram-02.svg)
 
 ---
 
@@ -390,32 +343,7 @@ Payment (for premium features): CP
 
 #### Architecture
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  Global Router                        │
-│   Routes by: data type → CP or AP path               │
-└──────────┬────────────────────────┬─────────────────┘
-           │                        │
-    ┌──────┴──────┐          ┌──────┴──────┐
-    │  CP Path    │          │  AP Path    │
-    │  (Strong)   │          │  (Eventual) │
-    └──────┬──────┘          └──────┬──────┘
-           │                        │
-    ┌──────┴──────┐          ┌──────┴──────┐
-    │ Raft/Paxos  │          │  Ring-based │
-    │ Consensus   │          │  Replication│
-    │             │          │             │
-    │ ┌───┐┌───┐ │          │ ┌───┐┌───┐  │
-    │ │ L ││ F │ │          │ │ R1││ R2│  │
-    │ └───┘└───┘ │          │ └───┘└───┘  │
-    │ ┌───┐      │          │ ┌───┐       │
-    │ │ F │      │          │ │ R3│       │
-    │ └───┘      │          │ └───┘       │
-    └─────────────┘          └─────────────┘
-    Leader + Followers        All peers equal
-    Writes go to leader       Write to any node
-    Blocks if no quorum       Always writable
-```
+![Architecture diagram](../assets/generated/01-fundamentals-08-cap-theorem-diagram-03.svg)
 
 #### Trade-offs
 

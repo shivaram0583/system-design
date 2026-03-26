@@ -1,4 +1,4 @@
-# HLD 01: URL Shortener (TinyURL / Bit.ly)
+﻿# HLD 01: URL Shortener (TinyURL / Bit.ly)
 
 > **Difficulty**: Easy
 > **Key Concepts**: Hashing, KV store, caching, redirection, analytics
@@ -65,27 +65,7 @@ GET /api/v1/stats/{short_code}
 
 ## 4. Database Design
 
-```
-Table: urls
-┌──────────────┬──────────────────────────────────────────┐
-│ short_code   │ VARCHAR(7), PRIMARY KEY                   │
-│ long_url     │ TEXT, NOT NULL                            │
-│ user_id      │ UUID (nullable, for registered users)     │
-│ created_at   │ TIMESTAMP                                │
-│ expires_at   │ TIMESTAMP (nullable)                     │
-│ click_count  │ BIGINT DEFAULT 0                         │
-└──────────────┴──────────────────────────────────────────┘
-
-Database choice:
-  Primary store: DynamoDB or Cassandra
-    • Key-value access pattern (lookup by short_code)
-    • High read throughput
-    • Horizontal scaling
-  
-  Alternative: PostgreSQL + read replicas
-    • If analytics/reporting is important
-    • ACID for URL creation
-```
+![4. Database Design diagram](../assets/generated/03-hld-01-url-shortener-diagram-01.svg)
 
 ---
 

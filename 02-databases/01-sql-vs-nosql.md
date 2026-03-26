@@ -1,4 +1,4 @@
-# Topic 01: SQL vs NoSQL
+﻿# Topic 01: SQL vs NoSQL
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -23,34 +23,7 @@
 
 **SQL databases** store data in tables with rows and columns, enforce schemas, and support powerful joins and transactions via SQL (Structured Query Language).
 
-```
-Table: users
-┌─────┬──────────┬──────────────────┬───────────┐
-│ id  │ name     │ email            │ created_at│
-├─────┼──────────┼──────────────────┼───────────┤
-│ 1   │ Alice    │ alice@example.com│ 2024-01-01│
-│ 2   │ Bob      │ bob@example.com  │ 2024-01-02│
-└─────┴──────────┴──────────────────┴───────────┘
-
-Table: orders
-┌─────┬─────────┬────────┬────────┐
-│ id  │ user_id │ total  │ status │
-├─────┼─────────┼────────┼────────┤
-│ 101 │ 1       │ 99.99  │ paid   │
-│ 102 │ 2       │ 49.50  │ pending│
-└─────┴─────────┴────────┴────────┘
-
-  SELECT u.name, o.total
-  FROM users u JOIN orders o ON u.id = o.user_id
-  WHERE o.status = 'paid';
-
-Properties:
-  • Fixed schema (ALTER TABLE to change)
-  • ACID transactions
-  • Rich queries: JOIN, GROUP BY, subqueries, window functions
-  • Referential integrity (foreign keys)
-  • Normalization: no data duplication
-```
+![SQL (Relational) Databases diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-01.svg)
 
 ### NoSQL Databases
 
@@ -167,35 +140,7 @@ Distributed SQL databases: SQL interface + horizontal scaling
 
 ### Polyglot Persistence
 
-```
-Use the right database for each use case:
-
-  ┌──────────────┐
-  │ E-Commerce   │
-  │ Platform     │
-  └──────┬───────┘
-         │
-  ┌──────┼──────────────────────────────────────┐
-  │      │                                       │
-  │  ┌───┴────┐  ┌──────────┐  ┌──────────┐   │
-  │  │Postgres│  │ MongoDB  │  │  Redis   │   │
-  │  │Orders, │  │ Product  │  │ Sessions,│   │
-  │  │Payments│  │ Catalog  │  │ Cart,    │   │
-  │  │Users   │  │ Reviews  │  │ Cache    │   │
-  │  └────────┘  └──────────┘  └──────────┘   │
-  │                                             │
-  │  ┌──────────┐  ┌──────────┐               │
-  │  │Elastic   │  │ClickHouse│               │
-  │  │Search    │  │Analytics │               │
-  │  └──────────┘  └──────────┘               │
-  └─────────────────────────────────────────────┘
-
-  Orders → PostgreSQL (ACID transactions, money)
-  Product catalog → MongoDB (flexible schema, nested attributes)
-  Sessions/cache → Redis (speed, TTL)
-  Search → Elasticsearch (full-text, facets)
-  Analytics → ClickHouse (columnar, fast aggregations)
-```
+![Polyglot Persistence diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-02.svg)
 
 ### Migration Considerations
 
@@ -238,38 +183,7 @@ Key insight: DynamoDB is cheap for simple key-value access patterns.
 
 ## D. Example: Choosing a Database for a Chat Application
 
-```
-Requirements:
-  • 10M users, 1B messages/month
-  • 1:1 and group chats (up to 500 members)
-  • Message history (read-heavy)
-  • User profiles and contacts
-  • Real-time presence (online/offline)
-
-Decision:
-
-  ┌─────────────────────────────────────────────────┐
-  │  USER PROFILES & AUTH: PostgreSQL                │
-  │  • Structured data, relationships                │
-  │  • Transactions for account operations           │
-  │  • ~10M rows, manageable size                    │
-  ├─────────────────────────────────────────────────┤
-  │  MESSAGES: Cassandra                             │
-  │  • Massive write throughput (1B/month)           │
-  │  • Partitioned by chat_id, sorted by timestamp   │
-  │  • Horizontal scaling, multi-DC replication      │
-  │  • Append-only (messages rarely updated)         │
-  ├─────────────────────────────────────────────────┤
-  │  PRESENCE & SESSIONS: Redis                      │
-  │  • Sub-millisecond reads                         │
-  │  • TTL for automatic expiry                      │
-  │  • Pub/Sub for real-time updates                 │
-  ├─────────────────────────────────────────────────┤
-  │  SEARCH: Elasticsearch                           │
-  │  • Full-text search across messages              │
-  │  • Async indexing from Cassandra via CDC          │
-  └─────────────────────────────────────────────────┘
-```
+![D. Example: Choosing a Database for a Chat Application diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-03.svg)
 
 ---
 
@@ -277,117 +191,99 @@ Decision:
 
 ### E.1 HLD — Multi-Database Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Clients                                                   │
-│      │                                                     │
-│  ┌───┴───────────┐                                        │
-│  │  API Gateway  │                                        │
-│  └───┬───────────┘                                        │
-│      │                                                     │
-│  ┌───┴─────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │ User Service│  │ Chat Service │  │ Search Svc   │    │
-│  │             │  │              │  │              │    │
-│  │  PostgreSQL │  │  Cassandra   │  │ Elasticsearch│    │
-│  │  (users,    │  │  (messages,  │  │ (message     │    │
-│  │   contacts) │  │   chats)     │  │  search)     │    │
-│  └─────────────┘  └──────────────┘  └──────────────┘    │
-│                                                            │
-│  ┌──────────────┐  ┌──────────────┐                      │
-│  │ Redis        │  │ Kafka        │                      │
-│  │ (sessions,   │  │ (events,     │                      │
-│  │  presence,   │  │  CDC for     │                      │
-│  │  cache)      │  │  search sync)│                      │
-│  └──────────────┘  └──────────────┘                      │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Multi-Database Architecture diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-04.svg)
 
 ### E.2 LLD — Database Abstraction Layer
 
-```python
-from abc import ABC, abstractmethod
+```java
+// Dependencies in the original example:
+// from abc import ABC, abstractmethod
 
-class Repository(ABC):
-    """Abstract repository — database-agnostic interface"""
-    
-    @abstractmethod
-    def get(self, id: str) -> dict:
-        pass
+public interface Repository {
+    Map<String, Object> get(String id);
+    String save(Map<String, Object> entity);
+    List<Object> query(Map<String, Object> filters, int limit);
+}
 
-    @abstractmethod
-    def save(self, entity: dict) -> str:
-        pass
+public class PostgresUserRepository {
+    private Object db;
 
-    @abstractmethod
-    def query(self, filters: dict, limit: int = 50) -> list:
-        pass
+    public PostgresUserRepository(Object dbPool) {
+        this.db = dbPool;
+    }
 
+    public Map<String, Object> get(String id) {
+        // row = db.execute(
+        // "SELECT id, name, email, created_at FROM users WHERE id = %s", (id,)
+        // )
+        // return dict(row) if row else null
+        return null;
+    }
 
-class PostgresUserRepository(Repository):
-    """SQL implementation for user data"""
-    
-    def __init__(self, db_pool):
-        self.db = db_pool
+    public String save(Map<String, Object> entity) {
+        // db.execute(
+        // "INSERT INTO users (id, name, email) VALUES (%s, %s, %s) "
+        // "ON CONFLICT (id) DO UPDATE SET name = %s, email = %s",
+        // (entity["id"], entity["name"], entity["email"],
+        // entity["name"], entity["email"])
+        // )
+        // return entity["id"]
+        return null;
+    }
 
-    def get(self, id: str) -> dict:
-        row = self.db.execute(
-            "SELECT id, name, email, created_at FROM users WHERE id = %s", (id,)
-        )
-        return dict(row) if row else None
+    public List<Object> query(Map<String, Object> filters, int limit) {
+        // where_clauses = []
+        // params = []
+        // for key, value in filters.items()
+        // where_clauses.append(f"{key} = %s")
+        // params.append(value)
+        // where = " AND ".join(where_clauses) if where_clauses else "1=1"
+        // rows = db.execute(
+        // f"SELECT * FROM users WHERE {where} LIMIT %s", (*params, limit)
+        // ...
+        return null;
+    }
+}
 
-    def save(self, entity: dict) -> str:
-        self.db.execute(
-            "INSERT INTO users (id, name, email) VALUES (%s, %s, %s) "
-            "ON CONFLICT (id) DO UPDATE SET name = %s, email = %s",
-            (entity["id"], entity["name"], entity["email"],
-             entity["name"], entity["email"])
-        )
-        return entity["id"]
+public class CassandraMessageRepository {
+    private Object session;
 
-    def query(self, filters: dict, limit: int = 50) -> list:
-        where_clauses = []
-        params = []
-        for key, value in filters.items():
-            where_clauses.append(f"{key} = %s")
-            params.append(value)
-        where = " AND ".join(where_clauses) if where_clauses else "1=1"
-        rows = self.db.execute(
-            f"SELECT * FROM users WHERE {where} LIMIT %s", (*params, limit)
-        )
-        return [dict(r) for r in rows]
+    public CassandraMessageRepository(Object session) {
+        this.session = session;
+    }
 
+    public Map<String, Object> get(String id) {
+        // row = session.execute(
+        // "SELECT * FROM messages WHERE message_id = %s", (id,)
+        // )
+        // return dict(row.one()) if row else null
+        return null;
+    }
 
-class CassandraMessageRepository(Repository):
-    """NoSQL implementation for message data"""
-    
-    def __init__(self, session):
-        self.session = session
+    public String save(Map<String, Object> entity) {
+        // session.execute(
+        // "INSERT INTO messages (chat_id, message_id, sender_id, content, created_at) "
+        // "VALUES (%s, %s, %s, %s, %s)",
+        // (entity["chat_id"], entity["message_id"],
+        // entity["sender_id"], entity["content"], entity["created_at"])
+        // )
+        // return entity["message_id"]
+        return null;
+    }
 
-    def get(self, id: str) -> dict:
-        row = self.session.execute(
-            "SELECT * FROM messages WHERE message_id = %s", (id,)
-        )
-        return dict(row.one()) if row else None
-
-    def save(self, entity: dict) -> str:
-        self.session.execute(
-            "INSERT INTO messages (chat_id, message_id, sender_id, content, created_at) "
-            "VALUES (%s, %s, %s, %s, %s)",
-            (entity["chat_id"], entity["message_id"],
-             entity["sender_id"], entity["content"], entity["created_at"])
-        )
-        return entity["message_id"]
-
-    def query(self, filters: dict, limit: int = 50) -> list:
-        # Cassandra: Must query by partition key (chat_id)
-        chat_id = filters.get("chat_id")
-        if not chat_id:
-            raise ValueError("chat_id is required for message queries")
-        rows = self.session.execute(
-            "SELECT * FROM messages WHERE chat_id = %s ORDER BY created_at DESC LIMIT %s",
-            (chat_id, limit)
-        )
-        return [dict(r) for r in rows]
+    public List<Object> query(Map<String, Object> filters, int limit) {
+        // Cassandra: Must query by partition key (chat_id)
+        // chat_id = filters.get("chat_id")
+        // if not chat_id
+        // raise ValueError("chat_id is required for message queries")
+        // rows = session.execute(
+        // "SELECT * FROM messages WHERE chat_id = %s ORDER BY created_at DESC LIMIT %s",
+        // (chat_id, limit)
+        // )
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Topic 29: Leader-Follower (Leader Election)
+﻿# Topic 29: Leader-Follower (Leader Election)
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -23,16 +23,7 @@
 
 The **leader-follower** (also called primary-replica or master-slave) pattern designates one node as the **leader** that coordinates work, while **followers** replicate state or standby for failover.
 
-```
-┌──────────┐     ┌──────────┐
-│  Leader   │────►│Follower 1│
-│ (writes)  │────►│Follower 2│
-│ (decides) │────►│Follower 3│
-└──────────┘     └──────────┘
-
-Leader: Accepts writes, makes decisions, coordinates
-Followers: Replicate leader's state, serve reads, ready for promotion
-```
+![What is Leader-Follower? diagram](../assets/generated/01-fundamentals-29-leader-follower-diagram-01.svg)
 
 ### Leader Election
 
@@ -98,25 +89,7 @@ TERM NUMBERS prevent stale leaders:
 
 ### Split-Brain Problem
 
-```
-Network partition splits cluster in half:
-
-  ┌─── Partition 1 ───┐   ┌─── Partition 2 ───┐
-  │  Node A (leader)   │   │  Node C            │
-  │  Node B            │   │  Node D            │
-  └────────────────────┘   │  Node E            │
-                           └────────────────────┘
-
-  Partition 1: A is still leader (2 nodes)
-  Partition 2: Elects new leader (3 nodes, has majority) → Node C becomes leader
-
-  TWO LEADERS! (split-brain)
-
-  Raft solution: Only majority side can commit writes
-    Partition 1 (2 nodes): Can't commit (need 3 votes) → read-only/unavailable
-    Partition 2 (3 nodes): Can commit → continues operating
-    When partition heals: A steps down (lower term) → follows C
-```
+![Split-Brain Problem diagram](../assets/generated/01-fundamentals-29-leader-follower-diagram-02.svg)
 
 ### Lease-Based Leadership
 
@@ -209,34 +182,7 @@ Alerts:
 
 ## D. Example: Database Primary Failover
 
-```
-PostgreSQL with Patroni (leader election via etcd):
-
-Normal operation:
-  ┌──────────┐   ┌──────────┐   ┌──────────┐
-  │  pg-1    │   │  pg-2    │   │  pg-3    │
-  │ PRIMARY  │──►│ REPLICA  │──►│ REPLICA  │
-  │(leader)  │   │(follower)│   │(follower)│
-  └──────────┘   └──────────┘   └──────────┘
-       │
-  ┌────┴────┐
-  │  etcd   │  Stores leader info, manages lease
-  │ cluster │
-  └─────────┘
-
-Failover:
-  1. pg-1 crashes → etcd lease expires (30s)
-  2. Patroni on pg-2 and pg-3 compete for leadership
-  3. pg-2 wins election (lowest replication lag)
-  4. pg-2 promoted to PRIMARY
-  5. pg-3 reconfigured to follow pg-2
-  6. Connection pool (PgBouncer) updated to point to pg-2
-  7. Total downtime: ~30-60 seconds
-
-  When pg-1 recovers:
-    → Detects it's no longer leader
-    → Rejoins as replica following pg-2
-```
+![D. Example: Database Primary Failover diagram](../assets/generated/01-fundamentals-29-leader-follower-diagram-03.svg)
 
 ---
 
@@ -244,94 +190,87 @@ Failover:
 
 ### E.1 HLD — Leader Election Service
 
-```
-┌──────────────────────────────────────────────────┐
-│  Application Nodes                                │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐           │
-│  │Node 1│ │Node 2│ │Node 3│ │Node 4│           │
-│  │Leader │ │Follow│ │Follow│ │Follow│           │
-│  └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘           │
-│     └────────┼────────┼────────┘                │
-│              ▼                                   │
-│  ┌───────────────────────┐                      │
-│  │  Election Coordinator │                      │
-│  │  (etcd / ZooKeeper)   │                      │
-│  │  3-5 node cluster     │                      │
-│  │                        │                      │
-│  │  /election/leader = "node1"                  │
-│  │  lease TTL = 15s       │                      │
-│  └───────────────────────┘                      │
-└──────────────────────────────────────────────────┘
-```
+![E.1 HLD — Leader Election Service diagram](../assets/generated/01-fundamentals-29-leader-follower-diagram-04.svg)
 
 ### E.2 LLD — Lease-Based Leader Election
 
-```python
-import time
-import threading
+```java
+// Dependencies in the original example:
+// import time
+// import threading
 
-class LeaderElection:
-    def __init__(self, node_id: str, etcd_client, lease_ttl: int = 15):
-        self.node_id = node_id
-        self.etcd = etcd_client
-        self.lease_ttl = lease_ttl
-        self.is_leader = False
-        self.lease_id = None
-        self._running = True
+public class LeaderElection {
+    private String nodeId;
+    private Object etcd;
+    private int leaseTtl;
+    private Object isLeader;
+    private String leaseId;
+    private Object running;
 
-    def start(self, on_become_leader, on_lose_leadership):
-        """Start the election loop"""
-        while self._running:
-            if not self.is_leader:
-                self._try_become_leader(on_become_leader)
-            else:
-                if not self._renew_lease():
-                    self.is_leader = False
-                    on_lose_leadership()
-            time.sleep(self.lease_ttl // 3)
+    public LeaderElection(String nodeId, Object etcdClient, int leaseTtl) {
+        this.nodeId = nodeId;
+        this.etcd = etcdClient;
+        this.leaseTtl = leaseTtl;
+        this.isLeader = false;
+        this.leaseId = null;
+        this.running = true;
+    }
 
-    def _try_become_leader(self, callback):
-        try:
-            # Create lease
-            self.lease_id = self.etcd.lease(self.lease_ttl)
-            
-            # Try to acquire leadership (atomic put-if-absent)
-            success = self.etcd.put_if_absent(
-                "/election/leader",
-                self.node_id,
-                lease=self.lease_id
-            )
-            
-            if success:
-                self.is_leader = True
-                callback()
-            else:
-                # Someone else is leader; wait for their lease to expire
-                self.etcd.revoke_lease(self.lease_id)
-                
-        except Exception as e:
-            log.error(f"Election attempt failed: {e}")
+    public Object start(Object onBecomeLeader, Object onLoseLeadership) {
+        // Start the election loop
+        // while _running
+        // if not is_leader
+        // _try_become_leader(on_become_leader)
+        // else
+        // if not _renew_lease()
+        // is_leader = false
+        // on_lose_leadership()
+        // ...
+        return null;
+    }
 
-    def _renew_lease(self) -> bool:
-        try:
-            self.etcd.refresh_lease(self.lease_id)
-            return True
-        except Exception:
-            return False  # Lost leadership
+    public Object tryBecomeLeader(Object callback) {
+        // try
+        // Create lease
+        // lease_id = etcd.lease(lease_ttl)
+        // Try to acquire leadership (atomic put-if-absent)
+        // success = etcd.put_if_absent(
+        // "/election/leader",
+        // node_id,
+        // lease=lease_id
+        // ...
+        return null;
+    }
 
-    def resign(self):
-        """Voluntarily give up leadership"""
-        if self.is_leader:
-            self.etcd.delete("/election/leader")
-            self.etcd.revoke_lease(self.lease_id)
-            self.is_leader = False
+    public boolean renewLease() {
+        // try
+        // etcd.refresh_lease(lease_id)
+        // return true
+        // except Exception
+        // return false  # Lost leadership
+        return false;
+    }
 
-    def get_current_leader(self) -> str:
-        return self.etcd.get("/election/leader")
+    public Object resign() {
+        // Voluntarily give up leadership
+        // if is_leader
+        // etcd.delete("/election/leader")
+        // etcd.revoke_lease(lease_id)
+        // is_leader = false
+        return null;
+    }
 
-    def stop(self):
-        self._running = False
-        self.resign()
+    public String getCurrentLeader() {
+        // return etcd.get("/election/leader")
+        return null;
+    }
+
+    public Object stop() {
+        // _running = false
+        // resign()
+        return null;
+    }
+}
 ```
 
 ---

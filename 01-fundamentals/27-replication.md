@@ -1,4 +1,4 @@
-# Topic 27: Replication
+﻿# Topic 27: Replication
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -23,72 +23,21 @@
 
 **Replication** is the process of maintaining copies of data on multiple machines to improve availability, fault tolerance, and read performance.
 
-```
-Single node (no replication):
-  ┌──────────┐
-  │ Database │ ← If this dies, ALL data is unavailable
-  └──────────┘
-
-Replicated (3 copies):
-  ┌──────────┐  ┌──────────┐  ┌──────────┐
-  │ Primary  │  │ Replica 1│  │ Replica 2│
-  │ (writes) │─►│ (reads)  │─►│ (reads)  │
-  └──────────┘  └──────────┘  └──────────┘
-  If primary dies → promote replica → minimal downtime
-  Reads can be served from any replica → 3× read capacity
-```
+![What is Replication? diagram](../assets/generated/01-fundamentals-27-replication-diagram-01.svg)
 
 ### Replication Topologies
 
 #### Single-Leader (Primary-Replica)
 
-```
-  ┌──────────┐
-  │ Primary  │  All writes go here
-  │ (Leader) │
-  └────┬─────┘
-       │ replicate
-  ┌────┼────────┐
-  │    │        │
-┌─┴────┴─┐  ┌──┴──────┐
-│Replica 1│  │Replica 2│  Reads from any
-└─────────┘  └─────────┘
-
-Pros: Simple, no write conflicts, strong consistency possible
-Cons: Single write bottleneck, leader is SPOF until failover
-Used by: PostgreSQL, MySQL, MongoDB (default), Redis
-```
+![Single-Leader (Primary-Replica) diagram](../assets/generated/01-fundamentals-27-replication-diagram-02.svg)
 
 #### Multi-Leader
 
-```
-  ┌──────────┐     ┌──────────┐
-  │ Leader 1 │◄───►│ Leader 2 │  Both accept writes
-  │ (US)     │     │ (EU)     │  Replicate to each other
-  └──────────┘     └──────────┘
-
-Pros: Write availability in multiple regions, low latency for local writes
-Cons: Write conflicts! Must resolve (LWW, vector clocks, CRDTs)
-Used by: CouchDB, MySQL Group Replication, multi-DC setups
-```
+![Multi-Leader diagram](../assets/generated/01-fundamentals-27-replication-diagram-03.svg)
 
 #### Leaderless
 
-```
-  ┌───────┐  ┌───────┐  ┌───────┐
-  │Node 1 │  │Node 2 │  │Node 3 │
-  └───────┘  └───────┘  └───────┘
-  
-  Write to W nodes, Read from R nodes
-  If W + R > N → guaranteed to read latest write (quorum)
-  
-  Example: N=3, W=2, R=2
-    Write to 2 nodes → Read from 2 nodes → at least 1 has latest
-
-Pros: No single point of failure, high availability
-Cons: Complex conflict resolution, weaker consistency
-Used by: Cassandra, DynamoDB, Riak
-```
+![Leaderless diagram](../assets/generated/01-fundamentals-27-replication-diagram-04.svg)
 
 ### Synchronous vs Asynchronous Replication
 
@@ -206,30 +155,7 @@ Split-brain risk:
 
 ## D. Example: Read-Heavy Application with Replicas
 
-```
-Architecture: 1 primary + 3 read replicas
-
-  ┌────────┐     ┌──────────┐     ┌──────────┐
-  │ Client │────►│ App Svc  │────►│ Primary  │ (writes only)
-  └────────┘     │          │     └──────────┘
-                 │          │         │ async replication
-                 │          │     ┌───┼───────────┐
-                 │          │     │   │           │
-                 │          │──►┌─┴───┴──┐  ┌────┴────┐  ┌──────────┐
-                 └──────────┘   │Replica1│  │Replica 2│  │Replica 3│
-                   (reads)      └────────┘  └─────────┘  └──────────┘
-
-  Write path: App → Primary only
-  Read path: App → any replica (round-robin LB)
-  
-  Read-after-write: After user writes, route their reads to primary for 5s
-  
-  Capacity:
-    Primary: 10K writes/s
-    Each replica: 10K reads/s
-    Total read: 30K reads/s (3 replicas)
-    Read:Write ratio: 3:1 → well balanced
-```
+![D. Example: Read-Heavy Application with Replicas diagram](../assets/generated/01-fundamentals-27-replication-diagram-05.svg)
 
 ---
 
@@ -237,62 +163,49 @@ Architecture: 1 primary + 3 read replicas
 
 ### E.1 HLD — Multi-Region Replication
 
-```
-┌──────────────────────────────────────────────────────┐
-│  US-EAST (Primary Region)                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
-│  │ Primary  │─►│ Replica  │─►│ Replica  │          │
-│  │ (writes) │  │ (reads)  │  │ (reads)  │          │
-│  └────┬─────┘  └──────────┘  └──────────┘          │
-│       │ async cross-region replication               │
-└───────┼──────────────────────────────────────────────┘
-        │
-┌───────┼──────────────────────────────────────────────┐
-│  EU-WEST (Read-Only Region)                           │
-│       │                                               │
-│  ┌────┴─────┐  ┌──────────┐                         │
-│  │ Replica  │─►│ Replica  │  (serve EU reads locally)│
-│  │ (reads)  │  │ (reads)  │                          │
-│  └──────────┘  └──────────┘                          │
-│                                                       │
-│  EU writes → routed to US primary (higher latency)   │
-│  EU reads → served locally (low latency)             │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Multi-Region Replication diagram](../assets/generated/01-fundamentals-27-replication-diagram-06.svg)
 
 ### E.2 LLD — Read/Write Routing
 
-```python
-class ReplicationRouter:
-    def __init__(self, primary_conn, replica_conns: list):
-        self.primary = primary_conn
-        self.replicas = replica_conns
-        self.rr_index = 0
-        self.recent_writers = {}  # user_id -> write_timestamp
+```java
+public class ReplicationRouter {
+    private Object primary;
+    private List<Object> replicas;
+    private Object rrIndex;
+    private Object recentWriters;
 
-    def get_connection(self, query_type: str, user_id: str = None):
-        if query_type == "write":
-            if user_id:
-                self.recent_writers[user_id] = time.time()
-            return self.primary
+    public ReplicationRouter(Object primaryConn, List<Object> replicaConns) {
+        this.primary = primaryConn;
+        this.replicas = replicaConns;
+        this.rrIndex = 0;
+        this.recentWriters = new HashMap<>();
+    }
 
-        # Read-after-write consistency
-        if user_id and user_id in self.recent_writers:
-            if time.time() - self.recent_writers[user_id] < 5:  # 5s window
-                return self.primary  # Route to primary for fresh reads
+    public Object getConnection(String queryType, String userId) {
+        // if query_type == "write"
+        // if user_id
+        // recent_writers[user_id] = time.time()
+        // return primary
+        // Read-after-write consistency
+        // if user_id and user_id in recent_writers
+        // if time.time() - recent_writers[user_id] < 5:  # 5s window
+        // return primary  # Route to primary for fresh reads
+        // ...
+        return null;
+    }
 
-        # Round-robin across replicas
-        replica = self.replicas[self.rr_index % len(self.replicas)]
-        self.rr_index += 1
-        return replica
+    public Object executeRead(Object query, Object params, Object userId) {
+        // conn = get_connection("read", user_id)
+        // return conn.execute(query, params)
+        return null;
+    }
 
-    def execute_read(self, query, params=None, user_id=None):
-        conn = self.get_connection("read", user_id)
-        return conn.execute(query, params)
-
-    def execute_write(self, query, params=None, user_id=None):
-        conn = self.get_connection("write", user_id)
-        return conn.execute(query, params)
+    public Object executeWrite(Object query, Object params, Object userId) {
+        // conn = get_connection("write", user_id)
+        // return conn.execute(query, params)
+        return null;
+    }
+}
 ```
 
 ---

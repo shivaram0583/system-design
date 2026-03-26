@@ -1,4 +1,4 @@
-# Topic 19: Pub-Sub (Publish-Subscribe)
+﻿# Topic 19: Pub-Sub (Publish-Subscribe)
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,21 +23,7 @@
 
 **Publish-Subscribe** is a messaging pattern where publishers send messages to a **topic** (not to specific receivers), and subscribers receive all messages from topics they subscribe to.
 
-```
-POINT-TO-POINT (Queue):
-  Producer → Queue → ONE Consumer gets each message
-
-PUB-SUB (Topic):
-  Publisher → Topic → ALL Subscribers get every message
-
-  ┌───────────┐          ┌─────────────┐
-  │ Publisher  │──event──►│   Topic     │──event──► Subscriber A
-  └───────────┘          │ "orders"    │──event──► Subscriber B
-                         └─────────────┘──event──► Subscriber C
-  
-  Publisher doesn't know who subscribes.
-  New subscribers can be added without changing the publisher.
-```
+![What is Pub-Sub? diagram](../assets/generated/01-fundamentals-19-pub-sub-diagram-01.svg)
 
 ### Pub-Sub vs Message Queue
 
@@ -51,20 +37,7 @@ PUB-SUB (Topic):
 
 ### Fan-Out Pattern
 
-```
-A single event needs to trigger multiple independent actions:
-
-  Order Created Event
-       │
-       ├──► Payment Service (charge card)
-       ├──► Inventory Service (reserve stock)
-       ├──► Email Service (send confirmation)
-       ├──► Analytics Service (track conversion)
-       └──► Fraud Service (check for fraud)
-
-Without pub-sub: Order Service calls each one (tight coupling, slow)
-With pub-sub: Order Service publishes once, 5 subscribers react independently
-```
+![Fan-Out Pattern diagram](../assets/generated/01-fundamentals-19-pub-sub-diagram-02.svg)
 
 ### Pub-Sub Implementations
 
@@ -132,22 +105,7 @@ Within a group, messages are load-balanced (queue behavior).
 
 ### AWS SNS + SQS Fan-Out
 
-```
-The standard AWS pattern for reliable fan-out:
-
-  ┌──────────┐     ┌──────┐     ┌──────────┐     ┌─────────────┐
-  │ Producer │────►│ SNS  │────►│ SQS (A)  │────►│ Consumer A  │
-  └──────────┘     │ Topic│────►│ SQS (B)  │────►│ Consumer B  │
-                   │      │────►│ SQS (C)  │────►│ Consumer C  │
-                   └──────┘     └──────────┘     └─────────────┘
-
-  SNS: Fire-and-forget pub-sub (no retention)
-  SQS: Durable queue per subscriber (with DLQ, retry, visibility timeout)
-  
-  Why not just SNS?
-    SNS is push-based. If subscriber is down, message is lost.
-    SQS buffers messages. Subscriber processes at its own pace.
-```
+![AWS SNS + SQS Fan-Out diagram](../assets/generated/01-fundamentals-19-pub-sub-diagram-03.svg)
 
 ### Filtering
 
@@ -169,30 +127,7 @@ Google Pub/Sub: Supports server-side filtering
 
 ## D. Example: Real-Time Notification System
 
-```
-Events:
-  user.followed, post.liked, post.commented, order.shipped
-
-┌───────────────────────────────────────────────────────┐
-│  Various Services publish events to SNS topics        │
-│                                                        │
-│  SNS Topic: "user-events"                             │
-│      │                                                 │
-│      ├──► SQS: push-notification-queue                │
-│      │    → Push Notification Worker (FCM/APNS)       │
-│      │                                                 │
-│      ├──► SQS: email-queue                            │
-│      │    → Email Worker (SES)                        │
-│      │                                                 │
-│      ├──► SQS: in-app-notification-queue              │
-│      │    → In-App Worker (writes to notification DB) │
-│      │                                                 │
-│      └──► SQS: analytics-queue                        │
-│           → Analytics Worker (writes to data lake)    │
-│                                                        │
-│  Each queue has its own DLQ and scaling policy        │
-└───────────────────────────────────────────────────────┘
-```
+![D. Example: Real-Time Notification System diagram](../assets/generated/01-fundamentals-19-pub-sub-diagram-04.svg)
 
 ---
 
@@ -200,25 +135,7 @@ Events:
 
 ### E.1 HLD — Pub-Sub Event Bus
 
-```
-┌────────────────────────────────────────────────────────┐
-│  Producers (any service)                                │
-│  ┌──────┐ ┌──────┐ ┌──────┐                           │
-│  │Order │ │User  │ │Pay   │                           │
-│  └──┬───┘ └──┬───┘ └──┬───┘                           │
-│     └────────┼────────┘                                │
-│              ▼                                          │
-│  ┌────────────────────────────────┐                    │
-│  │  Event Bus (Kafka)             │                    │
-│  │  Topics: orders, users, payments│                    │
-│  │  Partitions: 12 each           │                    │
-│  │  Retention: 7 days             │                    │
-│  └────┬──────┬──────┬──────┬─────┘                    │
-│       │      │      │      │                           │
-│  CG: payment CG: inv CG: notif CG: analytics         │
-│  (3 inst) (3 inst) (2 inst) (1 inst)                  │
-└────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Pub-Sub Event Bus diagram](../assets/generated/01-fundamentals-19-pub-sub-diagram-05.svg)
 
 ### E.2 LLD — Pub-Sub Broker
 

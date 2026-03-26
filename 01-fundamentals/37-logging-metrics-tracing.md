@@ -1,4 +1,4 @@
-# Topic 37: Logging, Metrics, and Tracing (Deep Dive)
+﻿# Topic 37: Logging, Metrics, and Tracing (Deep Dive)
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -56,76 +56,59 @@ STRUCTURED (good — JSON):
 
 #### Log Aggregation Architecture
 
-```
-  ┌──────────┐   ┌──────────┐   ┌──────────┐
-  │ Service A│   │ Service B│   │ Service C│
-  │ (stdout) │   │ (stdout) │   │ (stdout) │
-  └────┬─────┘   └────┬─────┘   └────┬─────┘
-       │              │              │
-  ┌────┴──────────────┴──────────────┴────┐
-  │  Log Shipper (Fluentd / Filebeat)     │
-  │  Collects, parses, enriches, forwards │
-  └────────────────┬──────────────────────┘
-                   │
-  ┌────────────────┴──────────────────────┐
-  │  Message Queue (Kafka)                 │  Buffer for spikes
-  └────────────────┬──────────────────────┘
-                   │
-  ┌────────────────┴──────────────────────┐
-  │  Indexer (Logstash / Loki)            │
-  └────────────────┬──────────────────────┘
-                   │
-  ┌────────────────┴──────────────────────┐
-  │  Storage (Elasticsearch / S3)          │
-  │  Hot: 7 days (SSD)                    │
-  │  Warm: 30 days (HDD)                  │
-  │  Cold: 90 days (S3)                   │
-  └────────────────┬──────────────────────┘
-                   │
-  ┌────────────────┴──────────────────────┐
-  │  Visualization (Kibana / Grafana)     │
-  └───────────────────────────────────────┘
-```
+![Log Aggregation Architecture diagram](../assets/generated/01-fundamentals-37-logging-metrics-tracing-diagram-01.svg)
 
 ### Metrics Deep Dive
 
 #### Prometheus Metric Types
 
-```python
-from prometheus_client import Counter, Gauge, Histogram, Summary
+```java
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.util.concurrent.atomic.AtomicInteger;
 
-# Counter: monotonically increasing
-http_requests_total = Counter(
-    'http_requests_total',
-    'Total HTTP requests',
-    ['method', 'path', 'status']
-)
-http_requests_total.labels(method='GET', path='/api/users', status='200').inc()
+public final class MetricsRegistry {
+    private final Counter httpRequestsTotal;
+    private final Counter paymentFailuresTotal;
+    private final AtomicInteger activeConnections;
+    private final Timer requestLatency;
 
-# Gauge: current value (can go up or down)
-active_connections = Gauge(
-    'active_connections',
-    'Number of active connections'
-)
-active_connections.set(42)
-active_connections.inc()
-active_connections.dec()
+    public MetricsRegistry(MeterRegistry registry) {
+        this.httpRequestsTotal = Counter.builder("http_requests_total")
+                .description("Total HTTP requests")
+                .tag("service", "payment-service")
+                .register(registry);
 
-# Histogram: distribution with configurable buckets
-request_duration = Histogram(
-    'request_duration_seconds',
-    'Request latency',
-    ['method', 'path'],
-    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
-)
-with request_duration.labels(method='GET', path='/api/users').time():
-    handle_request()  # Automatically records duration
+        this.paymentFailuresTotal = Counter.builder("payment_failures_total")
+                .description("Failed payment attempts")
+                .register(registry);
 
-# Summary: pre-calculated quantiles
-request_summary = Summary(
-    'request_processing_seconds',
-    'Time spent processing request'
-)
+        this.activeConnections = registry.gauge("active_connections", new AtomicInteger(0));
+
+        this.requestLatency = Timer.builder("http_request_latency")
+                .description("End-to-end request latency")
+                .publishPercentiles(0.5, 0.95, 0.99)
+                .register(registry);
+    }
+
+    public void recordRequest(String endpoint, int statusCode, Runnable handler) {
+        httpRequestsTotal.increment();
+        requestLatency.record(handler);
+        if (statusCode >= 500) {
+            paymentFailuresTotal.increment();
+        }
+    }
+
+    public void connectionOpened() {
+        activeConnections.incrementAndGet();
+    }
+
+    public void connectionClosed() {
+        activeConnections.decrementAndGet();
+    }
+}
 ```
 
 #### PromQL Examples
@@ -157,25 +140,7 @@ annotations:
 
 #### Trace Context Propagation
 
-```
-HTTP header propagation (W3C standard):
-
-  Request from Service A → Service B:
-    traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
-                 │  │                                  │                  │
-                 │  │ trace-id (128-bit)               │ parent-span-id  │ flags
-                 version                                                  sampled
-
-  Service B extracts trace-id → creates child span → propagates to Service C
-
-  Propagation formats:
-  • W3C Trace Context (standard): traceparent header
-  • B3 (Zipkin): X-B3-TraceId, X-B3-SpanId headers
-  • Jaeger: uber-trace-id header
-  • AWS X-Ray: X-Amzn-Trace-Id header
-
-  OpenTelemetry SDK handles propagation automatically.
-```
+![Trace Context Propagation diagram](../assets/generated/01-fundamentals-37-logging-metrics-tracing-diagram-02.svg)
 
 #### Sampling Strategies
 
@@ -312,85 +277,63 @@ Without observability: hours of guessing
 
 ### E.1 HLD — Full Observability Stack
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Application Services (OTel SDK)                          │
-│      │ logs        │ metrics      │ traces               │
-│      ▼             ▼              ▼                      │
-│  ┌─────────────────────────────────┐                     │
-│  │  OpenTelemetry Collector        │                     │
-│  │  (process, batch, export)       │                     │
-│  └──┬──────────┬──────────┬───────┘                     │
-│     │          │          │                              │
-│  ┌──┴────┐ ┌──┴────┐ ┌──┴──────┐                      │
-│  │ Loki  │ │ Prom  │ │ Tempo/  │                      │
-│  │ (logs)│ │(metric│ │ Jaeger  │                      │
-│  │       │ │  s)   │ │(traces) │                      │
-│  └──┬────┘ └──┬────┘ └──┬──────┘                      │
-│     └─────────┼─────────┘                              │
-│          ┌────┴────┐                                    │
-│          │ Grafana │                                    │
-│          │Dashboard│─── alerts ──► PagerDuty/Slack     │
-│          └─────────┘                                    │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Full Observability Stack diagram](../assets/generated/01-fundamentals-37-logging-metrics-tracing-diagram-03.svg)
 
 ### E.2 LLD — Logging Library
 
-```python
-import json
-import time
-import logging
-import traceback
+```java
+// Dependencies in the original example:
+// import json
+// import time
+// import logging
+// import traceback
 
-class StructuredLogger:
-    def __init__(self, service_name: str, default_fields: dict = None):
-        self.service = service_name
-        self.defaults = default_fields or {}
-        self.logger = logging.getLogger(service_name)
+public class StructuredLogger {
+    private String service;
+    private Object defaults;
+    private Object logger;
 
-    def _log(self, level: str, message: str, **kwargs):
-        entry = {
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "level": level,
-            "service": self.service,
-            "message": message,
-            **self.defaults,
-            **kwargs,
-        }
-        
-        # Add trace context if available
-        span = trace.get_current_span()
-        if span.is_recording():
-            ctx = span.get_span_context()
-            entry["trace_id"] = format(ctx.trace_id, '032x')
-            entry["span_id"] = format(ctx.span_id, '016x')
+    public StructuredLogger(String serviceName, Map<String, Object> defaultFields) {
+        this.service = serviceName;
+        this.defaults = defaultFields || {};
+        this.logger = logging.getLogger(serviceName);
+    }
 
-        if level == "error" and "error" in kwargs:
-            entry["stacktrace"] = traceback.format_exc()
+    public Object log(String level, String message) {
+        // entry = {
+        // "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        // "level": level,
+        // "service": service,
+        // "message": message,
+        // **defaults,
+        // **kwargs,
+        // }
+        // ...
+        return null;
+    }
 
-        self.logger.log(getattr(logging, level.upper()), json.dumps(entry))
+    public Object info(String message) {
+        // _log("info", message, **kwargs)
+        return null;
+    }
 
-    def info(self, message: str, **kwargs):
-        self._log("info", message, **kwargs)
+    public Object error(String message) {
+        // _log("error", message, **kwargs)
+        return null;
+    }
 
-    def error(self, message: str, **kwargs):
-        self._log("error", message, **kwargs)
+    public Object warn(String message) {
+        // _log("warn", message, **kwargs)
+        return null;
+    }
 
-    def warn(self, message: str, **kwargs):
-        self._log("warn", message, **kwargs)
-
-    def with_context(self, **kwargs):
-        """Create child logger with additional default fields"""
-        new_defaults = {**self.defaults, **kwargs}
-        return StructuredLogger(self.service, new_defaults)
-
-
-# Usage:
-log = StructuredLogger("payment-svc")
-request_log = log.with_context(user_id="usr_123", request_id="req_456")
-request_log.info("Processing payment", amount=99.99)
-request_log.error("Payment failed", error="card_declined", amount=99.99)
+    public Object withContext() {
+        // Create child logger with additional default fields
+        // new_defaults = {**defaults, **kwargs}
+        // return StructuredLogger(service, new_defaults)
+        return null;
+    }
+}
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Topic 32: Full-Text Search
+﻿# Topic 32: Full-Text Search
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -197,38 +197,7 @@ Problem: Data lives in PostgreSQL. Search index in Elasticsearch.
 
 ## D. Example: E-Commerce Product Search
 
-```
-Architecture:
-  ┌────────┐     ┌──────────┐     ┌───────────────┐
-  │ Client │────►│ Search   │────►│ Elasticsearch │
-  │        │     │ API      │     │ (3 nodes)     │
-  └────────┘     └──────────┘     └───────────────┘
-                                         ▲
-                                    CDC (Debezium)
-                                         │
-                                  ┌──────┴──────┐
-                                  │ PostgreSQL  │
-                                  │ (source of  │
-                                  │  truth)     │
-                                  └─────────────┘
-
-  Index mapping:
-    products: {
-      name: text (analyzed, boosted ×3)
-      description: text (analyzed)
-      brand: keyword (exact match + aggregation)
-      category: keyword (faceted search)
-      price: float (range filter)
-      rating: float (sort/filter)
-      in_stock: boolean (filter)
-    }
-
-  Query: "nike running shoes" with filters: price < $100, in_stock = true
-    → Match "nike running shoes" in name (boosted) + description
-    → Filter: price < 100 AND in_stock = true
-    → Sort by relevance score
-    → Return top 20 with facets (brands, categories, price ranges)
-```
+![D. Example: E-Commerce Product Search diagram](../assets/generated/01-fundamentals-32-full-text-search-diagram-01.svg)
 
 ---
 
@@ -236,112 +205,56 @@ Architecture:
 
 ### E.1 HLD — Search Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Clients                                               │
-│      │                                                 │
-│  ┌───┴─────────┐                                      │
-│  │  API Gateway │                                      │
-│  └───┬─────────┘                                      │
-│      │                                                 │
-│  ┌───┴──────────────┐     ┌──────────────────────┐   │
-│  │  Search Service  │────►│  Elasticsearch Cluster│   │
-│  │  (query builder, │     │  3 data nodes         │   │
-│  │   caching, auth) │     │  2 master nodes       │   │
-│  └──────────────────┘     │  1 coordinating node  │   │
-│                            └──────────┬───────────┘   │
-│                                       │ CDC           │
-│  ┌──────────────────┐     ┌──────────┴───────────┐   │
-│  │  Product Service │────►│  PostgreSQL (primary) │   │
-│  │  (CRUD)          │     │  Source of truth       │   │
-│  └──────────────────┘     └──────────────────────┘   │
-│                                                        │
-│  Redis: Cache popular search queries (5 min TTL)      │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Search Architecture diagram](../assets/generated/01-fundamentals-32-full-text-search-diagram-02.svg)
 
 ### E.2 LLD — Search Service
 
-```python
-class SearchService:
-    def __init__(self, es_client, cache_client):
-        self.es = es_client
-        self.cache = cache_client
+```java
+public class SearchService {
+    private Object es;
+    private Object cache;
 
-    def search_products(self, query: str, filters: dict = None,
-                       page: int = 1, size: int = 20) -> dict:
-        # Check cache
-        cache_key = f"search:{hash(query + str(filters) + str(page))}"
-        cached = self.cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
+    public SearchService(Object esClient, Object cacheClient) {
+        this.es = esClient;
+        this.cache = cacheClient;
+    }
 
-        # Build Elasticsearch query
-        es_query = {
-            "query": {
-                "bool": {
-                    "must": [{
-                        "multi_match": {
-                            "query": query,
-                            "fields": ["name^3", "description", "brand^2"],
-                            "type": "best_fields",
-                            "fuzziness": "AUTO",
-                        }
-                    }],
-                    "filter": self._build_filters(filters),
-                }
-            },
-            "aggs": {
-                "brands": {"terms": {"field": "brand", "size": 20}},
-                "categories": {"terms": {"field": "category", "size": 20}},
-                "price_ranges": {
-                    "range": {
-                        "field": "price",
-                        "ranges": [
-                            {"to": 25}, {"from": 25, "to": 50},
-                            {"from": 50, "to": 100}, {"from": 100},
-                        ]
-                    }
-                },
-            },
-            "highlight": {"fields": {"name": {}, "description": {}}},
-            "from": (page - 1) * size,
-            "size": size,
-        }
+    public Map<String, Object> searchProducts(String query, Map<String, Object> filters, int page, int size) {
+        // Check cache
+        // cache_key = f"search:{hash(query + str(filters) + str(page))}"
+        // cached = cache.get(cache_key)
+        // if cached
+        // return json.loads(cached)
+        // Build Elasticsearch query
+        // es_query = {
+        // "query": {
+        // ...
+        return null;
+    }
 
-        result = self.es.search(index="products", body=es_query)
-        
-        response = {
-            "hits": [self._format_hit(h) for h in result["hits"]["hits"]],
-            "total": result["hits"]["total"]["value"],
-            "facets": result["aggregations"],
-            "page": page,
-        }
+    public List<Object> buildFilters(Map<String, Object> filters) {
+        // if not filters
+        // return []
+        // clauses = []
+        // if "price_min" in filters
+        // clauses.append({"range": {"price": {"gte": filters["price_min"]}}})
+        // if "price_max" in filters
+        // clauses.append({"range": {"price": {"lte": filters["price_max"]}}})
+        // if "brand" in filters
+        // ...
+        return null;
+    }
 
-        self.cache.setex(cache_key, 300, json.dumps(response))
-        return response
-
-    def _build_filters(self, filters: dict) -> list:
-        if not filters:
-            return []
-        clauses = []
-        if "price_min" in filters:
-            clauses.append({"range": {"price": {"gte": filters["price_min"]}}})
-        if "price_max" in filters:
-            clauses.append({"range": {"price": {"lte": filters["price_max"]}}})
-        if "brand" in filters:
-            clauses.append({"term": {"brand": filters["brand"]}})
-        if "in_stock" in filters:
-            clauses.append({"term": {"in_stock": filters["in_stock"]}})
-        return clauses
-
-    def _format_hit(self, hit):
-        return {
-            "id": hit["_id"],
-            "score": hit["_score"],
-            **hit["_source"],
-            "highlights": hit.get("highlight", {}),
-        }
+    public Object formatHit(Object hit) {
+        // return {
+        // "id": hit["_id"],
+        // "score": hit["_score"],
+        // **hit["_source"],
+        // "highlights": hit.get("highlight", {}),
+        // }
+        return null;
+    }
+}
 ```
 
 ---

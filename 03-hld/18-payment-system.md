@@ -1,4 +1,4 @@
-# HLD 18: Payment System
+﻿# HLD 18: Payment System
 
 > **Difficulty**: Hard
 > **Key Concepts**: Idempotency, reconciliation, PCI compliance, state machine
@@ -48,20 +48,7 @@ graph TD
 
 ### Payment State Machine
 
-```
-CREATED → PROCESSING → SUCCEEDED → SETTLED
-    │         │                        │
-    └→ FAILED │                   REFUND_REQUESTED → REFUNDED
-              └→ FAILED                    │
-                                      REFUND_FAILED
-
-Each transition:
-  1. Validate transition is allowed
-  2. Update DB in transaction (optimistic locking)
-  3. Call PSP if needed (Stripe charge, refund)
-  4. Emit event to Kafka (payment.succeeded, payment.failed)
-  5. Never delete records — append-only for audit trail
-```
+![Payment State Machine diagram](../assets/generated/03-hld-18-payment-system-diagram-01.svg)
 
 ### Idempotency (No Double Charges)
 

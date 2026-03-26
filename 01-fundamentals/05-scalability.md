@@ -1,4 +1,4 @@
-# Topic 5: Scalability
+﻿# Topic 5: Scalability
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -41,40 +41,13 @@ It means:
 
 Add more power to **the same machine** — more CPU, RAM, faster disks, better network.
 
-```
-BEFORE:                          AFTER:
-┌──────────────┐                 ┌──────────────────────┐
-│   Server     │                 │      Server          │
-│   4 CPU      │     Scale      │      32 CPU          │
-│   16 GB RAM  │  ───────────►  │      256 GB RAM      │
-│   500 GB SSD │       Up       │      4 TB NVMe SSD   │
-│   1 Gbps NIC │                │      10 Gbps NIC     │
-└──────────────┘                 └──────────────────────┘
-   $100/month                       $2,000/month
-   Handles 1K QPS                   Handles 10K QPS
-```
+![Vertical Scaling (Scale Up) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-01.svg)
 
 #### Horizontal Scaling (Scale Out)
 
 Add **more machines** of similar size and distribute the load across them.
 
-```
-BEFORE:                          AFTER:
-┌──────────────┐                 ┌──────────┐ ┌──────────┐ ┌──────────┐
-│   Server     │                 │ Server 1 │ │ Server 2 │ │ Server 3 │
-│   4 CPU      │     Scale      │  4 CPU   │ │  4 CPU   │ │  4 CPU   │
-│   16 GB RAM  │  ───────────►  │ 16GB RAM │ │ 16GB RAM │ │ 16GB RAM │
-│   Handles    │      Out       │          │ │          │ │          │
-│   1K QPS     │                └──────────┘ └──────────┘ └──────────┘
-└──────────────┘                     ▲            ▲            ▲
-                                     └────────────┼────────────┘
-                                            ┌─────┴─────┐
-                                            │    Load   │
-                                            │  Balancer │
-                                            └───────────┘
-                                           Total: 3K QPS
-                                           Cost: $300/month
-```
+![Horizontal Scaling (Scale Out) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-02.svg)
 
 ### Head-to-Head Comparison
 
@@ -92,63 +65,13 @@ BEFORE:                          AFTER:
 
 ### Cost Curves
 
-```
-Cost  ▲
-      │          Vertical
-      │         ╱ (exponential)
-      │        ╱
-      │       ╱
-      │      ╱        Horizontal
-      │     ╱        ╱ (linear)
-      │    ╱       ╱
-      │   ╱      ╱
-      │  ╱     ╱
-      │ ╱    ╱
-      │╱   ╱
-      └──────────────────────────► Capacity
-      
-Vertical: 2× capacity ≠ 2× cost (often 4–10× cost)
-Horizontal: 2× capacity ≈ 2× cost (ideally)
-```
+![Cost Curves diagram](../assets/generated/01-fundamentals-05-scalability-diagram-03.svg)
 
 ### What Makes Scaling Hard?
 
 #### Stateful vs Stateless
 
-```
-STATELESS SERVICE (Easy to scale):
-  ┌──────────┐
-  │ Server 1 │ ← Any request can go to any server
-  │ No state │    because no server stores user-specific data
-  └──────────┘
-  ┌──────────┐
-  │ Server 2 │ ← Each server is interchangeable
-  │ No state │
-  └──────────┘
-
-STATEFUL SERVICE (Hard to scale):
-  ┌──────────────────┐
-  │ Server 1         │ ← User A's session is HERE
-  │ Session: User A  │    If Server 1 dies, session is lost
-  │ Cart: [item1]    │    Requests must be routed to THIS server
-  └──────────────────┘
-  ┌──────────────────┐
-  │ Server 2         │ ← User B's session is HERE
-  │ Session: User B  │    Can't just add servers freely
-  │ Cart: [item2,3]  │
-  └──────────────────┘
-
-Solution: Move state OUT of the app server
-  ┌──────────┐  ┌──────────┐
-  │ Server 1 │  │ Server 2 │  ← Stateless, interchangeable
-  │ No state │  │ No state │
-  └─────┬────┘  └─────┬────┘
-        └──────┬──────┘
-         ┌─────┴──────┐
-         │   Redis    │  ← Sessions stored externally
-         │  (Shared)  │     Any server can access any session
-         └────────────┘
-```
+![Stateful vs Stateless diagram](../assets/generated/01-fundamentals-05-scalability-diagram-04.svg)
 
 #### The Scaling Dimensions
 
@@ -165,46 +88,7 @@ A system has multiple bottlenecks. You must identify **which dimension** needs s
 
 ### Scaling Strategies by Component
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SCALING STRATEGIES                             │
-│                                                                   │
-│  ┌─────────────┐                                                 │
-│  │   CLIENT    │  CDN for static assets                          │
-│  │             │  Client-side caching                            │
-│  └──────┬──────┘  Compression (gzip/brotli)                     │
-│         │                                                        │
-│  ┌──────┴──────┐                                                 │
-│  │     CDN     │  Edge caching                                   │
-│  │             │  Geographic distribution                        │
-│  └──────┬──────┘  Static + dynamic content caching               │
-│         │                                                        │
-│  ┌──────┴──────┐                                                 │
-│  │  LOAD       │  Horizontal scaling (multiple LBs)              │
-│  │  BALANCER   │  L4 vs L7 based on needs                       │
-│  └──────┬──────┘  Health checks + failover                      │
-│         │                                                        │
-│  ┌──────┴──────┐                                                 │
-│  │  APP        │  Horizontal scaling (stateless!)                │
-│  │  SERVERS    │  Auto-scaling based on CPU/QPS                  │
-│  └──────┬──────┘  Container orchestration (K8s)                  │
-│         │                                                        │
-│  ┌──────┴──────┐                                                 │
-│  │   CACHE     │  Distributed cache (Redis Cluster)              │
-│  │             │  Multi-layer (L1 in-proc + L2 distributed)      │
-│  └──────┬──────┘  Cache warming, eviction policies               │
-│         │                                                        │
-│  ┌──────┴──────┐                                                 │
-│  │  DATABASE   │  Read replicas (scale reads)                    │
-│  │             │  Sharding (scale writes)                        │
-│  └──────┬──────┘  Connection pooling                             │
-│         │         Denormalization                                 │
-│  ┌──────┴──────┐                                                 │
-│  │   QUEUE     │  Partitioning (Kafka partitions)                │
-│  │             │  Consumer groups                                │
-│  └─────────────┘  Backpressure                                   │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Scaling Strategies by Component diagram](../assets/generated/01-fundamentals-05-scalability-diagram-05.svg)
 
 ### Database Scaling Deep Dive
 
@@ -212,48 +96,11 @@ Databases are usually the **hardest component to scale** because they are statef
 
 #### Read Scaling: Replicas
 
-```
-                    ┌────────────────┐
-          Writes───►│    Primary     │
-                    │   (Leader)     │
-                    └───────┬────────┘
-                            │ Replication
-                   ┌────────┼────────┐
-                   │        │        │
-            ┌──────┴──┐ ┌───┴────┐ ┌─┴───────┐
-  Reads────►│Replica 1│ │Replica2│ │Replica 3│
-            │(Follower)│ │(Follower)│ │(Follower)│
-            └─────────┘ └────────┘ └─────────┘
-
-  Pros: Read throughput scales linearly with replicas
-  Cons: Replication lag → stale reads (eventual consistency)
-  Cons: Writes don't scale (still single primary)
-```
+![Read Scaling: Replicas diagram](../assets/generated/01-fundamentals-05-scalability-diagram-06.svg)
 
 #### Write Scaling: Sharding (Partitioning)
 
-```
-                    ┌─────────────┐
-                    │   Router    │
-                    │ (Shard key  │
-                    │  → shard)   │
-                    └──────┬──────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-        ┌─────┴─────┐ ┌───┴─────┐ ┌───┴─────┐
-        │  Shard 1  │ │ Shard 2 │ │ Shard 3 │
-        │ Users A-H │ │Users I-P│ │Users Q-Z│
-        │           │ │         │ │         │
-        │ Primary + │ │Primary +│ │Primary +│
-        │ Replicas  │ │Replicas │ │Replicas │
-        └───────────┘ └─────────┘ └─────────┘
-
-  Pros: Both reads AND writes scale
-  Cons: Cross-shard queries are expensive
-  Cons: Resharding is painful (adding/removing shards)
-  Cons: Choosing the right shard key is critical
-```
+![Write Scaling: Sharding (Partitioning) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-07.svg)
 
 #### Shard Key Selection
 
@@ -268,34 +115,7 @@ Databases are usually the **hardest component to scale** because they are statef
 
 Modern cloud platforms can automatically add/remove capacity:
 
-```
-Auto-Scaling Configuration:
-  Metric:     CPU Utilization
-  Target:     60%
-  Min:        2 instances
-  Max:        20 instances
-  Cooldown:   300 seconds (5 min between scale actions)
-  Scale-up:   +2 instances when CPU > 70% for 2 min
-  Scale-down: -1 instance when CPU < 40% for 10 min
-
-Traffic ▲
-        │     ┌────┐
-        │     │    │     ┌──────┐
-        │  ┌──┘    │     │      │
-        │  │       └─────┘      └──┐
-        │──┘                       └────
-        └────────────────────────────────► Time
-           6am    12pm    6pm    12am
-
-Instances ▲
-          │     ┌──┐
-          │     │  │     ┌────┐
-          │  ┌──┘  │     │    │
-          │  │     └─────┘    └──┐
-          │──┘                   └────
-          └────────────────────────────► Time
-          2     8    4     10    6    3
-```
+![Auto-Scaling diagram](../assets/generated/01-fundamentals-05-scalability-diagram-08.svg)
 
 ### Scalability Anti-Patterns
 
@@ -316,36 +136,7 @@ Instances ▲
 
 Not everything can be parallelized. **Amdahl's Law** defines the theoretical speedup limit:
 
-```
-Speedup = 1 / (S + (1-S)/N)
-
-Where:
-  S = fraction of work that is sequential (can't be parallelized)
-  N = number of processors/servers
-
-Example: If 10% of your system is sequential (S = 0.1):
-  N=2:   Speedup = 1/(0.1 + 0.9/2)  = 1.82×
-  N=4:   Speedup = 1/(0.1 + 0.9/4)  = 3.08×
-  N=10:  Speedup = 1/(0.1 + 0.9/10) = 5.26×
-  N=100: Speedup = 1/(0.1 + 0.9/100)= 9.17×
-  N=∞:   Speedup = 1/0.1            = 10×   ← MAX (can never exceed this!)
-
-Speedup ▲
-   10×  │─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   Theoretical max (10% sequential)
-        │              ╱──────────────────
-   8×   │            ╱
-        │          ╱
-   6×   │        ╱
-        │      ╱
-   4×   │    ╱
-        │  ╱
-   2×   │╱
-        └──────────────────────────────────► Number of servers (N)
-        1    4    8   16   32   64   128
-
-Lesson: Identify and eliminate sequential bottlenecks BEFORE
-        throwing more hardware at the problem.
-```
+![Amdahl's Law — The Scaling Limit diagram](../assets/generated/01-fundamentals-05-scalability-diagram-09.svg)
 
 ### Common Sequential Bottlenecks
 
@@ -429,58 +220,7 @@ Step 5: Discuss trade-offs
 
 ### Scaling Journey — From 0 to 10M Users
 
-```
-Stage 1: Single Server (0 – 1K users)
-┌─────────────────────────────────────┐
-│           Single Server             │
-│  ┌───────┐  ┌──────┐  ┌──────┐     │
-│  │  Web  │  │ App  │  │  DB  │     │
-│  │Server │  │Logic │  │      │     │
-│  └───────┘  └──────┘  └──────┘     │
-│  Cost: $20/month                    │
-└─────────────────────────────────────┘
-
-Stage 2: Separate DB (1K – 10K users)
-┌──────────┐     ┌──────────┐
-│  App     │────►│    DB    │
-│  Server  │     │(Managed) │
-└──────────┘     └──────────┘
-  Cost: $50/month + $100/month (RDS)
-
-Stage 3: Add Cache + CDN (10K – 100K users)
-┌──────┐  ┌──────┐  ┌──────────┐  ┌───────┐  ┌──────┐
-│Client│─►│ CDN  │─►│App Server│─►│ Redis │─►│  DB  │
-└──────┘  └──────┘  └──────────┘  └───────┘  └──────┘
-  Cost: ~$500/month total
-
-Stage 4: Load Balancer + Multiple Servers (100K – 1M users)
-┌──────┐  ┌─────┐  ┌────┐  ┌──────────┐  ┌───────┐  ┌──────┐
-│Client│─►│ CDN │─►│ LB │─►│Servers ×3│─►│ Redis │─►│  DB  │
-└──────┘  └─────┘  └────┘  └──────────┘  │Cluster│  │+Read │
-                                          └───────┘  │Replica│
-                                                     └──────┘
-  Cost: ~$2,000/month
-
-Stage 5: Sharding + Microservices (1M – 10M users)
-┌──────┐  ┌─────┐  ┌─────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐
-│Client│─►│ CDN │─►│ LB  │─►│API      │─►│Redis     │─►│DB Shards │
-└──────┘  └─────┘  └─────┘  │Gateway  │  │Cluster   │  │(3 shards)│
-                             └────┬────┘  └──────────┘  └──────────┘
-                                  │
-                    ┌─────────────┼─────────────┐
-                    │             │             │
-               ┌────┴───┐  ┌─────┴────┐  ┌────┴─────┐
-               │  Auth  │  │  Product │  │  Order   │
-               │Service │  │ Service  │  │ Service  │
-               └────────┘  └──────────┘  └──────────┘
-  Cost: ~$10,000-30,000/month
-
-Stage 6: Multi-Region (10M+ users)
-  + Global DNS routing
-  + Region-local app servers + caches + DB replicas
-  + Cross-region replication for writes
-  Cost: $50,000-200,000+/month
-```
+![Scaling Journey — From 0 to 10M Users diagram](../assets/generated/01-fundamentals-05-scalability-diagram-10.svg)
 
 ### Real-World Scaling Numbers
 
@@ -556,109 +296,19 @@ Large (100+ servers):
 
 ### Phase 1: MVP (100 users)
 
-```
-┌──────────┐     ┌──────────────────────────┐
-│  Client  │────►│     Single Server        │
-│          │     │  ┌──────┐  ┌──────────┐  │
-│          │◄────│  │ App  │  │ SQLite   │  │
-│          │     │  │(Flask)│  │          │  │
-└──────────┘     │  └──────┘  └──────────┘  │
-                 └──────────────────────────┘
-  
-  Create short URL: POST /shorten {url: "https://example.com/very-long-path"}
-  Redirect:         GET /abc123 → 301 Redirect to original URL
-  
-  QPS: ~1 req/sec
-  Storage: ~1000 URLs = negligible
-  Cost: $5/month (shared hosting)
-```
+![Phase 1: MVP (100 users) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-11.svg)
 
 ### Phase 2: Growing (10K users, 100 URLs/day)
 
-```
-┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Client  │────►│   App    │────►│PostgreSQL│
-│          │     │  Server  │     │ (RDS)    │
-└──────────┘     └──────────┘     └──────────┘
-  
-  Changes:
-  - Moved from SQLite to PostgreSQL (managed RDS)
-  - Added proper indexing on short_code column
-  - HTTPS enabled
-  
-  QPS: ~10 req/sec
-  Storage: 100K URLs × 500 bytes = 50 MB
-  Cost: $50/month
-```
+![Phase 2: Growing (10K users, 100 URLs/day) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-12.svg)
 
 ### Phase 3: Scaling Reads (1M users, 10K redirects/sec)
 
-```
-┌──────────┐  ┌──────────┐  ┌────────────┐  ┌───────┐  ┌──────────┐
-│  Client  │─►│   CDN    │─►│    LB      │─►│ Redis │  │PostgreSQL│
-│          │  │(cache 301│  │            │  │ Cache │  │          │
-│          │  │redirects)│  │  ┌──────┐  │  └───┬───┘  │ Primary +│
-└──────────┘  └──────────┘  │  │App ×3│──┼──────┘      │ 2 Read   │
-                            │  └──────┘  │             │ Replicas │
-                            └────────────┘             └──────────┘
-
-  Changes:
-  - CDN caches redirect responses (huge win — 301s are highly cacheable)
-  - Redis cache for URL lookups (read:write ratio is ~100:1)
-  - 3 app servers behind load balancer
-  - PostgreSQL read replicas for analytics queries
-  
-  Cache hit rate: 95% (popular URLs are cached)
-  Effective DB QPS: 10K × 0.05 = 500 QPS (manageable)
-  
-  QPS: 10K req/sec
-  Storage: 10M URLs × 500 bytes = 5 GB
-  Cost: $500/month
-```
+![Phase 3: Scaling Reads (1M users, 10K redirects/sec) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-13.svg)
 
 ### Phase 4: Scaling Writes + Global (100M users, 100K redirects/sec)
 
-```
-                         ┌───────────────────┐
-                         │    Global DNS     │
-                         │  (Geo-routing)    │
-                         └────────┬──────────┘
-                                  │
-                    ┌─────────────┼─────────────┐
-                    │             │             │
-              ┌─────┴─────┐ ┌────┴────┐ ┌──────┴─────┐
-              │ US Region │ │EU Region│ │Asia Region │
-              └─────┬─────┘ └────┬────┘ └──────┬─────┘
-                    │            │             │
-              (Each region has:)
-                    │
-              ┌─────┴──────────────────────────┐
-              │  ┌─────┐  ┌────────┐  ┌──────┐ │
-              │  │ CDN │  │LB + App│  │Redis │ │
-              │  │     │  │×5 nodes│  │Cluster│ │
-              │  └─────┘  └────────┘  └──────┘ │
-              │                                 │
-              │  ┌──────────────────────────┐   │
-              │  │  DB Shard (by hash of    │   │
-              │  │  short_code)             │   │
-              │  │  Shard 1 | Shard 2 |...  │   │
-              │  └──────────────────────────┘   │
-              └─────────────────────────────────┘
-
-  Changes:
-  - Sharded database by hash(short_code) % N
-  - Distributed ID generation (Snowflake-like) for unique short codes
-  - Multi-region deployment with geo-routing
-  - Redis Cluster (not just single Redis)
-  - Kafka for analytics events (don't block the redirect path)
-  
-  Write path: Generate short code → Write to correct shard (async analytics via Kafka)
-  Read path:  CDN hit (60%) → Redis hit (35%) → DB hit (5%)
-  
-  QPS: 100K reads/sec, 1K writes/sec
-  Storage: 1B URLs × 500 bytes = 500 GB (across shards)
-  Cost: $20,000-50,000/month
-```
+![Phase 4: Scaling Writes + Global (100M users, 100K redirects/sec) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-14.svg)
 
 ### Scaling Decisions Summary
 
@@ -705,71 +355,11 @@ Need to handle 10× traffic increase within 2 minutes.
 
 #### Architecture with Auto-Scaling
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                   │
-│  ┌────────┐   ┌──────────┐   ┌──────────────────────────────┐   │
-│  │  CDN   │   │   WAF    │   │     Auto-Scaling Group       │   │
-│  │(cached │   │(DDoS     │   │  ┌────┐┌────┐┌────┐ ... ┌───┐│   │
-│  │ assets)│   │ protect) │   │  │App1││App2││App3│     │AppN││   │
-│  └───┬────┘   └────┬─────┘   │  └────┘└────┘└────┘     └───┘│   │
-│      │             │         │  Min: 3    Max: 30            │   │
-│      └──────┬──────┘         │  Scale on: CPU > 60%         │   │
-│             │                │            QPS > 3K/instance  │   │
-│        ┌────┴─────┐          └──────────────┬───────────────┘   │
-│        │   ALB    │─────────────────────────┘                   │
-│        └──────────┘                                              │
-│                                                                   │
-│  ┌──────────────────┐  ┌────────────────────────────────────┐   │
-│  │   ElastiCache    │  │         Database Layer             │   │
-│  │   Redis Cluster  │  │                                    │   │
-│  │   ┌─────┐┌─────┐ │  │  ┌─────────┐  ┌────────────────┐  │   │
-│  │   │Node1││Node2│ │  │  │ Primary │  │  Read Replicas  │  │   │
-│  │   └─────┘└─────┘ │  │  │(writes) │  │  ┌────┐┌────┐  │  │   │
-│  │   Auto-scaling    │  │  └─────────┘  │  │ R1 ││ R2 │  │  │   │
-│  └──────────────────┘  │               │  └────┘└────┘  │  │   │
-│                         │               │  Auto-scaling  │  │   │
-│                         └────────────────────────────────┘  │   │
-│                                                                   │
-│  ┌──────────────────┐  ┌──────────────────┐                     │
-│  │   SQS / Kafka    │  │  Lambda / Workers │                     │
-│  │  (Order Queue)   │─►│  (Order Process)  │                     │
-│  │  Buffer during   │  │  Auto-scaled      │                     │
-│  │  flash sales     │  │  consumers        │                     │
-│  └──────────────────┘  └──────────────────┘                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Architecture with Auto-Scaling diagram](../assets/generated/01-fundamentals-05-scalability-diagram-15.svg)
 
 #### Flash Sale Strategy
 
-```
-Before Flash Sale:
-  1. Pre-warm caches (product data, inventory counts)
-  2. Pre-scale app servers to 15 instances (anticipate traffic)
-  3. Set up rate limiting per user (max 5 req/sec)
-  4. Enable write queue (orders go to SQS, processed async)
-  5. Switch to eventual consistency for inventory display
-
-During Flash Sale:
-  ┌─────────────────────────────────────────────────┐
-  │  Request arrives:                               │
-  │    1. Rate limiter checks (user within limit?)  │
-  │    2. CDN serves product page (cached)          │
-  │    3. Redis has pre-warmed inventory count       │
-  │    4. "Buy" request → SQS queue (not direct DB) │
-  │    5. Worker processes orders from queue         │
-  │       - Atomic decrement inventory in Redis      │
-  │       - If stock > 0: create order in DB         │
-  │       - If stock = 0: reject, notify user        │
-  │    6. User gets 202 Accepted → polls for status  │
-  └─────────────────────────────────────────────────┘
-
-After Flash Sale:
-  1. Auto-scaler gradually reduces instances
-  2. Queue drains remaining orders
-  3. Reconcile Redis inventory with DB
-  4. Generate analytics report
-```
+![Flash Sale Strategy diagram](../assets/generated/01-fundamentals-05-scalability-diagram-16.svg)
 
 #### Scaling Approach
 
@@ -797,41 +387,7 @@ After Flash Sale:
 
 #### Classes and Components
 
-```
-┌──────────────────────────────────┐
-│       AutoScaler                 │
-│                                  │
-│  - config: ScalingConfig         │
-│  - metricsProvider: Metrics      │
-│  - cloudProvider: CloudAPI       │
-│  - currentInstances: int         │
-│  - lastScaleAction: datetime     │
-│                                  │
-│  + evaluate(): ScalingDecision   │
-│  + scaleUp(count: int): void     │
-│  + scaleDown(count: int): void   │
-│  + getCooldownRemaining(): int   │
-└───────────────┬──────────────────┘
-                │
-    ┌───────────┼───────────────┐
-    │           │               │
-┌───┴────┐ ┌───┴─────┐ ┌───────┴────────┐
-│Metrics │ │Scaling  │ │ CloudProvider  │
-│Provider│ │Policy   │ │ (Interface)    │
-│        │ │         │ │                │
-│+getCPU │ │+evaluate│ │+launchInstance │
-│+getQPS │ │ (metrics│ │+terminateInst  │
-│+getMem │ │  ): Dec │ │+listInstances  │
-│+custom │ │         │ │+getHealth      │
-└────────┘ └─────────┘ └────────────────┘
-                              │
-                    ┌─────────┼──────────┐
-                    │         │          │
-               ┌────┴───┐ ┌──┴────┐ ┌───┴────┐
-               │  AWS   │ │  GCP  │ │ Azure  │
-               │Provider│ │Provider│ │Provider│
-               └────────┘ └───────┘ └────────┘
-```
+![Classes and Components diagram](../assets/generated/01-fundamentals-05-scalability-diagram-17.svg)
 
 #### Data Models
 

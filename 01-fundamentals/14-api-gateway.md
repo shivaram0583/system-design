@@ -1,4 +1,4 @@
-# Topic 14: API Gateway
+﻿# Topic 14: API Gateway
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,24 +23,7 @@
 
 An **API Gateway** is a single entry point for all client requests in a microservices architecture. It acts as a reverse proxy that routes, composes, and manages API calls.
 
-```
-WITHOUT API Gateway:
-  Client must know every service URL:
-  ┌────────┐──► user-service:8081/users
-  │ Client │──► order-service:8082/orders
-  │        │──► product-service:8083/products
-  └────────┘──► payment-service:8084/payments
-  Problems: Client complexity, CORS, auth in every service, no central control
-
-WITH API Gateway:
-  ┌────────┐     ┌─────────────┐     ┌─────────────────┐
-  │ Client │────►│ API Gateway │────►│ user-service    │
-  │        │     │ api.app.com │────►│ order-service   │
-  └────────┘     │             │────►│ product-service │
-                 └─────────────┘────►│ payment-service │
-                                     └─────────────────┘
-  Single URL, single auth, centralized control
-```
+![What is an API Gateway? diagram](../assets/generated/01-fundamentals-14-api-gateway-diagram-01.svg)
 
 ### API Gateway Responsibilities
 
@@ -74,28 +57,7 @@ WITH API Gateway:
 
 ### Backend for Frontend (BFF) Pattern
 
-```
-Different clients need different API shapes:
-
-  Mobile App:  Needs compact responses, fewer fields, different auth
-  Web App:     Needs full responses, SSR support
-  3rd Party:   Needs rate-limited, versioned, documented API
-
-BFF Pattern — One gateway per client type:
-  ┌────────┐     ┌───────────┐
-  │ Mobile │────►│ Mobile BFF│───┐
-  └────────┘     └───────────┘   │    ┌──────────────┐
-                                 ├───►│ Microservices│
-  ┌────────┐     ┌───────────┐   │    └──────────────┘
-  │  Web   │────►│  Web BFF  │───┘
-  └────────┘     └───────────┘
-
-Each BFF:
-  • Tailors response format for its client
-  • Handles client-specific auth
-  • Aggregates exactly the fields needed
-  • Can be maintained by the frontend team
-```
+![Backend for Frontend (BFF) Pattern diagram](../assets/generated/01-fundamentals-14-api-gateway-diagram-02.svg)
 
 ### Popular API Gateways
 
@@ -164,45 +126,13 @@ DO:
 
 ### Gateway Timeout Strategy
 
-```
-Client ──[10s timeout]──► Gateway ──[5s timeout]──► Service A
-                                  ──[3s timeout]──► Service B
-                                  ──[2s timeout]──► Service C
-
-Rules:
-  • Gateway timeout < Client timeout
-  • Individual service timeout < Gateway timeout
-  • Set different timeouts per service based on expected latency
-  • Return partial response if some services timeout
-```
+![Gateway Timeout Strategy diagram](../assets/generated/01-fundamentals-14-api-gateway-diagram-03.svg)
 
 ---
 
 ## D. Example: E-Commerce API Gateway
 
-```
-┌────────────────────────────────────────────────────┐
-│              API Gateway (Kong)                      │
-│                                                      │
-│  Auth: JWT verification (plugin)                    │
-│  Rate limit: 100 req/s per user (plugin)            │
-│  Logging: All requests → Kafka → ELK (plugin)      │
-│                                                      │
-│  Routes:                                             │
-│    GET  /api/v1/products/*  → product-svc (cache 60s)│
-│    POST /api/v1/orders/*    → order-svc (no cache)  │
-│    GET  /api/v1/users/*     → user-svc              │
-│    POST /api/v1/payments/*  → payment-svc (strict)  │
-│    GET  /api/v1/search/*    → search-svc (cache 30s)│
-│                                                      │
-│  Composition:                                        │
-│    GET /api/v1/homepage                              │
-│      → product-svc/featured (parallel)              │
-│      → user-svc/recommendations (parallel)          │
-│      → order-svc/recent (parallel)                  │
-│      → Merge results → Single response              │
-└────────────────────────────────────────────────────┘
-```
+![D. Example: E-Commerce API Gateway diagram](../assets/generated/01-fundamentals-14-api-gateway-diagram-04.svg)
 
 ---
 
@@ -210,34 +140,7 @@ Rules:
 
 ### E.1 HLD — Gateway Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Internet                                                  │
-│  ┌────────┐                                                │
-│  │ Client │                                                │
-│  └───┬────┘                                                │
-│      │                                                     │
-│  ┌───┴───────────┐                                         │
-│  │  ALB (L7)     │  ← HA for the gateway itself           │
-│  └───┬───────────┘                                         │
-│      │                                                     │
-│  ┌───┴───────────────┐  ┌──────────────────────┐          │
-│  │  API Gateway (×3) │──│  Config DB (etcd)    │          │
-│  │  (Kong / Custom)  │  │  Routes, rate limits │          │
-│  └───┬───────────────┘  └──────────────────────┘          │
-│      │                                                     │
-│  ┌───┴───────────────────────────────────┐                │
-│  │  Service Discovery (Consul)           │                │
-│  │  Knows all service instances + health │                │
-│  └───┬───────────────────────────────────┘                │
-│      │                                                     │
-│  ┌───┼───────┬───────────┬───────────┐                    │
-│  │   │       │           │           │                    │
-│  │  Users  Orders    Products    Payments                 │
-│  │  (×3)   (×5)      (×3)       (×2)                    │
-│  └───────────────────────────────────────┘                │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Gateway Architecture diagram](../assets/generated/01-fundamentals-14-api-gateway-diagram-05.svg)
 
 ### E.2 LLD — API Composition
 

@@ -1,4 +1,4 @@
-# Topic 36: Observability
+﻿# Topic 36: Observability
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -35,23 +35,7 @@ Observability = Monitoring + ability to ask arbitrary questions about system sta
 
 ### Three Pillars of Observability
 
-```
-┌──────────────────────────────────────────────────┐
-│              OBSERVABILITY                         │
-│                                                    │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │  LOGS    │  │ METRICS  │  │ TRACES   │       │
-│  │          │  │          │  │          │       │
-│  │ What     │  │ How much │  │ Where    │       │
-│  │ happened │  │ / how    │  │ (across  │       │
-│  │ (events) │  │ fast     │  │ services)│       │
-│  └──────────┘  └──────────┘  └──────────┘       │
-│                                                    │
-│  Logs: Discrete events with context               │
-│  Metrics: Numeric measurements over time           │
-│  Traces: Request path across services              │
-└──────────────────────────────────────────────────┘
-```
+![Three Pillars of Observability diagram](../assets/generated/01-fundamentals-36-observability-diagram-01.svg)
 
 ### Logs
 
@@ -115,34 +99,7 @@ Tools:
 
 ### Traces (Distributed Tracing)
 
-```
-A trace follows a single request across multiple services:
-
-  User clicks "Buy" → API Gateway → Order Service → Payment Service → Inventory → Email
-
-  Trace ID: trace_abc123
-  ┌──────────────────────────────────────────────────────┐
-  │ Span: API Gateway          [0ms ─────── 500ms]      │
-  │   └─ Span: Order Service     [50ms ──── 450ms]      │
-  │       ├─ Span: Payment Svc    [100ms ── 350ms]      │
-  │       │   └─ Span: Stripe API   [150ms ─ 300ms]     │
-  │       ├─ Span: Inventory Svc  [360ms ── 420ms]      │
-  │       └─ Span: Email Svc      [430ms ── 445ms]      │
-  └──────────────────────────────────────────────────────┘
-
-  Each span: service, operation, start_time, duration, status, tags
-  Trace ID propagated via HTTP header: X-Trace-Id: trace_abc123
-
-  "Why was this request slow?"
-  → Look at trace → Payment/Stripe span took 200ms (bottleneck!)
-
-Tools:
-  Jaeger (open source, CNCF)
-  Zipkin (open source)
-  Datadog APM
-  AWS X-Ray
-  OpenTelemetry (standard SDK for all three pillars)
-```
+![Traces (Distributed Tracing) diagram](../assets/generated/01-fundamentals-36-observability-diagram-02.svg)
 
 ### OpenTelemetry (OTel)
 
@@ -240,57 +197,13 @@ Alert tiers:
 
 ### Dashboards
 
-```
-Four golden signals dashboard:
-
-  ┌─────────────────────────────────────────────┐
-  │  SERVICE: payment-service                    │
-  │                                               │
-  │  Traffic (RPS):  ████████████████  1,200/s   │
-  │  Error Rate:     ██                0.5%      │
-  │  Latency (p99):  ████████         180ms     │
-  │  Saturation:     ██████████       65% CPU   │
-  │                                               │
-  │  [Request Rate]  [Error Rate]  [Latency]     │
-  │  ┌──────────┐   ┌──────────┐  ┌──────────┐  │
-  │  │ ╱╲  ╱╲   │   │          │  │     ╱╲    │  │
-  │  │╱  ╲╱  ╲  │   │  ─────   │  │ ───╱  ╲── │  │
-  │  └──────────┘   └──────────┘  └──────────┘  │
-  └─────────────────────────────────────────────┘
-```
+![Dashboards diagram](../assets/generated/01-fundamentals-36-observability-diagram-03.svg)
 
 ---
 
 ## D. Example: Observability Stack for Microservices
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Services (instrumented with OpenTelemetry)               │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                   │
-│  │Order │ │Pay   │ │Inv   │ │User  │                   │
-│  │Svc   │ │Svc   │ │Svc   │ │Svc   │                   │
-│  └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘                   │
-│     └────────┼────────┼────────┘                        │
-│              ▼                                           │
-│  ┌─────────────────────────┐                            │
-│  │  OTel Collector         │ (receives traces, metrics, │
-│  │  (central aggregation)  │  logs from all services)   │
-│  └────┬──────┬──────┬─────┘                            │
-│       │      │      │                                   │
-│  ┌────┴──┐ ┌┴────┐ ┌┴────────┐                        │
-│  │Jaeger │ │Prom │ │Loki     │                        │
-│  │Traces │ │Metrics│ │Logs    │                        │
-│  └───┬───┘ └──┬──┘ └──┬──────┘                        │
-│      └────────┼───────┘                                │
-│          ┌────┴────┐                                    │
-│          │ Grafana │ (unified dashboards + alerts)      │
-│          └────┬────┘                                    │
-│               │                                         │
-│          ┌────┴────────┐                                │
-│          │ PagerDuty   │ (incident management)          │
-│          └─────────────┘                                │
-└──────────────────────────────────────────────────────────┘
-```
+![D. Example: Observability Stack for Microservices diagram](../assets/generated/01-fundamentals-36-observability-diagram-04.svg)
 
 ---
 
@@ -298,106 +211,36 @@ Four golden signals dashboard:
 
 ### E.1 HLD — Observability Platform
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Application Layer                                         │
-│  (OTel SDK auto-instrumented)                             │
-│      │                                                     │
-│  ┌───┴───────────────────────────┐                        │
-│  │  OTel Collector (×3 replicas) │                        │
-│  │  Receives, processes, exports │                        │
-│  └───┬──────────┬───────────┬────┘                        │
-│      │          │           │                              │
-│  ┌───┴────┐ ┌──┴────┐ ┌───┴──────┐                      │
-│  │Metrics │ │Traces │ │Logs      │                      │
-│  │Prom    │ │Jaeger │ │Loki/ELK  │                      │
-│  │(15d)   │ │(7d)   │ │(30d)     │                      │
-│  └───┬────┘ └──┬────┘ └───┬──────┘                      │
-│      └─────────┼──────────┘                              │
-│           ┌────┴────┐                                     │
-│           │ Grafana │  Unified: dashboards, explore,     │
-│           │         │  alerts, correlate across pillars   │
-│           └────┬────┘                                     │
-│                │ alerts                                    │
-│           ┌────┴────┐                                     │
-│           │PagerDuty│ → on-call → Slack notification     │
-│           └─────────┘                                     │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Observability Platform diagram](../assets/generated/01-fundamentals-36-observability-diagram-05.svg)
 
 ### E.2 LLD — Instrumentation Middleware
 
-```python
-import time
-import uuid
-from opentelemetry import trace, metrics
+```java
+// Dependencies in the original example:
+// import time
+// import uuid
+// from opentelemetry import trace, metrics
 
-tracer = trace.get_tracer("payment-service")
-meter = metrics.get_meter("payment-service")
+public class ObservabilityMiddleware {
+    private Object logger;
 
-# Metrics
-request_counter = meter.create_counter("http_requests_total")
-request_duration = meter.create_histogram("http_request_duration_ms")
-error_counter = meter.create_counter("http_errors_total")
+    public ObservabilityMiddleware(Object logger) {
+        this.logger = logger;
+    }
 
-class ObservabilityMiddleware:
-    def __init__(self, logger):
-        self.logger = logger
-
-    def handle(self, request, next_handler):
-        # Extract or create trace context
-        trace_id = request.headers.get("X-Trace-Id", str(uuid.uuid4()))
-        
-        with tracer.start_as_current_span(
-            f"{request.method} {request.path}",
-            attributes={
-                "http.method": request.method,
-                "http.url": request.path,
-                "user.id": request.user_id,
-            }
-        ) as span:
-            start_time = time.time()
-            status_code = 500  # Default to error
-            
-            try:
-                response = next_handler(request)
-                status_code = response.status_code
-                span.set_attribute("http.status_code", status_code)
-                return response
-                
-            except Exception as e:
-                span.set_attribute("error", True)
-                span.set_attribute("error.message", str(e))
-                error_counter.add(1, {"path": request.path, "error": type(e).__name__})
-                
-                self.logger.error("Request failed", extra={
-                    "trace_id": trace_id,
-                    "path": request.path,
-                    "error": str(e),
-                    "user_id": request.user_id,
-                })
-                raise
-                
-            finally:
-                duration_ms = (time.time() - start_time) * 1000
-                request_counter.add(1, {
-                    "method": request.method,
-                    "path": request.path,
-                    "status": str(status_code),
-                })
-                request_duration.record(duration_ms, {
-                    "method": request.method,
-                    "path": request.path,
-                })
-                
-                self.logger.info("Request completed", extra={
-                    "trace_id": trace_id,
-                    "method": request.method,
-                    "path": request.path,
-                    "status": status_code,
-                    "duration_ms": round(duration_ms, 2),
-                    "user_id": request.user_id,
-                })
+    public Object handle(Object request, Object nextHandler) {
+        // Extract or create trace context
+        // trace_id = request.headers.get("X-Trace-Id", str(uuid.uuid4()))
+        // with tracer.start_as_current_span(
+        // f"{request.method} {request.path}",
+        // attributes={
+        // "http.method": request.method,
+        // "http.url": request.path,
+        // "user.id": request.user_id,
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

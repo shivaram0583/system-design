@@ -1,4 +1,4 @@
-# Topic 12: Load Balancing
+﻿# Topic 12: Load Balancing
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -23,29 +23,11 @@
 
 A **load balancer** distributes incoming network traffic across multiple servers to ensure no single server is overwhelmed, improving availability, throughput, and reliability.
 
-```
-WITHOUT Load Balancer:
-  All traffic → Single Server → Overloaded → Crashes
-  
-WITH Load Balancer:
-  ┌────────┐     ┌──────────┐     ┌──────────┐
-  │ Client │────►│   Load   │──┬─►│ Server 1 │  33% traffic
-  └────────┘     │ Balancer │  ├─►│ Server 2 │  33% traffic
-                 └──────────┘  └─►│ Server 3 │  33% traffic
-                                  └──────────┘
-```
+![What is Load Balancing? diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-01.svg)
 
 ### Where Load Balancers Sit
 
-```
-┌────────┐   ┌────┐   ┌───────┐   ┌────┐   ┌──────┐   ┌────┐   ┌────┐
-│ Client │──►│LB 1│──►│  Web  │──►│LB 2│──►│ App  │──►│LB 3│──►│ DB │
-│        │   │    │   │Servers│   │    │   │Servers│   │    │   │    │
-└────────┘   └────┘   └───────┘   └────┘   └──────┘   └────┘   └────┘
-             Layer 1              Layer 2              Layer 3
-           (Internet             (Internal           (Database
-            facing)               services)           connections)
-```
+![Where Load Balancers Sit diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-02.svg)
 
 ### L4 vs L7 Load Balancing
 
@@ -84,23 +66,7 @@ L7 Load Balancer:
 | **Least Response Time** | Routes to fastest-responding server | Best latency | Requires monitoring | Latency-sensitive apps |
 | **Consistent Hashing** | Hash ring; minimal redistribution on change | Minimal disruption | Complex implementation | Cache servers, DB sharding |
 
-```
-ROUND ROBIN:
-  Request 1 → Server A
-  Request 2 → Server B
-  Request 3 → Server C
-  Request 4 → Server A  (cycles back)
-
-LEAST CONNECTIONS:
-  Server A: 5 connections
-  Server B: 3 connections  ← next request goes here
-  Server C: 7 connections
-
-CONSISTENT HASHING (for cache):
-  Hash ring: [0 ──── A ──── B ──── C ──── 0]
-  hash("user:123") → lands between A and B → goes to B
-  If B is removed → those keys move to C (not all keys reshuffled)
-```
+![Load Balancing Algorithms diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-03.svg)
 
 ### Health Checks
 
@@ -132,49 +98,11 @@ ACTIVE health check:
 
 The LB itself can be a single point of failure:
 
-```
-ACTIVE-PASSIVE LB:
-  ┌─────────────┐     ┌─────────────┐
-  │  Primary LB │     │ Standby LB  │
-  │  (Active)   │────►│  (Passive)  │
-  │  VIP: 1.2.3 │     │  Monitors   │
-  └─────────────┘     └─────────────┘
-  If primary fails → standby takes over VIP (via VRRP/keepalived)
-  Failover time: 1-5 seconds
-
-ACTIVE-ACTIVE LB:
-  ┌──────────┐     ┌──────────┐
-  │   LB 1   │     │   LB 2   │
-  │ (Active) │     │ (Active) │
-  └──────────┘     └──────────┘
-       ▲                ▲
-       └────────┬───────┘
-          ┌─────┴─────┐
-          │    DNS     │  DNS returns both LB IPs
-          │ Round Robin│  or uses ECMP/anycast
-          └───────────┘
-```
+![High Availability for Load Balancers diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-04.svg)
 
 ### Global Server Load Balancing (GSLB)
 
-```
-┌────────────────────────────────────────────────────┐
-│                    DNS (GSLB)                       │
-│  User in US → resolve to 1.2.3.4 (US datacenter)  │
-│  User in EU → resolve to 5.6.7.8 (EU datacenter)  │
-└────────────────┬────────────────┬──────────────────┘
-                 │                │
-          ┌──────┴──────┐  ┌─────┴──────┐
-          │  US Region  │  │  EU Region │
-          │  LB → Servers│  │  LB → Servers│
-          └─────────────┘  └────────────┘
-
-Strategies:
-  • Geographic: Route to nearest datacenter
-  • Latency-based: Route to lowest-latency datacenter
-  • Failover: Route to backup if primary is down
-  • Weighted: Split traffic (80% US, 20% EU)
-```
+![Global Server Load Balancing (GSLB) diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-05.svg)
 
 ---
 
@@ -221,71 +149,17 @@ Strategies:
 
 ### Connection Draining
 
-```
-When removing a server from the pool (deploy, scale-down):
-
-WITHOUT draining:
-  Server removed → in-flight requests DROPPED → errors
-
-WITH draining:
-  1. LB stops sending NEW requests to server
-  2. Existing in-flight requests continue (grace period: 30-300s)
-  3. Once all connections close (or timeout) → server removed
-  4. Safe to terminate/update server
-
-  Timeline:
-    ──── [Draining starts] ──── [All connections closed] ──── [Server removed]
-         No new requests      In-flight requests finish       Safe to terminate
-```
+![Connection Draining diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-06.svg)
 
 ### SSL/TLS Termination
 
-```
-SSL at LB (recommended):
-  Client ──HTTPS──► LB ──HTTP──► Servers
-  
-  Pros:
-  • Servers don't need SSL certificates
-  • LB handles CPU-intensive encryption/decryption
-  • Easier certificate management (one place)
-  
-  Cons:
-  • Traffic between LB and servers is unencrypted (OK within VPC)
-  • If compliance requires end-to-end encryption: use SSL passthrough
-
-SSL passthrough (L4):
-  Client ──HTTPS──► LB ──HTTPS──► Servers
-  LB can't inspect traffic (just routes TCP)
-```
+![SSL/TLS Termination diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-07.svg)
 
 ---
 
 ## D. Example: Scaling an API with Load Balancing
 
-```
-Architecture:
-  ┌────────┐     ┌──────┐     ┌─────────────────────┐
-  │ Client │────►│ ALB  │────►│ API Servers (×5)    │
-  │        │     │ (L7) │     │ Target group:       │
-  └────────┘     └──────┘     │  /api/* → API group │
-                              │  /ws/*  → WS group  │
-                              └─────────────────────┘
-
-ALB Configuration:
-  Algorithm: Least connections (weighted)
-  Health check: GET /health every 30s
-  Stickiness: Disabled (stateless API)
-  SSL: Terminate at ALB (ACM certificate)
-  
-  Path-based routing:
-    /api/*       → API target group (5 instances, port 8080)
-    /websocket/* → WS target group (3 instances, port 8081)
-    /static/*    → S3 bucket (via redirect)
-  
-  Auto-scaling:
-    Min: 3, Max: 20
-    Scale on: RequestCountPerTarget > 1000
-```
+![D. Example: Scaling an API with Load Balancing diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-08.svg)
 
 ---
 
@@ -293,36 +167,7 @@ ALB Configuration:
 
 ### E.1 HLD — Multi-Tier Load Balanced Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Internet                                                  │
-│  ┌────────┐                                                │
-│  │ Client │                                                │
-│  └───┬────┘                                                │
-│      │                                                     │
-│  ┌───┴─────────┐  DNS-based GSLB (Route 53)               │
-│  │ US: 1.2.3.4 │  Latency-based routing                   │
-│  │ EU: 5.6.7.8 │                                          │
-│  └───┬─────────┘                                           │
-│      │                                                     │
-│  ┌───┴───┐       ┌──────────────────────────┐             │
-│  │  ALB  │──────►│  Web/API Servers (×N)    │             │
-│  │  (L7) │       │  Stateless, auto-scaled  │             │
-│  └───────┘       └────────────┬─────────────┘             │
-│                               │                            │
-│                    ┌──────────┼──────────┐                 │
-│                    │          │          │                  │
-│              ┌─────┴───┐ ┌───┴───┐ ┌────┴─────┐          │
-│              │  Redis  │ │  NLB  │ │  Kafka   │          │
-│              │ Cluster │ │  (L4) │ │  Cluster │          │
-│              └─────────┘ └───┬───┘ └──────────┘          │
-│                              │                            │
-│                    ┌─────────┴──────────┐                 │
-│                    │  Internal Services │                 │
-│                    │  (gRPC, port 9090) │                 │
-│                    └────────────────────┘                 │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Multi-Tier Load Balanced Architecture diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-09.svg)
 
 ### E.2 LLD — Simple Load Balancer
 

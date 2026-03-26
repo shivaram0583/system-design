@@ -1,4 +1,4 @@
-# Topic 35: Batch Processing
+﻿# Topic 35: Batch Processing
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -78,54 +78,11 @@ OUTPUT: Word counts across all files
 
 ### ETL vs ELT
 
-```
-ETL (Extract, Transform, Load):
-  Source DB → Extract → Transform (clean, aggregate) → Load into warehouse
-  Transform happens BEFORE loading.
-  Traditional approach. Good when warehouse storage is expensive.
-
-ELT (Extract, Load, Transform):
-  Source DB → Extract → Load raw into warehouse → Transform in warehouse
-  Transform happens AFTER loading using warehouse compute (e.g., dbt + BigQuery).
-  Modern approach. Warehouse handles transformation at scale.
-
-  ┌────────┐     ┌───────────┐     ┌───────────┐
-  │ Source │────►│ Raw Layer │────►│ Transform │──► Curated tables
-  │  DBs   │ EL  │(data lake)│ T   │(Spark/dbt)│
-  └────────┘     └───────────┘     └───────────┘
-```
+![ETL vs ELT diagram](../assets/generated/01-fundamentals-35-batch-processing-diagram-01.svg)
 
 ### Lambda vs Kappa Architecture
 
-```
-LAMBDA (batch + stream):
-  ┌──────────────────────┐
-  │ Raw Data             │
-  │    │         │       │
-  │    ▼         ▼       │
-  │ [Batch]  [Stream]   │
-  │ (Spark)  (Flink)    │
-  │    │         │       │
-  │    ▼         ▼       │
-  │ [Serving Layer]      │  Merge batch + stream results
-  └──────────────────────┘
-  Pros: Accurate (batch) + real-time (stream)
-  Cons: Two codebases to maintain
-
-KAPPA (stream only):
-  ┌──────────────────────┐
-  │ Raw Data             │
-  │    │                 │
-  │    ▼                 │
-  │ [Stream only]        │
-  │ (Flink/Kafka)        │
-  │    │                 │
-  │    ▼                 │
-  │ [Serving Layer]      │  Replay Kafka for historical reprocessing
-  └──────────────────────┘
-  Pros: Single codebase, simpler
-  Cons: Replay can be slow for large datasets
-```
+![Lambda vs Kappa Architecture diagram](../assets/generated/01-fundamentals-35-batch-processing-diagram-02.svg)
 
 ---
 
@@ -182,29 +139,37 @@ Solutions:
 
 ### Workflow Orchestration (Airflow)
 
-```python
-# Airflow DAG for daily ETL
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from datetime import datetime, timedelta
+```java
+import java.time.LocalDate;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-dag = DAG(
-    "daily_sales_etl",
-    schedule_interval="0 2 * * *",  # 2 AM daily
-    start_date=datetime(2024, 1, 1),
-    catchup=True,  # Backfill missed runs
-    default_args={
-        "retries": 3,
-        "retry_delay": timedelta(minutes=5),
-    },
-)
+@Configuration
+public class DailyEtlJobConfiguration {
+    @Bean
+    public Job dailyEtlJob(
+            JobBuilderFactory jobs,
+            Step extractStep,
+            Step transformStep,
+            Step loadStep) {
+        return jobs.get("dailyEtlJob")
+                .start(extractStep)
+                .next(transformStep)
+                .next(loadStep)
+                .build();
+    }
 
-extract = PythonOperator(task_id="extract", python_callable=extract_from_db, dag=dag)
-transform = PythonOperator(task_id="transform", python_callable=transform_data, dag=dag)
-load = PythonOperator(task_id="load", python_callable=load_to_warehouse, dag=dag)
-validate = PythonOperator(task_id="validate", python_callable=run_data_quality, dag=dag)
+    @Bean
+    public EtlRunContext etlRunContext() {
+        return new EtlRunContext(LocalDate.now().minusDays(1));
+    }
 
-extract >> transform >> load >> validate
+    public record EtlRunContext(LocalDate businessDate) {}
+}
 ```
 
 ### Monitoring Batch Jobs
@@ -229,30 +194,7 @@ Alerts:
 
 ## D. Example: Daily Analytics Pipeline
 
-```
-Daily pipeline: Raw events → Aggregated metrics → Dashboard
-
-  Schedule: 2:00 AM UTC daily (processes previous day)
-  
-  ┌────────────┐     ┌────────────┐     ┌────────────────┐
-  │ S3 Raw     │────►│ Spark Job  │────►│ Data Warehouse │
-  │ Events     │     │ (EMR)      │     │ (Redshift)     │
-  │ (Parquet)  │     │            │     │                │
-  └────────────┘     │ Extract:   │     │ Tables:        │
-                     │  S3 parquet│     │  daily_metrics │
-  10 TB / day        │ Transform: │     │  user_cohorts  │
-                     │  aggregate │     │  revenue_summary│
-                     │  join      │     └────────────────┘
-                     │  clean     │            │
-                     │ Load:      │     ┌──────┴──────┐
-                     │  Redshift  │     │  Looker     │
-                     └────────────┘     │  Dashboard  │
-                                        └─────────────┘
-
-  Processing time: ~45 minutes for 10 TB
-  Cost: ~$15/run (spot instances)
-  SLA: Results available by 3:00 AM UTC
-```
+![D. Example: Daily Analytics Pipeline diagram](../assets/generated/01-fundamentals-35-batch-processing-diagram-03.svg)
 
 ---
 
@@ -260,108 +202,87 @@ Daily pipeline: Raw events → Aggregated metrics → Dashboard
 
 ### E.1 HLD — Data Pipeline Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Data Sources                                              │
-│  ┌──────┐ ┌──────┐ ┌──────┐                              │
-│  │App DB│ │Kafka │ │APIs  │                              │
-│  └──┬───┘ └──┬───┘ └──┬───┘                              │
-│     └────────┼────────┘                                   │
-│              ▼                                             │
-│  ┌────────────────────────┐                               │
-│  │  Data Lake (S3)         │                               │
-│  │  /raw/     (source data)│                               │
-│  │  /staging/ (transformed)│                               │
-│  │  /curated/ (final)      │                               │
-│  └──────────┬─────────────┘                               │
-│             │                                              │
-│  ┌──────────┴─────────────┐                               │
-│  │  Spark on EMR / Glue   │                               │
-│  │  Orchestrated by Airflow│                               │
-│  │  Scheduled: daily 2 AM │                               │
-│  └──────────┬─────────────┘                               │
-│             │                                              │
-│  ┌──────────┴─────────────┐                               │
-│  │  Data Warehouse         │                               │
-│  │  (Redshift / BigQuery)  │                               │
-│  │  + BI tools (Looker)    │                               │
-│  └─────────────────────────┘                               │
-│                                                            │
-│  Monitoring: Airflow UI + CloudWatch + PagerDuty          │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Data Pipeline Architecture diagram](../assets/generated/01-fundamentals-35-batch-processing-diagram-04.svg)
 
 ### E.2 LLD — Batch Job Framework
 
-```python
-class BatchJob:
-    """Base class for idempotent batch jobs"""
-    
-    def __init__(self, job_name: str, execution_date: str):
-        self.job_name = job_name
-        self.execution_date = execution_date
-        self.metrics = {"input_count": 0, "output_count": 0, "error_count": 0}
+```java
+public class BatchJob {
+    private String jobName;
+    private String executionDate;
+    private Map<String, Object> metrics;
 
-    def run(self):
-        try:
-            log.info(f"Starting {self.job_name} for {self.execution_date}")
-            
-            # Extract
-            raw_data = self.extract()
-            self.metrics["input_count"] = len(raw_data)
-            
-            # Transform
-            transformed = self.transform(raw_data)
-            
-            # Validate
-            self.validate(transformed)
-            
-            # Load (idempotent: overwrite partition)
-            self.load(transformed)
-            self.metrics["output_count"] = len(transformed)
-            
-            self.report_metrics()
-            log.info(f"Completed {self.job_name}: {self.metrics}")
-            
-        except Exception as e:
-            self.metrics["error_count"] += 1
-            log.error(f"Failed {self.job_name}: {e}")
-            alert(f"Batch job {self.job_name} failed: {e}")
-            raise
+    public BatchJob(String jobName, String executionDate) {
+        this.jobName = jobName;
+        this.executionDate = executionDate;
+        this.metrics = Map.of("input_count", 0, "output_count", 0, "error_count", 0);
+    }
 
-    def extract(self) -> list:
-        raise NotImplementedError
+    public Object run() {
+        // try
+        // log.info(f"Starting {job_name} for {execution_date}")
+        // Extract
+        // raw_data = extract()
+        // metrics["input_count"] = len(raw_data)
+        // Transform
+        // transformed = transform(raw_data)
+        // Validate
+        // ...
+        return null;
+    }
 
-    def transform(self, data: list) -> list:
-        raise NotImplementedError
+    public List<Object> extract() {
+        // raise NotImplementedError
+        return null;
+    }
 
-    def validate(self, data: list):
-        """Data quality checks"""
-        if len(data) == 0:
-            raise ValueError("Transform produced zero records")
-        # Add more checks: null rates, schema validation, etc.
+    public List<Object> transform(List<Object> data) {
+        // raise NotImplementedError
+        return null;
+    }
 
-    def load(self, data: list):
-        raise NotImplementedError
+    public Object validate(List<Object> data) {
+        // Data quality checks
+        // if len(data) == 0
+        // raise ValueError("Transform produced zero records")
+        // Add more checks: null rates, schema validation, etc.
+        return null;
+    }
 
-    def report_metrics(self):
-        monitoring.emit(f"batch.{self.job_name}.input_count", self.metrics["input_count"])
-        monitoring.emit(f"batch.{self.job_name}.output_count", self.metrics["output_count"])
+    public Object load(List<Object> data) {
+        // raise NotImplementedError
+        return null;
+    }
 
+    public int reportMetrics() {
+        // monitoring.emit(f"batch.{job_name}.input_count", metrics["input_count"])
+        // monitoring.emit(f"batch.{job_name}.output_count", metrics["output_count"])
+        return 0;
+    }
+}
 
-class DailySalesAggregation(BatchJob):
-    def extract(self):
-        return spark.read.parquet(f"s3://raw/sales/{self.execution_date}/")
+public class DailySalesAggregation {
+    // State inferred from the original Python example.
 
-    def transform(self, data):
-        return data.groupBy("product_id", "region") \
-                    .agg(sum("amount").alias("total_sales"),
-                         count("*").alias("transaction_count"))
+    public Object extract() {
+        // return spark.read.parquet(f"s3://raw/sales/{execution_date}/")
+        return null;
+    }
 
-    def load(self, data):
-        data.write.mode("overwrite") \
-            .partitionBy("region") \
-            .parquet(f"s3://curated/daily_sales/{self.execution_date}/")
+    public Object transform(Object data) {
+        // return data.groupBy("product_id", "region") \
+        // .agg(sum("amount").alias("total_sales"),
+        // count("*").alias("transaction_count"))
+        return null;
+    }
+
+    public Object load(Object data) {
+        // data.write.mode("overwrite") \
+        // .partitionBy("region") \
+        // .parquet(f"s3://curated/daily_sales/{execution_date}/")
+        return null;
+    }
+}
 ```
 
 ---

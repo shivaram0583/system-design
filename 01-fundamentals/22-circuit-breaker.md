@@ -1,4 +1,4 @@
-# Topic 22: Circuit Breaker
+﻿# Topic 22: Circuit Breaker
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,51 +23,11 @@
 
 A **circuit breaker** is a resilience pattern that prevents a service from repeatedly calling a failing dependency, giving the dependency time to recover and preventing cascade failures.
 
-```
-Inspired by electrical circuit breakers:
-  Too much current → breaker trips → circuit disconnected → prevents fire
-
-In software:
-  Too many failures → breaker opens → requests fail fast → prevents cascade
-
-WITHOUT Circuit Breaker:
-  Service A ──── timeout 5s ────► Service B (down)
-  Every request waits 5 seconds, then fails.
-  100 concurrent requests × 5s = thread pool exhaustion → Service A also crashes!
-
-WITH Circuit Breaker:
-  Service A ──► Circuit Breaker ──► Service B (down)
-  After 5 failures → breaker OPENS → requests fail immediately (no waiting)
-  Periodically checks if B is back → if yes, breaker CLOSES
-```
+![What is a Circuit Breaker? diagram](../assets/generated/01-fundamentals-22-circuit-breaker-diagram-01.svg)
 
 ### Circuit Breaker States
 
-```
-          Failure threshold reached
-  ┌──────────┐                    ┌──────────┐
-  │  CLOSED  │───────────────────►│   OPEN   │
-  │ (normal) │                    │(fail fast)│
-  └──────────┘◄───────┐          └─────┬─────┘
-       ▲               │                │
-       │          Success               │ Timeout expires
-       │               │                │
-       │          ┌────┴─────┐          │
-       │          │HALF-OPEN │◄─────────┘
-       └──────────│(testing) │
-    Enough        └──────────┘
-    successes      Failure → back to OPEN
-
-CLOSED:  All requests pass through normally. Failures are counted.
-         If failure count > threshold → switch to OPEN.
-
-OPEN:    All requests fail immediately with an error (no call to dependency).
-         After a timeout period → switch to HALF-OPEN.
-
-HALF-OPEN: A limited number of test requests pass through.
-           If they succeed → switch to CLOSED (recovered).
-           If they fail → switch back to OPEN.
-```
+![Circuit Breaker States diagram](../assets/generated/01-fundamentals-22-circuit-breaker-diagram-02.svg)
 
 ### Configuration Parameters
 
@@ -192,28 +152,7 @@ Circuit Breaker + Bulkhead:
 
 ## D. Example: Payment Service with Circuit Breaker
 
-```
-┌──────────┐     ┌──────────────┐     ┌────────────────┐
-│  Order   │────►│   Circuit    │────►│ Payment Gateway│
-│ Service  │     │   Breaker    │     │ (Stripe)       │
-└──────────┘     │              │     └────────────────┘
-                 │ State: CLOSED│
-                 │ Failures: 2/5│
-                 └──────────────┘
-
-Scenario:
-  1. Stripe starts timing out (5 failures in 1 min)
-  2. Circuit OPENS → orders get instant error
-  3. Fallback: Queue payment for retry + show "Payment processing"
-  4. After 30s → HALF-OPEN → try one Stripe call
-  5a. Success → CLOSE circuit → normal operation
-  5b. Failure → OPEN again → wait another 30s
-
-User experience:
-  CLOSED: "Payment successful!" (normal)
-  OPEN: "Payment is being processed. You'll get a confirmation email."
-        (order saved, payment retried from queue)
-```
+![D. Example: Payment Service with Circuit Breaker diagram](../assets/generated/01-fundamentals-22-circuit-breaker-diagram-03.svg)
 
 ---
 
@@ -221,112 +160,97 @@ User experience:
 
 ### E.1 HLD — Resilient Service Communication
 
-```
-┌─────────────────────────────────────────────────┐
-│  Service A                                       │
-│    │                                             │
-│  ┌─┴──────────────────────────────┐             │
-│  │ Resilience Layer               │             │
-│  │  ┌──────────┐ ┌────────────┐  │             │
-│  │  │ Timeout  │→│  Retry     │  │             │
-│  │  │ (5s)     │ │  (3x, exp) │  │             │
-│  │  └──────────┘ └─────┬──────┘  │             │
-│  │                     │          │             │
-│  │  ┌──────────────────┴───────┐ │             │
-│  │  │ Circuit Breaker          │ │             │
-│  │  │ threshold: 5, timeout:30s│ │             │
-│  │  └──────────────────┬───────┘ │             │
-│  │                     │          │             │
-│  │  ┌──────────────────┴───────┐ │             │
-│  │  │ Bulkhead (max 20 threads)│ │             │
-│  │  └──────────────────────────┘ │             │
-│  └────────────────────────────────┘             │
-│                    │                             │
-│              ┌─────┴─────┐                       │
-│              │ Service B │                       │
-│              └───────────┘                       │
-└─────────────────────────────────────────────────┘
-
-Order of wrapping (outside → inside):
-  Timeout → Retry → Circuit Breaker → Bulkhead → Actual call
-```
+![E.1 HLD — Resilient Service Communication diagram](../assets/generated/01-fundamentals-22-circuit-breaker-diagram-04.svg)
 
 ### E.2 LLD — Circuit Breaker Implementation
 
-```python
-import time
-import threading
-from enum import Enum
+```java
+// Dependencies in the original example:
+// import time
+// import threading
+// from enum import Enum
 
-class State(Enum):
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
+public enum State {
+    CLOSED,
+    OPEN,
+    HALF_OPEN
+}
 
-class CircuitBreaker:
-    def __init__(self, failure_threshold=5, success_threshold=3,
-                 timeout_sec=30, monitoring_window_sec=60):
-        self.failure_threshold = failure_threshold
-        self.success_threshold = success_threshold
-        self.timeout = timeout_sec
-        self.window = monitoring_window_sec
-        
-        self.state = State.CLOSED
-        self.failure_count = 0
-        self.success_count = 0
-        self.last_failure_time = 0
-        self.last_state_change = time.time()
-        self.lock = threading.Lock()
+public class CircuitBreaker {
+    private Object failureThreshold;
+    private Object successThreshold;
+    private Object timeout;
+    private Object window;
+    private Object state;
+    private int failureCount;
+    private int successCount;
+    private Instant lastFailureTime;
+    private Instant lastStateChange;
+    private Object lock;
 
-    def call(self, func, *args, fallback=None, **kwargs):
-        with self.lock:
-            if self.state == State.OPEN:
-                if time.time() - self.last_state_change > self.timeout:
-                    self._transition(State.HALF_OPEN)
-                else:
-                    if fallback:
-                        return fallback(*args, **kwargs)
-                    raise CircuitOpenError("Circuit is open")
+    public CircuitBreaker(Object failureThreshold, Object successThreshold, Object timeoutSec, Object monitoringWindowSec) {
+        this.failureThreshold = failureThreshold;
+        this.successThreshold = successThreshold;
+        this.timeout = timeoutSec;
+        this.window = monitoringWindowSec;
+        this.state = State.CLOSED;
+        this.failureCount = 0;
+        this.successCount = 0;
+        this.lastFailureTime = 0;
+        this.lastStateChange = System.currentTimeMillis();
+        this.lock = threading.Lock();
+    }
 
-        try:
-            result = func(*args, **kwargs)
-            self._on_success()
-            return result
-        except Exception as e:
-            self._on_failure()
-            if fallback:
-                return fallback(*args, **kwargs)
-            raise
+    public Object call(Object func, Object fallback) {
+        // with lock
+        // if state == State.OPEN
+        // if time.time() - last_state_change > timeout
+        // _transition(State.HALF_OPEN)
+        // else
+        // if fallback
+        // return fallback(*args, **kwargs)
+        // raise CircuitOpenError("Circuit is open")
+        // ...
+        return null;
+    }
 
-    def _on_success(self):
-        with self.lock:
-            if self.state == State.HALF_OPEN:
-                self.success_count += 1
-                if self.success_count >= self.success_threshold:
-                    self._transition(State.CLOSED)
-            elif self.state == State.CLOSED:
-                self.failure_count = 0  # Reset on success
+    public Object onSuccess() {
+        // with lock
+        // if state == State.HALF_OPEN
+        // success_count += 1
+        // if success_count >= success_threshold
+        // _transition(State.CLOSED)
+        // elif state == State.CLOSED
+        // failure_count = 0  # Reset on success
+        return null;
+    }
 
-    def _on_failure(self):
-        with self.lock:
-            self.last_failure_time = time.time()
-            if self.state == State.HALF_OPEN:
-                self._transition(State.OPEN)
-            elif self.state == State.CLOSED:
-                self.failure_count += 1
-                if self.failure_count >= self.failure_threshold:
-                    self._transition(State.OPEN)
+    public Object onFailure() {
+        // with lock
+        // last_failure_time = time.time()
+        // if state == State.HALF_OPEN
+        // _transition(State.OPEN)
+        // elif state == State.CLOSED
+        // failure_count += 1
+        // if failure_count >= failure_threshold
+        // _transition(State.OPEN)
+        return null;
+    }
 
-    def _transition(self, new_state):
-        self.state = new_state
-        self.failure_count = 0
-        self.success_count = 0
-        self.last_state_change = time.time()
-        log.info(f"Circuit breaker → {new_state.value}")
+    public Object transition(Object newState) {
+        // state = new_state
+        // failure_count = 0
+        // success_count = 0
+        // last_state_change = time.time()
+        // log.info(f"Circuit breaker → {new_state.value}")
+        return null;
+    }
 
-    @property
-    def is_open(self):
-        return self.state == State.OPEN
+    public Object isOpen() {
+        // return state == State.OPEN
+        return null;
+    }
+}
 ```
 
 ---

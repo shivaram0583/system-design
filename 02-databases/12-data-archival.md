@@ -1,4 +1,4 @@
-# Topic 12: Data Archival
+﻿# Topic 12: Data Archival
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -38,37 +38,7 @@ With archival:
 
 ### Data Lifecycle
 
-```
-┌────────────────────────────────────────────────────┐
-│  HOT DATA (0-30 days)                              │
-│  Primary database (PostgreSQL/MySQL)                │
-│  Fast SSD storage, full indexes                    │
-│  Cost: $$$                                          │
-├────────────────────────────────────────────────────┤
-│  WARM DATA (30-90 days)                            │
-│  Read replica or separate DB instance               │
-│  Accessed occasionally (reports, lookups)           │
-│  Cost: $$                                           │
-├────────────────────────────────────────────────────┤
-│  COLD DATA (90 days - 7 years)                     │
-│  Object storage (S3 Standard-IA)                    │
-│  Rarely accessed, queryable via Athena/Presto      │
-│  Cost: $                                            │
-├────────────────────────────────────────────────────┤
-│  FROZEN DATA (7+ years / compliance)               │
-│  Deep archive (S3 Glacier Deep Archive)            │
-│  Accessed only for legal/audit                     │
-│  Retrieval: hours                                   │
-│  Cost: ¢                                            │
-└────────────────────────────────────────────────────┘
-
-Cost comparison (per TB/month):
-  PostgreSQL RDS (gp3): ~$115/TB
-  S3 Standard:          ~$23/TB    (5× cheaper)
-  S3 Standard-IA:       ~$12.50/TB (9× cheaper)
-  S3 Glacier:           ~$4/TB     (29× cheaper)
-  S3 Glacier Deep:      ~$1/TB     (115× cheaper)
-```
+![Data Lifecycle diagram](../assets/generated/02-databases-12-data-archival-diagram-01.svg)
 
 ### Archival Strategies
 
@@ -251,38 +221,7 @@ GDPR Right to Erasure: User requests data deletion.
 
 ## D. Example: E-Commerce Order Archival
 
-```
-Platform: 10M orders/month, 3 years of data = 360M rows
-
-  Current: All in PostgreSQL → 500 GB, queries slowing down
-  Goal: Primary DB stays under 50M rows (5 months)
-
-  ┌────────────────────────────────────────────────────┐
-  │  ARCHIVAL PIPELINE (runs nightly)                   │
-  │                                                      │
-  │  1. IDENTIFY: SELECT * FROM orders                  │
-  │     WHERE created_at < now() - interval '5 months'  │
-  │     AND status IN ('completed', 'cancelled')        │
-  │                                                      │
-  │  2. EXPORT: Write to S3 as Parquet, partitioned     │
-  │     s3://archive/orders/year=2024/month=01/*.parquet│
-  │                                                      │
-  │  3. VERIFY: Count rows in S3 = count in DB          │
-  │     Checksum validation                              │
-  │                                                      │
-  │  4. DELETE: Remove archived rows from PostgreSQL     │
-  │     DELETE FROM orders WHERE id IN (archived_ids)   │
-  │     Or: DETACH + DROP partition (if partitioned)     │
-  │                                                      │
-  │  5. VACUUM: Reclaim space in PostgreSQL              │
-  └────────────────────────────────────────────────────┘
-
-  Results:
-    PostgreSQL: 50M rows (50 GB) → fast queries ✓
-    S3 Archive: 310M rows (30 GB Parquet, compressed) → cheap ✓
-    Queryable: AWS Athena for historical reports ✓
-    Savings: $300/month RDS storage → $1/month S3 ✓
-```
+![D. Example: E-Commerce Order Archival diagram](../assets/generated/02-databases-12-data-archival-diagram-02.svg)
 
 ---
 
@@ -290,132 +229,56 @@ Platform: 10M orders/month, 3 years of data = 360M rows
 
 ### E.1 HLD — Data Archival Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Primary Database (PostgreSQL)                             │
-│  Hot data: last 5 months                                  │
-│      │                                                     │
-│  ┌───┴────────────────┐                                   │
-│  │ Archival Service    │ Runs nightly via Airflow          │
-│  │ • Identify old data │                                   │
-│  │ • Export to Parquet │                                   │
-│  │ • Verify integrity  │                                   │
-│  │ • Delete from DB    │                                   │
-│  └───┬────────────────┘                                   │
-│      │                                                     │
-│  ┌───┴────────────────┐                                   │
-│  │ S3 (Archive)       │                                   │
-│  │ /orders/year=YYYY/month=MM/*.parquet                   │
-│  │                     │                                   │
-│  │ Lifecycle rules:    │                                   │
-│  │ 0-1 yr: Standard-IA │                                  │
-│  │ 1-7 yr: Glacier     │                                  │
-│  │ 7+ yr:  Deep Archive│                                  │
-│  └───┬────────────────┘                                   │
-│      │                                                     │
-│  ┌───┴────────────────┐                                   │
-│  │ Query Layer        │                                   │
-│  │ Athena / Presto    │ SQL on archived data              │
-│  │ API: GET /orders?  │ Routes to DB or Athena            │
-│  │   date<5mo → DB    │ based on date range               │
-│  │   date>5mo → Athena│                                   │
-│  └────────────────────┘                                   │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Data Archival Architecture diagram](../assets/generated/02-databases-12-data-archival-diagram-03.svg)
 
 ### E.2 LLD — Archival Service
 
-```python
-import json
-import pyarrow as pa
-import pyarrow.parquet as pq
-from datetime import datetime, timedelta
+```java
+// Dependencies in the original example:
+// import json
+// import pyarrow as pa
+// import pyarrow.parquet as pq
+// from datetime import datetime, timedelta
 
-class ArchivalService:
-    """Archives old data from PostgreSQL to S3 as Parquet"""
-    
-    def __init__(self, db_pool, s3_client, bucket: str,
-                 retention_days: int = 150):
-        self.db = db_pool
-        self.s3 = s3_client
-        self.bucket = bucket
-        self.retention_days = retention_days
+public class ArchivalService {
+    private Object db;
+    private Object s3;
+    private String bucket;
+    private int retentionDays;
 
-    def run_archival(self, table: str, date_column: str,
-                    batch_size: int = 50000):
-        cutoff = datetime.utcnow() - timedelta(days=self.retention_days)
-        print(f"Archiving {table} data before {cutoff.isoformat()}")
+    public ArchivalService(Object dbPool, Object s3Client, String bucket, int retentionDays) {
+        this.db = dbPool;
+        this.s3 = s3Client;
+        this.bucket = bucket;
+        this.retentionDays = retentionDays;
+    }
 
-        total_archived = 0
-        while True:
-            # 1. Fetch batch of old rows
-            rows = self.db.execute(f"""
-                SELECT * FROM {table}
-                WHERE {date_column} < %s
-                ORDER BY {date_column}
-                LIMIT %s
-            """, (cutoff, batch_size))
+    public Object runArchival(String table, String dateColumn, int batchSize) {
+        // cutoff = datetime.utcnow() - timedelta(days=retention_days)
+        // print(f"Archiving {table} data before {cutoff.isoformat()}")
+        // total_archived = 0
+        // while true
+        // 1. Fetch batch of old rows
+        // rows = db.execute(f
+        // SELECT * FROM {table}
+        // WHERE {date_column} < %s
+        // ...
+        return null;
+    }
 
-            if not rows:
-                break
-
-            # 2. Determine partition (year/month)
-            partition_key = rows[0][date_column].strftime("%Y/%m")
-
-            # 3. Convert to Parquet
-            table_data = pa.Table.from_pylist([dict(r) for r in rows])
-            buffer = pa.BufferOutputStream()
-            pq.write_table(table_data, buffer, compression='snappy')
-
-            # 4. Upload to S3
-            s3_key = f"archive/{table}/year={partition_key[:4]}/month={partition_key[5:]}/{datetime.utcnow().isoformat()}.parquet"
-            self.s3.put_object(
-                Bucket=self.bucket,
-                Key=s3_key,
-                Body=buffer.getvalue().to_pybytes()
-            )
-
-            # 5. Verify upload
-            s3_obj = self.s3.head_object(Bucket=self.bucket, Key=s3_key)
-            if s3_obj['ContentLength'] == 0:
-                raise RuntimeError(f"Upload verification failed for {s3_key}")
-
-            # 6. Delete archived rows from primary DB
-            ids = [r['id'] for r in rows]
-            placeholders = ", ".join(["%s"] * len(ids))
-            self.db.execute(
-                f"DELETE FROM {table} WHERE id IN ({placeholders})", ids
-            )
-            self.db.commit()
-
-            total_archived += len(rows)
-            print(f"  Archived {len(rows)} rows to {s3_key}")
-
-        print(f"Archival complete: {total_archived} rows archived from {table}")
-        return total_archived
-
-    def query_archive(self, table: str, year: int, month: int,
-                     sql_filter: str = None) -> list:
-        """Query archived data via S3 Select or Athena"""
-        prefix = f"archive/{table}/year={year}/month={month:02d}/"
-        
-        # List all Parquet files in the partition
-        response = self.s3.list_objects_v2(
-            Bucket=self.bucket, Prefix=prefix
-        )
-        
-        results = []
-        for obj in response.get('Contents', []):
-            # Read Parquet from S3
-            s3_obj = self.s3.get_object(Bucket=self.bucket, Key=obj['Key'])
-            table_data = pq.read_table(pa.BufferReader(s3_obj['Body'].read()))
-            df = table_data.to_pandas()
-            
-            if sql_filter:
-                df = df.query(sql_filter)
-            results.extend(df.to_dict('records'))
-        
-        return results
+    public List<Object> queryArchive(String table, int year, int month, String sqlFilter) {
+        // Query archived data via S3 Select or Athena
+        // prefix = f"archive/{table}/year={year}/month={month:02d}/"
+        // List all Parquet files in the partition
+        // response = s3.list_objects_v2(
+        // Bucket=bucket, Prefix=prefix
+        // )
+        // results = []
+        // for obj in response.get('Contents', [])
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Topic 26: Sharding
+﻿# Topic 26: Sharding
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -23,25 +23,7 @@
 
 **Sharding** (horizontal partitioning) splits a large dataset across multiple database servers (shards), where each shard holds a subset of the data. It enables write scaling beyond a single machine.
 
-```
-BEFORE sharding (single DB):
-  ┌────────────────────────────┐
-  │  Database (1 server)       │
-  │  100M users, 500 GB       │
-  │  10K writes/s (maxed out) │
-  └────────────────────────────┘
-
-AFTER sharding (4 shards):
-  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-  │ Shard 0  │ │ Shard 1  │ │ Shard 2  │ │ Shard 3  │
-  │ 25M users│ │ 25M users│ │ 25M users│ │ 25M users│
-  │ 125 GB   │ │ 125 GB   │ │ 125 GB   │ │ 125 GB   │
-  │ 2.5K w/s │ │ 2.5K w/s │ │ 2.5K w/s │ │ 2.5K w/s │
-  └──────────┘ └──────────┘ └──────────┘ └──────────┘
-  
-  Total: 10K writes/s distributed across 4 servers
-  Each server handles 25% of the load
-```
+![What is Sharding? diagram](../assets/generated/01-fundamentals-26-sharding-diagram-01.svg)
 
 ### Sharding Strategies
 
@@ -76,26 +58,7 @@ Best for: Key-value lookups, user data
 
 #### 3. Consistent Hashing
 
-```
-Hash ring: nodes placed at hash positions on a circle
-
-  ┌──── Node A ────── Node B ─────┐
-  │                                │
-  Node D                      Node C
-  │                                │
-  └────────────────────────────────┘
-
-  hash("key1") → lands between A and B → goes to B
-  hash("key2") → lands between C and D → goes to D
-
-  Adding Node E between B and C:
-    Only keys between B and E move to E
-    All other keys stay → minimal data movement!
-
-Pros: Minimal redistribution when adding/removing nodes
-Cons: Can be uneven; use virtual nodes for better distribution
-Best for: Distributed caches (Redis, Memcached), DynamoDB
-```
+![3. Consistent Hashing diagram](../assets/generated/01-fundamentals-26-sharding-diagram-02.svg)
 
 #### 4. Directory-Based Sharding
 
@@ -144,29 +107,7 @@ BAD shard keys:
 
 ### Cross-Shard Queries (The Hard Problem)
 
-```
-Query: "Find all orders over $100 across all users"
-
-With shard key = user_id:
-  Order data is split by user across shards.
-  → Must query ALL shards → merge results → slow!
-
-  ┌──────────┐  ┌──────────┐  ┌──────────┐
-  │ Shard 0  │  │ Shard 1  │  │ Shard 2  │
-  │ Query... │  │ Query... │  │ Query... │
-  └────┬─────┘  └────┬─────┘  └────┬─────┘
-       └─────────────┼─────────────┘
-                ┌────┴────┐
-                │  Merge  │  ← Scatter-gather pattern
-                │ Results │
-                └─────────┘
-
-Strategies:
-  1. Denormalize: Store data redundantly so queries hit one shard
-  2. Secondary index service: Elasticsearch for cross-shard search
-  3. Materialized views: Pre-compute aggregations
-  4. Avoid: Design schema so most queries use the shard key
-```
+![Cross-Shard Queries (The Hard Problem) diagram](../assets/generated/01-fundamentals-26-sharding-diagram-03.svg)
 
 ---
 
@@ -221,32 +162,7 @@ Scaling path BEFORE sharding:
 
 ### Resharding
 
-```
-Problem: You have 4 shards but need 8.
-
-Hash-based: hash(key) % 4 ≠ hash(key) % 8 → most keys move!
-
-Solutions:
-  1. Consistent hashing: Add 4 virtual nodes → only ~25% of keys move
-  2. Double-and-migrate: 
-     New shard mapping: shard = hash(key) % 8
-     Old data: migrate in background while serving reads from old shard
-     Use dual-read: check new shard first, fall back to old
-  3. Logical sharding: Start with 256 logical shards on 4 physical nodes
-     To add nodes: move logical shards (no rehashing)
-
-  ┌────────────────────────────────────────┐
-  │  256 logical shards on 4 physical nodes │
-  │                                          │
-  │  Node 1: shards 0-63                   │
-  │  Node 2: shards 64-127                 │
-  │  Node 3: shards 128-191               │
-  │  Node 4: shards 192-255               │
-  │                                          │
-  │  Add Node 5: move shards 192-223 → 5  │
-  │  No rehashing! Just move shard files.  │
-  └────────────────────────────────────────┘
-```
+![Resharding diagram](../assets/generated/01-fundamentals-26-sharding-diagram-04.svg)
 
 ---
 
@@ -280,69 +196,71 @@ Design:
 
 ### E.1 HLD — Sharded Database Architecture
 
-```
-┌──────────────────────────────────────────────────┐
-│  Application Layer                                │
-│  ┌──────────────────────────┐                    │
-│  │  Shard Router / Proxy    │                    │
-│  │  (Vitess / ProxySQL)     │                    │
-│  └──────┬──────┬──────┬─────┘                    │
-│         │      │      │                          │
-│    ┌────┴─┐ ┌──┴───┐ ┌┴─────┐ ┌──────┐         │
-│    │Shard0│ │Shard1│ │Shard2│ │Shard3│         │
-│    │Master│ │Master│ │Master│ │Master│         │
-│    │+2 rep│ │+2 rep│ │+2 rep│ │+2 rep│         │
-│    └──────┘ └──────┘ └──────┘ └──────┘         │
-│                                                  │
-│  Config DB: shard mapping (which key → which shard) │
-│  Elasticsearch: cross-shard search index         │
-└──────────────────────────────────────────────────┘
-```
+![E.1 HLD — Sharded Database Architecture diagram](../assets/generated/01-fundamentals-26-sharding-diagram-05.svg)
 
 ### E.2 LLD — Shard Router
 
-```python
-import hashlib
+```java
+// Dependencies in the original example:
+// import hashlib
 
-class ShardRouter:
-    def __init__(self, shard_connections: dict, num_virtual_nodes=150):
-        self.connections = shard_connections  # {shard_id: db_connection}
-        self.ring = {}  # hash_value -> shard_id
-        self._build_ring(num_virtual_nodes)
+public class ShardRouter {
+    private List<Object> connections;
+    private Object ring;
+    private Object sortedKeys;
 
-    def _build_ring(self, num_virtual_nodes):
-        for shard_id in self.connections:
-            for i in range(num_virtual_nodes):
-                key = f"{shard_id}:vn{i}"
-                hash_val = self._hash(key)
-                self.ring[hash_val] = shard_id
-        self.sorted_keys = sorted(self.ring.keys())
+    public ShardRouter(Map<String, Object> shardConnections, List<Object> numVirtualNodes) {
+        this.connections = shardConnections;
+        this.ring = new HashMap<>();
+        // _build_ring(num_virtual_nodes)
+    }
 
-    def get_shard(self, shard_key: str) -> str:
-        """Get the shard ID for a given shard key using consistent hashing"""
-        hash_val = self._hash(str(shard_key))
-        for ring_key in self.sorted_keys:
-            if hash_val <= ring_key:
-                return self.ring[ring_key]
-        return self.ring[self.sorted_keys[0]]  # Wrap around
+    public Object buildRing(List<Object> numVirtualNodes) {
+        // for shard_id in connections
+        // for i in range(num_virtual_nodes)
+        // key = f"{shard_id}:vn{i}"
+        // hash_val = _hash(key)
+        // ring[hash_val] = shard_id
+        // sorted_keys = sorted(ring.keys())
+        return null;
+    }
 
-    def get_connection(self, shard_key: str):
-        shard_id = self.get_shard(shard_key)
-        return self.connections[shard_id]
+    public String getShard(String shardKey) {
+        // Get the shard ID for a given shard key using consistent hashing
+        // hash_val = _hash(str(shard_key))
+        // for ring_key in sorted_keys
+        // if hash_val <= ring_key
+        // return ring[ring_key]
+        // return ring[sorted_keys[0]]  # Wrap around
+        return null;
+    }
 
-    def execute(self, shard_key: str, query: str, params=None):
-        conn = self.get_connection(shard_key)
-        return conn.execute(query, params)
+    public Object getConnection(String shardKey) {
+        // shard_id = get_shard(shard_key)
+        // return connections[shard_id]
+        return null;
+    }
 
-    def scatter_gather(self, query: str, params=None):
-        """Execute query on ALL shards and merge results"""
-        results = []
-        for shard_id, conn in self.connections.items():
-            results.extend(conn.execute(query, params))
-        return results
+    public Object execute(String shardKey, String query, Object params) {
+        // conn = get_connection(shard_key)
+        // return conn.execute(query, params)
+        return null;
+    }
 
-    def _hash(self, key: str) -> int:
-        return int(hashlib.md5(key.encode()).hexdigest(), 16)
+    public Object scatterGather(String query, Object params) {
+        // Execute query on ALL shards and merge results
+        // results = []
+        // for shard_id, conn in connections.items()
+        // results.extend(conn.execute(query, params))
+        // return results
+        return null;
+    }
+
+    public int hash(String key) {
+        // return int(hashlib.md5(key.encode()).hexdigest(), 16)
+        return 0;
+    }
+}
 ```
 
 ---

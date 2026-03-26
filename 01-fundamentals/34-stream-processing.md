@@ -1,4 +1,4 @@
-# Topic 34: Stream Processing
+﻿# Topic 34: Stream Processing
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -195,31 +195,7 @@ Kafka Streams: Consumer lag monitoring → auto-scale
 
 ## D. Example: Real-Time Fraud Detection
 
-```
-┌──────────────┐     ┌─────────────┐     ┌──────────────────┐
-│ Payment      │────►│ Kafka Topic │────►│ Flink Fraud      │
-│ Service      │     │ transactions│     │ Detection Job    │
-└──────────────┘     └─────────────┘     │                  │
-                                          │ Rules:           │
-                                          │ • >$5K in 1 min │
-                                          │ • >10 txns/min  │
-                                          │ • New country   │
-                                          └────────┬─────────┘
-                                                   │
-                                          ┌────────┴─────────┐
-                                          │ fraud_alerts     │
-                                          │ (Kafka topic)    │
-                                          └────────┬─────────┘
-                                                   │
-                                     ┌─────────────┼──────────────┐
-                                     ▼             ▼              ▼
-                                ┌────────┐  ┌──────────┐  ┌──────────┐
-                                │Block   │  │Alert     │  │Dashboard │
-                                │Payment │  │Team      │  │(Grafana) │
-                                └────────┘  └──────────┘  └──────────┘
-
-Processing time: <500ms from transaction to alert
-```
+![D. Example: Real-Time Fraud Detection diagram](../assets/generated/01-fundamentals-34-stream-processing-diagram-01.svg)
 
 ---
 
@@ -227,106 +203,73 @@ Processing time: <500ms from transaction to alert
 
 ### E.1 HLD — Stream Processing Pipeline
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Data Sources                                              │
-│  ┌──────┐ ┌──────┐ ┌──────┐                              │
-│  │Click │ │Txn   │ │IoT   │                              │
-│  │Stream│ │Stream│ │Stream│                              │
-│  └──┬───┘ └──┬───┘ └──┬───┘                              │
-│     └────────┼────────┘                                   │
-│              ▼                                             │
-│  ┌────────────────────────────┐                           │
-│  │  Kafka (ingestion layer)   │                           │
-│  │  Topics: clicks, txns, iot │                           │
-│  └──────────┬─────────────────┘                           │
-│             │                                              │
-│  ┌──────────┴─────────────────┐                           │
-│  │  Flink (processing layer)  │                           │
-│  │  Job 1: Fraud detection    │                           │
-│  │  Job 2: Click aggregation  │                           │
-│  │  Job 3: IoT anomaly detect │                           │
-│  │  State: RocksDB + S3 ckpt  │                           │
-│  └──────────┬─────────────────┘                           │
-│             │                                              │
-│  ┌──────────┴─────────────────┐                           │
-│  │  Output (serving layer)    │                           │
-│  │  Kafka → Alerts            │                           │
-│  │  Redis → Real-time metrics │                           │
-│  │  S3 → Data lake (archive)  │                           │
-│  │  PostgreSQL → Aggregates   │                           │
-│  └────────────────────────────┘                           │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Stream Processing Pipeline diagram](../assets/generated/01-fundamentals-34-stream-processing-diagram-02.svg)
 
 ### E.2 LLD — Stream Processor
 
-```python
-class StreamProcessor:
-    """Simplified stream processing engine"""
-    
-    def __init__(self, kafka_consumer, output_handlers: dict):
-        self.consumer = kafka_consumer
-        self.handlers = output_handlers
-        self.windows = {}  # key -> {window_start: aggregation}
-        self.state = {}    # key -> current state
+```java
+public class StreamProcessor {
+    private Object consumer;
+    private Map<String, Object> handlers;
+    private Map<String, Object> windows;
+    private Object state;
 
-    def process(self, topics: list, window_size_sec: int = 300):
-        self.consumer.subscribe(topics)
-        
-        for message in self.consumer:
-            event = json.loads(message.value)
-            event_time = event.get("timestamp", time.time())
-            
-            # 1. Filter
-            if not self._should_process(event):
-                continue
+    public StreamProcessor(Object kafkaConsumer, Map<String, Object> outputHandlers) {
+        this.consumer = kafkaConsumer;
+        this.handlers = outputHandlers;
+        this.windows = new HashMap<>();
+        this.state = new HashMap<>();
+    }
 
-            # 2. Transform
-            enriched = self._enrich(event)
+    public Object process(List<Object> topics, int windowSizeSec) {
+        // consumer.subscribe(topics)
+        // for message in consumer
+        // event = json.loads(message.value)
+        // event_time = event.get("timestamp", time.time())
+        // 1. Filter
+        // if not _should_process(event)
+        // continue
+        // 2. Transform
+        // ...
+        return null;
+    }
 
-            # 3. Window aggregate
-            window_key = self._get_window_key(enriched, event_time, window_size_sec)
-            self._aggregate(window_key, enriched)
+    public Object getWindowKey(Object event, Object eventTime, int windowSize) {
+        // window_start = int(event_time // window_size) * window_size
+        // entity_key = event.get("user_id", "global")
+        // return f"{entity_key}:{window_start}"
+        return null;
+    }
 
-            # 4. Check rules and emit
-            alerts = self._evaluate_rules(window_key, enriched)
-            for alert in alerts:
-                self._emit(alert)
+    public Object aggregate(Object windowKey, Object event) {
+        // if window_key not in windows
+        // windows[window_key] = {"count": 0, "sum": 0.0, "events": []}
+        // w = windows[window_key]
+        // w["count"] += 1
+        // w["sum"] += event.get("amount", 0)
+        // w["events"].append(event)
+        return null;
+    }
 
-            # 5. Expire old windows
-            self._expire_windows(event_time, window_size_sec * 2)
+    public List<Object> evaluateRules(Object windowKey, Object event) {
+        // alerts = []
+        // w = windows.get(window_key, {})
+        // Rule: More than $5000 in a window
+        // if w.get("sum", 0) > 5000
+        // alerts.append({"type": "high_spend", "window": window_key, "total": w["sum"]})
+        // Rule: More than 10 transactions in a window
+        // if w.get("count", 0) > 10
+        // alerts.append({"type": "high_frequency", "window": window_key, "count": w["count"]})
+        // ...
+        return null;
+    }
 
-    def _get_window_key(self, event, event_time, window_size):
-        window_start = int(event_time // window_size) * window_size
-        entity_key = event.get("user_id", "global")
-        return f"{entity_key}:{window_start}"
-
-    def _aggregate(self, window_key, event):
-        if window_key not in self.windows:
-            self.windows[window_key] = {"count": 0, "sum": 0.0, "events": []}
-        w = self.windows[window_key]
-        w["count"] += 1
-        w["sum"] += event.get("amount", 0)
-        w["events"].append(event)
-
-    def _evaluate_rules(self, window_key, event) -> list:
-        alerts = []
-        w = self.windows.get(window_key, {})
-        
-        # Rule: More than $5000 in a window
-        if w.get("sum", 0) > 5000:
-            alerts.append({"type": "high_spend", "window": window_key, "total": w["sum"]})
-        
-        # Rule: More than 10 transactions in a window
-        if w.get("count", 0) > 10:
-            alerts.append({"type": "high_frequency", "window": window_key, "count": w["count"]})
-        
-        return alerts
-
-    def _emit(self, alert):
-        for handler in self.handlers.values():
-            handler.send(alert)
+    public Object emit(Object alert) {
+        // for handler in handlers.values()
+        // handler.send(alert)
+        return null;
+    }
+}
 ```
 
 ---

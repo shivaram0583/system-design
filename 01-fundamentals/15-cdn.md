@@ -1,4 +1,4 @@
-# Topic 15: CDN (Content Delivery Network)
+﻿# Topic 15: CDN (Content Delivery Network)
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -23,20 +23,7 @@
 
 A **Content Delivery Network** is a geographically distributed network of servers that caches and serves content from locations close to the end user, reducing latency and load on origin servers.
 
-```
-WITHOUT CDN:
-  User in Tokyo ───────── 200ms ────────► Origin in Virginia
-  Every request travels across the globe.
-
-WITH CDN:
-  User in Tokyo ──── 10ms ────► CDN Edge (Tokyo)
-                                    │ cache miss? 
-                                    ▼
-                              Origin (Virginia)
-                              (only on first request)
-  
-  Subsequent users in Tokyo get content from the Tokyo edge = 10ms
-```
+![What is a CDN? diagram](../assets/generated/01-fundamentals-15-cdn-diagram-01.svg)
 
 ### How CDNs Work
 
@@ -154,33 +141,7 @@ Typical pricing (CloudFront):
 
 ## D. Example: Global Image Service
 
-```
-Architecture:
-  ┌────────┐     ┌─────────────┐     ┌──────────────┐
-  │ Client │────►│ CloudFront  │────►│ S3 (Origin)  │
-  │ (Tokyo)│     │ Edge (Tokyo)│     │ (us-east-1)  │
-  └────────┘     └─────────────┘     └──────────────┘
-
-Upload flow:
-  App Server → S3 (original) → Lambda (resize) → S3 (variants)
-  
-  S3 stores: /images/123/original.jpg  (5 MB)
-             /images/123/thumb_200.jpg (20 KB)
-             /images/123/medium_800.jpg (100 KB)
-
-Request flow:
-  GET https://cdn.example.com/images/123/thumb_200.jpg
-  → CloudFront edge (Tokyo): Cache HIT → return 20 KB in 10ms
-  → Cache MISS → fetch from S3 → cache → return
-
-  Cache-Control: public, max-age=86400, immutable
-  (Images are immutable — new version = new URL)
-
-Performance:
-  Without CDN: 200ms (Tokyo → Virginia round trip)
-  With CDN: 10ms (Tokyo edge) + 99% cache hit rate
-  Origin load reduction: 99% fewer requests to S3
-```
+![D. Example: Global Image Service diagram](../assets/generated/01-fundamentals-15-cdn-diagram-02.svg)
 
 ---
 
@@ -188,30 +149,7 @@ Performance:
 
 ### E.1 HLD — CDN-Backed Static Site
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Users (Global)                                       │
-│      │                                                │
-│  ┌───┴──────────┐                                     │
-│  │  DNS (Route53)│  → cdn.example.com → CloudFront    │
-│  └───┬──────────┘                                     │
-│      │                                                │
-│  ┌───┴──────────────┐                                 │
-│  │  CloudFront CDN  │                                 │
-│  │  400+ edge PoPs  │                                 │
-│  │                   │                                 │
-│  │  Cache behaviors: │                                 │
-│  │  /static/* → S3 (1 day TTL)                       │
-│  │  /api/*    → ALB (0 TTL, passthrough)             │
-│  │  /*        → S3 (5 min TTL, SPA fallback)         │
-│  └───┬──────┬───────┘                                 │
-│      │      │                                         │
-│  ┌───┴──┐ ┌─┴────┐                                   │
-│  │  S3  │ │ ALB  │                                   │
-│  │Static│ │→ API │                                   │
-│  └──────┘ └──────┘                                   │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — CDN-Backed Static Site diagram](../assets/generated/01-fundamentals-15-cdn-diagram-03.svg)
 
 ### E.2 LLD — Cache Key and Invalidation Logic
 

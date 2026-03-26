@@ -1,4 +1,4 @@
-# HLD 15: Search Autocomplete (Typeahead)
+﻿# HLD 15: Search Autocomplete (Typeahead)
 
 > **Difficulty**: Medium
 > **Key Concepts**: Trie, prefix matching, ranking, low latency
@@ -58,32 +58,7 @@ graph TD
 
 ### Trie Data Structure
 
-```
-Trie: Tree where each node is a character, paths form words.
-
-  Root
-  ├── i
-  │   ├── p
-  │   │   ├── h
-  │   │   │   ├── o
-  │   │   │   │   ├── n
-  │   │   │   │   │   ├── e [*] (count: 50M) → "iphone"
-  │   │   │   │   │   │   ├── 1
-  │   │   │   │   │   │   │   ├── 5 [*] (count: 20M) → "iphone 15"
-  │   │   │   │   │   │   │   ├── 6 [*] (count: 8M)  → "iphone 16"
-  │   │   │   ├── a
-  │   │   │   │   ├── d [*] (count: 30M) → "ipad"
-
-  Query "iph" → traverse to node 'h' → return top-K descendants:
-    1. "iphone" (50M)
-    2. "ipad" (30M)  -- wait, this doesn't match "iph"
-    
-  Corrected: "iph" matches "iphone", "iphone 15", "iphone 16"
-
-Optimization: Store top-K results at each node
-  Node 'h' caches: ["iphone", "iphone 15", "iphone 16", "iphoto", ...]
-  No need to traverse subtree at query time → O(prefix_length) lookup
-```
+![Trie Data Structure diagram](../assets/generated/03-hld-15-search-autocomplete-diagram-01.svg)
 
 ### Trie Building Pipeline
 

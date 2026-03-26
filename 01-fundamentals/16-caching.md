@@ -1,4 +1,4 @@
-# Topic 16: Caching
+﻿# Topic 16: Caching
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -39,19 +39,7 @@ Cache hit rate of 95% means:
 
 ### Cache Levels
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Level 0: CPU Cache (L1/L2/L3)     ~1-10 ns            │
-│  Level 1: Application Memory        ~100 ns             │
-│  Level 2: Distributed Cache (Redis) ~1 ms               │
-│  Level 3: CDN Edge Cache            ~10 ms              │
-│  Level 4: Database Query Cache      ~5 ms               │
-│  Level 5: Disk/SSD (origin)         ~10-100 ms          │
-└─────────────────────────────────────────────────────────┘
-
-Closer to client = faster but smaller and more expensive
-Farther from client = slower but larger and cheaper
-```
+![Cache Levels diagram](../assets/generated/01-fundamentals-16-caching-diagram-01.svg)
 
 ### Caching Strategies
 
@@ -163,27 +151,7 @@ Strategies:
 
 ### Distributed Cache
 
-```
-Single-node cache (in-process):
-  Pros: Fastest (no network), simplest
-  Cons: Limited by server RAM, lost on restart, not shared across instances
-
-Distributed cache (Redis/Memcached):
-  ┌──────┐  ┌──────┐  ┌──────┐
-  │ App1 │  │ App2 │  │ App3 │
-  └──┬───┘  └──┬───┘  └──┬───┘
-     └─────────┼────────┘
-          ┌────┴────┐
-          │  Redis  │  Shared across all app instances
-          │ Cluster │  Persistent (optional), replicated
-          └─────────┘
-
-  Redis Cluster (sharded):
-    Key → hash slot (0-16383) → node
-    Node 1: slots 0-5460
-    Node 2: slots 5461-10922
-    Node 3: slots 10923-16383
-```
+![Distributed Cache diagram](../assets/generated/01-fundamentals-16-caching-diagram-02.svg)
 
 ### Cache Stampede (Thundering Herd)
 
@@ -301,30 +269,7 @@ Performance:
 
 ### E.1 HLD — Multi-Tier Caching
 
-```
-┌────────────────────────────────────────────────────────┐
-│  Client                                                  │
-│    │                                                     │
-│    ▼                                                     │
-│  CDN (edge cache) ← static assets, images (TTL: hours) │
-│    │                                                     │
-│    ▼                                                     │
-│  API Gateway ← response cache for GET endpoints          │
-│    │                                                     │
-│    ▼                                                     │
-│  Application                                             │
-│    │ ← in-process cache (Caffeine/Guava, TTL: seconds)  │
-│    │                                                     │
-│    ▼                                                     │
-│  Redis Cluster ← distributed cache (TTL: minutes)       │
-│    │                                                     │
-│    ▼                                                     │
-│  Database ← query result cache (TTL: varies)            │
-│    │                                                     │
-│    ▼                                                     │
-│  Disk / SSD (origin data)                               │
-└────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Multi-Tier Caching diagram](../assets/generated/01-fundamentals-16-caching-diagram-03.svg)
 
 ### E.2 LLD — Cache Service
 

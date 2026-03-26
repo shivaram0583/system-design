@@ -1,4 +1,4 @@
-# Topic 10: Horizontal vs Vertical Scaling
+﻿# Topic 10: Horizontal vs Vertical Scaling
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner
@@ -45,29 +45,7 @@
 
 ### Decision Framework
 
-```
-START HERE
-  │
-  ├─ Is the bottleneck CPU/RAM on a single machine?
-  │   YES → Try vertical first (simpler)
-  │   NO  ↓
-  │
-  ├─ Is the component stateless?
-  │   YES → Horizontal scaling (easy win)
-  │   NO  ↓
-  │
-  ├─ Is it a database?
-  │   YES → Vertical first, then read replicas, then sharding
-  │   NO  ↓
-  │
-  ├─ Do you need redundancy/HA?
-  │   YES → Must go horizontal (can't be HA with one machine)
-  │   NO  ↓
-  │
-  ├─ Is cost a concern at current scale?
-  │   YES → Horizontal (commodity hardware is cheaper)
-  │   NO  → Vertical (simpler to manage)
-```
+![Decision Framework diagram](../assets/generated/01-fundamentals-10-horizontal-vs-vertical-scaling-diagram-01.svg)
 
 ### When Vertical Scaling Wins
 
@@ -104,28 +82,7 @@ Real examples:
 
 ### Hybrid Approach (What Most Companies Do)
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    HYBRID SCALING                         │
-│                                                           │
-│  Web/API Layer: HORIZONTAL                               │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                    │
-│  │ App1 │ │ App2 │ │ App3 │ │ App4 │  (scale out)       │
-│  └──────┘ └──────┘ └──────┘ └──────┘                    │
-│                                                           │
-│  Cache Layer: HORIZONTAL                                 │
-│  ┌───────┐ ┌───────┐ ┌───────┐                          │
-│  │Redis 1│ │Redis 2│ │Redis 3│  (cluster/scale out)     │
-│  └───────┘ └───────┘ └───────┘                          │
-│                                                           │
-│  Database: VERTICAL + HORIZONTAL                         │
-│  ┌───────────────┐  ┌─────────┐ ┌─────────┐            │
-│  │Primary (BIG)  │  │Replica 1│ │Replica 2│            │
-│  │64 cores       │  │(reads)  │ │(reads)  │            │
-│  │512 GB RAM     │  └─────────┘ └─────────┘            │
-│  └───────────────┘  (vertical)  (horizontal for reads)  │
-└─────────────────────────────────────────────────────────┘
-```
+![Hybrid Approach (What Most Companies Do) diagram](../assets/generated/01-fundamentals-10-horizontal-vs-vertical-scaling-diagram-02.svg)
 
 ---
 
@@ -235,22 +192,7 @@ STAGE 4 — Full Horizontal (1M users):
 
 ### E.1 HLD — Scaling Decision Engine
 
-```
-┌─────────────────────────────────────────┐
-│         Scaling Decision                 │
-│                                          │
-│  Component: Web Servers                  │
-│  Current: 3 instances (m5.large)        │
-│  CPU: 75% avg                           │
-│  Decision: SCALE OUT (+2 instances)     │
-│                                          │
-│  Component: Database                     │
-│  Current: db.r5.xlarge                  │
-│  CPU: 80%, RAM: 90%                     │
-│  Decision: SCALE UP (db.r5.4xlarge)     │
-│  Reason: Stateful, can't easily split   │
-└─────────────────────────────────────────┘
-```
+![E.1 HLD — Scaling Decision Engine diagram](../assets/generated/01-fundamentals-10-horizontal-vs-vertical-scaling-diagram-03.svg)
 
 ### E.2 LLD — Scaling Strategy Selector
 

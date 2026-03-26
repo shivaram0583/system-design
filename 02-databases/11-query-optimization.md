@@ -1,4 +1,4 @@
-# Topic 11: Query Optimization
+﻿# Topic 11: Query Optimization
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate → Advanced
@@ -167,28 +167,7 @@ KEYSET (cursor-based) pagination (fast for any page):
 
 ### Connection Pooling
 
-```
-Problem: Each DB connection costs ~10 MB RAM + setup time.
-  1000 app servers × 10 connections each = 10,000 connections → DB OOM
-
-Solution: Connection pooler between app and DB.
-
-  ┌──────────┐     ┌──────────────┐     ┌──────────┐
-  │ App (1000│────►│ PgBouncer    │────►│PostgreSQL│
-  │ conns)   │     │ (50 pooled   │     │ (50 real │
-  └──────────┘     │  connections)│     │  conns)  │
-                   └──────────────┘     └──────────┘
-
-  Modes:
-  • Session pooling: 1 client = 1 server conn for session duration
-  • Transaction pooling: conn returned after each transaction (most efficient)
-  • Statement pooling: conn returned after each statement
-
-  PgBouncer settings:
-    pool_size = 50          # max DB connections
-    max_client_conn = 10000 # max app connections
-    pool_mode = transaction
-```
+![Connection Pooling diagram](../assets/generated/02-databases-11-query-optimization-diagram-01.svg)
 
 ### Prepared Statements
 
@@ -316,111 +295,55 @@ ORDER BY hour;
 
 ### E.1 HLD — Query Performance Infrastructure
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Application                                               │
-│  ┌────────────────────────────────────────┐               │
-│  │  ORM / Query Builder                   │               │
-│  │  • Eager loading (avoid N+1)           │               │
-│  │  • Select specific columns             │               │
-│  │  • Prepared statements                 │               │
-│  │  • Keyset pagination                   │               │
-│  └──────────────┬─────────────────────────┘               │
-│                 │                                          │
-│  ┌──────────────┴─────────────────────────┐               │
-│  │  Connection Pooler (PgBouncer)         │               │
-│  │  50 pooled connections                 │               │
-│  └──────────────┬─────────────────────────┘               │
-│                 │                                          │
-│  ┌──────────────┴─────────────────────────┐               │
-│  │  PostgreSQL                            │               │
-│  │  • Partitioned tables (by date)        │               │
-│  │  • Optimized indexes                   │               │
-│  │  • Materialized views (hourly refresh) │               │
-│  │  • Read replicas (analytics queries)   │               │
-│  │  • pg_stat_statements (monitoring)     │               │
-│  └────────────────────────────────────────┘               │
-│                                                            │
-│  Monitoring:                                              │
-│  pg_stat_statements → Prometheus → Grafana                │
-│  Slow query log → Alert on queries > 1s                   │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Query Performance Infrastructure diagram](../assets/generated/02-databases-11-query-optimization-diagram-02.svg)
 
 ### E.2 LLD — Query Optimizer Helper
 
-```python
-class QueryOptimizer:
-    """Helpers for building optimized queries"""
-    
-    def __init__(self, db_pool):
-        self.db = db_pool
+```java
+public class QueryOptimizer {
+    private Object db;
 
-    def paginate_keyset(self, table: str, columns: list,
-                       order_col: str, order_dir: str = "DESC",
-                       cursor_value=None, limit: int = 20,
-                       filters: dict = None) -> dict:
-        """Keyset pagination — O(log n) for any page depth"""
-        cols = ", ".join(columns)
-        where_parts = []
-        params = {}
+    public QueryOptimizer(Object dbPool) {
+        this.db = dbPool;
+    }
 
-        if filters:
-            for key, value in filters.items():
-                where_parts.append(f"{key} = %({key})s")
-                params[key] = value
+    public Map<String, Object> paginateKeyset(String table, List<Object> columns, String orderCol, String orderDir, Object cursorValue, int limit, Map<String, Object> filters) {
+        // Keyset pagination — O(log n) for any page depth
+        // cols = ", ".join(columns)
+        // where_parts = []
+        // params = {}
+        // if filters
+        // for key, value in filters.items()
+        // where_parts.append(f"{key} = %({key})s")
+        // params[key] = value
+        // ...
+        return null;
+    }
 
-        if cursor_value is not None:
-            op = "<" if order_dir == "DESC" else ">"
-            where_parts.append(f"{order_col} {op} %(cursor)s")
-            params["cursor"] = cursor_value
+    public List<Object> batchGet(String table, List<Object> ids, String idCol, List<Object> columns) {
+        // Batch fetch by IDs (avoids N+1)
+        // if not ids
+        // return []
+        // cols = ", ".join(columns) if columns else "*"
+        // placeholders = ", ".join(["%s"] * len(ids))
+        // query = f"SELECT {cols} FROM {table} WHERE {id_col} IN ({placeholders})"
+        // return db.execute(query, ids)
+        return null;
+    }
 
-        where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
-        params["limit"] = limit + 1  # Fetch one extra to detect "has more"
-
-        query = f"""
-            SELECT {cols} FROM {table}
-            {where_clause}
-            ORDER BY {order_col} {order_dir}
-            LIMIT %(limit)s
-        """
-        rows = self.db.execute(query, params)
-        
-        has_more = len(rows) > limit
-        items = rows[:limit]
-        next_cursor = items[-1][order_col] if items and has_more else None
-
-        return {
-            "items": items,
-            "next_cursor": next_cursor,
-            "has_more": has_more,
-        }
-
-    def batch_get(self, table: str, ids: list, id_col: str = "id",
-                  columns: list = None) -> list:
-        """Batch fetch by IDs (avoids N+1)"""
-        if not ids:
-            return []
-        cols = ", ".join(columns) if columns else "*"
-        placeholders = ", ".join(["%s"] * len(ids))
-        query = f"SELECT {cols} FROM {table} WHERE {id_col} IN ({placeholders})"
-        return self.db.execute(query, ids)
-
-    def explain_query(self, query: str, params=None) -> dict:
-        """Run EXPLAIN ANALYZE and parse results"""
-        explain_query = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query}"
-        result = self.db.execute(explain_query, params)
-        plan = result[0][0][0]
-
-        return {
-            "execution_time_ms": plan["Execution Time"],
-            "planning_time_ms": plan["Planning Time"],
-            "plan": plan["Plan"]["Node Type"],
-            "total_cost": plan["Plan"]["Total Cost"],
-            "actual_rows": plan["Plan"].get("Actual Rows"),
-            "shared_hit_blocks": plan["Plan"].get("Shared Hit Blocks", 0),
-            "shared_read_blocks": plan["Plan"].get("Shared Read Blocks", 0),
-        }
+    public Map<String, Object> explainQuery(String query, Object params) {
+        // Run EXPLAIN ANALYZE and parse results
+        // explain_query = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query}"
+        // result = db.execute(explain_query, params)
+        // plan = result[0][0][0]
+        // return {
+        // "execution_time_ms": plan["Execution Time"],
+        // "planning_time_ms": plan["Planning Time"],
+        // "plan": plan["Plan"]["Node Type"],
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

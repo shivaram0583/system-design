@@ -1,4 +1,4 @@
-# Topic 23: Retry, Timeout, Backoff
+﻿# Topic 23: Retry, Timeout, Backoff
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,20 +23,7 @@
 
 A **timeout** sets the maximum time a client waits for a response before giving up.
 
-```
-WITHOUT timeout:
-  Service A ──── request ────► Service B (stuck forever)
-  Thread hangs indefinitely → thread pool exhaustion → A crashes
-
-WITH timeout:
-  Service A ──── request (timeout: 3s) ────► Service B
-  After 3s with no response → timeout error → A can respond/retry
-
-Types:
-  Connection timeout: Max time to establish TCP connection (1-5s)
-  Read/Response timeout: Max time to receive response (3-30s)
-  Overall timeout: Total time for the entire operation (5-60s)
-```
+![Timeout diagram](../assets/generated/01-fundamentals-23-retry-timeout-backoff-diagram-01.svg)
 
 ### Retry
 
@@ -91,21 +78,7 @@ Full jitter provides the best spread (recommended by AWS).
 
 ### The Complete Resilience Stack
 
-```
-Order of application (outside → inside):
-
-  1. TIMEOUT (outermost) ─── Don't wait forever
-  2. RETRY + BACKOFF ─────── Try again on transient failure
-  3. CIRCUIT BREAKER ─────── Stop trying if dependency is down
-  4. BULKHEAD ────────────── Limit concurrent calls
-  5. ACTUAL CALL (innermost)
-
-  call = timeout(10s,
-           retry(3, exponential_backoff_with_jitter,
-             circuit_breaker(threshold=5,
-               bulkhead(max_concurrent=20,
-                 actual_http_call()))))
-```
+![The Complete Resilience Stack diagram](../assets/generated/01-fundamentals-23-retry-timeout-backoff-diagram-02.svg)
 
 ---
 
@@ -215,91 +188,32 @@ Order Service calls Payment Service:
 
 ### E.1 HLD — Resilient Service Mesh
 
-```
-┌──────────────────────────────────────────────────┐
-│  Each service has a sidecar proxy (Envoy/Istio)  │
-│  that handles retry, timeout, and circuit breaking│
-│                                                    │
-│  ┌─────┐  ┌───────┐        ┌───────┐  ┌─────┐   │
-│  │Svc A│──│Envoy  │──net──►│Envoy  │──│Svc B│   │
-│  └─────┘  │Sidecar│        │Sidecar│  └─────┘   │
-│           │• 3s timeout│    │       │             │
-│           │• 2 retries│     │       │             │
-│           │• exp backoff│   │       │             │
-│           │• CB: 5 fail│    │       │             │
-│           └───────┘        └───────┘             │
-│                                                    │
-│  Config managed centrally (Istio control plane)   │
-│  No code changes needed in services               │
-└──────────────────────────────────────────────────┘
-```
+![E.1 HLD — Resilient Service Mesh diagram](../assets/generated/01-fundamentals-23-retry-timeout-backoff-diagram-03.svg)
 
 ### E.2 LLD — Retry with Backoff
 
-```python
-import time
-import random
+```java
+// Dependencies in the original example:
+// import time
+// import random
 
-class RetryConfig:
-    def __init__(self, max_retries=3, base_delay=1.0, max_delay=30.0,
-                 backoff="exponential_jitter",
-                 retryable_exceptions=(TimeoutError, ConnectionError),
-                 retryable_status_codes=(500, 502, 503, 429)):
-        self.max_retries = max_retries
-        self.base_delay = base_delay
-        self.max_delay = max_delay
-        self.backoff = backoff
-        self.retryable_exceptions = retryable_exceptions
-        self.retryable_status_codes = retryable_status_codes
+public class RetryConfig {
+    private int maxRetries;
+    private Object baseDelay;
+    private Object maxDelay;
+    private Object backoff;
+    private Object retryableExceptions;
+    private Object retryableStatusCodes;
 
-
-def retry_with_backoff(func, config: RetryConfig):
-    last_exception = None
-    
-    for attempt in range(config.max_retries + 1):
-        try:
-            result = func()
-            
-            # Check for retryable HTTP status
-            if hasattr(result, 'status_code'):
-                if result.status_code in config.retryable_status_codes:
-                    if attempt < config.max_retries:
-                        delay = _calculate_delay(config, attempt, result)
-                        time.sleep(delay)
-                        continue
-                    return result  # Last attempt, return as-is
-            
-            return result  # Success
-            
-        except config.retryable_exceptions as e:
-            last_exception = e
-            if attempt < config.max_retries:
-                delay = _calculate_delay(config, attempt)
-                log.warn(f"Attempt {attempt+1} failed: {e}. Retrying in {delay:.1f}s")
-                time.sleep(delay)
-            else:
-                raise  # Max retries exhausted
-
-    raise last_exception
-
-
-def _calculate_delay(config, attempt, response=None):
-    # Respect Retry-After header (for 429 responses)
-    if response and hasattr(response, 'headers'):
-        retry_after = response.headers.get('Retry-After')
-        if retry_after:
-            return min(float(retry_after), config.max_delay)
-
-    if config.backoff == "exponential_jitter":
-        # Full jitter: random(0, base * 2^attempt)
-        max_delay = min(config.base_delay * (2 ** attempt), config.max_delay)
-        return random.uniform(0, max_delay)
-    elif config.backoff == "exponential":
-        return min(config.base_delay * (2 ** attempt), config.max_delay)
-    elif config.backoff == "linear":
-        return min(config.base_delay * (attempt + 1), config.max_delay)
-    else:
-        return config.base_delay  # Fixed
+    public RetryConfig(int maxRetries, Object baseDelay, Object maxDelay, Object backoff, Object retryableExceptions, Object connectionError), Object retryableStatusCodes, Object 502, Object 503, Object 429)) {
+        this.maxRetries = maxRetries;
+        this.baseDelay = baseDelay;
+        this.maxDelay = maxDelay;
+        this.backoff = backoff;
+        this.retryableExceptions = retryableExceptions;
+        this.retryableStatusCodes = retryableStatusCodes;
+    }
+}
 ```
 
 ---

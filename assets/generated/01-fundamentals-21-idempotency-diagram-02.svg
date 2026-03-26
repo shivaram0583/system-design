@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="821" height="368" viewBox="0 0 821 368" role="img" aria-labelledby="title desc">
+  <title id="title">D. Example: Idempotent Payment Service diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="819.8" height="366.8" rx="16" />
+  <g class="segments">
+    <line x1="28.2" y1="44" x2="32.4" y2="34" />
+    <line x1="32.4" y1="34" x2="40.8" y2="34" />
+    <line x1="40.8" y1="34" x2="49.199999999999996" y2="34" />
+    <line x1="49.2" y1="34" x2="57.6" y2="34" />
+    <line x1="57.6" y1="34" x2="66" y2="34" />
+    <line x1="66" y1="34" x2="74.4" y2="34" />
+    <line x1="74.4" y1="34" x2="82.80000000000001" y2="34" />
+    <line x1="82.80000000000001" y1="34" x2="91.20000000000002" y2="34" />
+    <line x1="91.2" y1="34" x2="99.60000000000001" y2="34" />
+    <line x1="99.60000000000001" y1="34" x2="103.80000000000001" y2="44" />
+    <line x1="263.40000000000003" y1="44" x2="267.6" y2="34" />
+    <line x1="267.6" y1="34" x2="276" y2="34" />
+    <line x1="276" y1="34" x2="284.4" y2="34" />
+    <line x1="284.40000000000003" y1="34" x2="292.8" y2="34" />
+    <line x1="292.8" y1="34" x2="301.2" y2="34" />
+    <line x1="301.2" y1="34" x2="309.59999999999997" y2="34" />
+    <line x1="309.6" y1="34" x2="318" y2="34" />
+    <line x1="318" y1="34" x2="326.4" y2="34" />
+    <line x1="326.40000000000003" y1="34" x2="334.8" y2="34" />
+    <line x1="334.8" y1="34" x2="343.2" y2="34" />
+    <line x1="343.2" y1="34" x2="351.59999999999997" y2="34" />
+    <line x1="351.6" y1="34" x2="360" y2="34" />
+    <line x1="360" y1="34" x2="368.4" y2="34" />
+    <line x1="368.40000000000003" y1="34" x2="376.8" y2="34" />
+    <line x1="376.8" y1="34" x2="385.2" y2="34" />
+    <line x1="385.2" y1="34" x2="393.59999999999997" y2="34" />
+    <line x1="393.6" y1="34" x2="397.8" y2="44" />
+    <line x1="28.2" y1="44" x2="28.2" y2="64" />
+    <line x1="103.80000000000001" y1="44" x2="103.80000000000001" y2="64" />
+    <line x1="108" y1="54" x2="116.4" y2="54" />
+    <line x1="116.4" y1="54" x2="124.80000000000001" y2="54" />
+    <line x1="217.20000000000002" y1="54" x2="225.60000000000002" y2="54" />
+    <line x1="225.60000000000002" y1="54" x2="234.00000000000003" y2="54" />
+    <line x1="234" y1="54" x2="242.4" y2="54" />
+    <line x1="242.4" y1="54" x2="250.8" y2="54" />
+    <line x1="263.40000000000003" y1="44" x2="263.40000000000003" y2="64" />
+    <line x1="397.8" y1="44" x2="397.8" y2="64" />
+    <line x1="28.2" y1="64" x2="28.2" y2="84" />
+    <line x1="103.80000000000001" y1="64" x2="103.80000000000001" y2="84" />
+    <line x1="263.40000000000003" y1="64" x2="263.40000000000003" y2="84" />
+    <line x1="397.8" y1="64" x2="397.8" y2="84" />
+    <line x1="28.2" y1="84" x2="32.4" y2="94" />
+    <line x1="32.4" y1="94" x2="40.8" y2="94" />
+    <line x1="40.8" y1="94" x2="49.199999999999996" y2="94" />
+    <line x1="49.2" y1="94" x2="57.6" y2="94" />
+    <line x1="57.6" y1="94" x2="66" y2="94" />
+    <line x1="66" y1="94" x2="74.4" y2="94" />
+    <line x1="74.4" y1="94" x2="82.80000000000001" y2="94" />
+    <line x1="82.80000000000001" y1="94" x2="91.20000000000002" y2="94" />
+    <line x1="91.2" y1="94" x2="99.60000000000001" y2="94" />
+    <line x1="99.60000000000001" y1="94" x2="103.80000000000001" y2="84" />
+    <line x1="263.40000000000003" y1="84" x2="263.40000000000003" y2="104" />
+    <line x1="397.8" y1="84" x2="397.8" y2="104" />
+    <line x1="402" y1="94" x2="410.4" y2="94" />
+    <line x1="410.40000000000003" y1="94" x2="418.8" y2="94" />
+    <line x1="263.40000000000003" y1="104" x2="263.40000000000003" y2="124" />
+    <line x1="397.8" y1="104" x2="397.8" y2="124" />
+    <line x1="263.40000000000003" y1="124" x2="263.40000000000003" y2="144" />
+    <line x1="397.8" y1="124" x2="397.8" y2="144" />
+    <line x1="263.40000000000003" y1="144" x2="267.6" y2="154" />
+    <line x1="267.6" y1="154" x2="276" y2="154" />
+    <line x1="276" y1="154" x2="284.4" y2="154" />
+    <line x1="284.40000000000003" y1="154" x2="292.8" y2="154" />
+    <line x1="292.8" y1="154" x2="301.2" y2="154" />
+    <line x1="301.2" y1="154" x2="309.59999999999997" y2="154" />
+    <line x1="309.6" y1="154" x2="318" y2="154" />
+    <line x1="318" y1="154" x2="326.4" y2="154" />
+    <line x1="326.40000000000003" y1="154" x2="334.8" y2="154" />
+    <line x1="334.8" y1="154" x2="343.2" y2="154" />
+    <line x1="343.2" y1="154" x2="351.59999999999997" y2="154" />
+    <line x1="351.6" y1="154" x2="360" y2="154" />
+    <line x1="360" y1="154" x2="368.4" y2="154" />
+    <line x1="368.40000000000003" y1="154" x2="376.8" y2="154" />
+    <line x1="376.8" y1="154" x2="385.2" y2="154" />
+    <line x1="385.2" y1="154" x2="393.59999999999997" y2="154" />
+    <line x1="393.6" y1="154" x2="397.8" y2="144" />
+  </g>
+  <g>
+    <text x="24" y="59" xml:space="preserve">  Client     POST /pay     ►  Payment API    </text>
+    <text x="24" y="79" xml:space="preserve">            Key: abc123                      </text>
+    <text x="24" y="99" xml:space="preserve">                              1. Check Redis   ► EXISTS abc123?</text>
+    <text x="24" y="119" xml:space="preserve">                              2. Process         YES → return stored</text>
+    <text x="24" y="139" xml:space="preserve">                              3. Store           NO  → process → store</text>
+    <text x="24" y="199" xml:space="preserve">Request 1 (first attempt):</text>
+    <text x="24" y="219" xml:space="preserve">  Key: abc123 not in Redis → charge card → store {key: abc123, result: success} → return 200</text>
+    <text x="24" y="259" xml:space="preserve">Request 2 (retry, same key):</text>
+    <text x="24" y="279" xml:space="preserve">  Key: abc123 found in Redis → return stored result → 200 (no double charge)</text>
+    <text x="24" y="319" xml:space="preserve">Request 3 (different payment):</text>
+    <text x="24" y="339" xml:space="preserve">  Key: def456 not in Redis → charge card → store → return 200</text>
+  </g>
+</svg>

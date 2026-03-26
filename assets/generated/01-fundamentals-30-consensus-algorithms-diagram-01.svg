@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="608" viewBox="0 0 830 608" role="img" aria-labelledby="title desc">
+  <title id="title">Raft Consensus (Detailed) diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="828.8" height="606.8" rx="16" />
+  <g class="segments">
+    <line x1="53.400000000000006" y1="304" x2="57.6" y2="294" />
+    <line x1="57.6" y1="294" x2="66" y2="294" />
+    <line x1="66" y1="294" x2="74.4" y2="294" />
+    <line x1="74.4" y1="294" x2="82.80000000000001" y2="294" />
+    <line x1="82.80000000000001" y1="294" x2="91.20000000000002" y2="294" />
+    <line x1="91.2" y1="294" x2="99.60000000000001" y2="294" />
+    <line x1="99.60000000000001" y1="294" x2="108.00000000000001" y2="294" />
+    <line x1="108" y1="294" x2="116.4" y2="294" />
+    <line x1="116.4" y1="294" x2="124.80000000000001" y2="294" />
+    <line x1="124.80000000000001" y1="294" x2="129" y2="304" />
+    <line x1="179.4" y1="304" x2="183.60000000000002" y2="294" />
+    <line x1="183.6" y1="294" x2="192" y2="294" />
+    <line x1="192" y1="294" x2="200.4" y2="294" />
+    <line x1="200.4" y1="294" x2="208.8" y2="294" />
+    <line x1="208.8" y1="294" x2="217.20000000000002" y2="294" />
+    <line x1="217.20000000000002" y1="294" x2="225.60000000000002" y2="294" />
+    <line x1="225.60000000000002" y1="294" x2="234.00000000000003" y2="294" />
+    <line x1="234" y1="294" x2="242.4" y2="294" />
+    <line x1="242.4" y1="294" x2="250.8" y2="294" />
+    <line x1="250.8" y1="294" x2="255" y2="304" />
+    <line x1="305.4" y1="304" x2="309.59999999999997" y2="294" />
+    <line x1="309.6" y1="294" x2="318" y2="294" />
+    <line x1="318" y1="294" x2="326.4" y2="294" />
+    <line x1="326.40000000000003" y1="294" x2="334.8" y2="294" />
+    <line x1="334.8" y1="294" x2="343.2" y2="294" />
+    <line x1="343.2" y1="294" x2="351.59999999999997" y2="294" />
+    <line x1="351.6" y1="294" x2="360" y2="294" />
+    <line x1="360" y1="294" x2="368.4" y2="294" />
+    <line x1="368.40000000000003" y1="294" x2="376.8" y2="294" />
+    <line x1="376.8" y1="294" x2="381" y2="304" />
+    <line x1="53.400000000000006" y1="304" x2="53.400000000000006" y2="324" />
+    <line x1="129" y1="304" x2="129" y2="324" />
+    <line x1="179.4" y1="304" x2="179.4" y2="324" />
+    <line x1="255" y1="304" x2="255" y2="324" />
+    <line x1="305.4" y1="304" x2="305.4" y2="324" />
+    <line x1="381" y1="304" x2="381" y2="324" />
+    <line x1="53.400000000000006" y1="324" x2="53.400000000000006" y2="344" />
+    <line x1="129" y1="324" x2="129" y2="344" />
+    <line x1="179.4" y1="324" x2="179.4" y2="344" />
+    <line x1="255" y1="324" x2="255" y2="344" />
+    <line x1="305.4" y1="324" x2="305.4" y2="344" />
+    <line x1="381" y1="324" x2="381" y2="344" />
+    <line x1="53.400000000000006" y1="344" x2="53.400000000000006" y2="364" />
+    <line x1="129" y1="344" x2="129" y2="364" />
+    <line x1="133.2" y1="354" x2="141.6" y2="354" />
+    <line x1="141.60000000000002" y1="354" x2="150.00000000000003" y2="354" />
+    <line x1="150" y1="354" x2="158.4" y2="354" />
+    <line x1="158.4" y1="354" x2="166.8" y2="354" />
+    <line x1="179.4" y1="344" x2="179.4" y2="364" />
+    <line x1="255" y1="344" x2="255" y2="364" />
+    <line x1="305.4" y1="344" x2="305.4" y2="364" />
+    <line x1="381" y1="344" x2="381" y2="364" />
+    <line x1="53.400000000000006" y1="364" x2="53.400000000000006" y2="384" />
+    <line x1="129" y1="364" x2="129" y2="384" />
+    <line x1="179.4" y1="364" x2="179.4" y2="384" />
+    <line x1="255" y1="364" x2="255" y2="384" />
+    <line x1="305.4" y1="364" x2="305.4" y2="384" />
+    <line x1="381" y1="364" x2="381" y2="384" />
+    <line x1="53.400000000000006" y1="384" x2="57.6" y2="394" />
+    <line x1="57.6" y1="394" x2="66" y2="394" />
+    <line x1="66" y1="394" x2="74.4" y2="394" />
+    <line x1="74.4" y1="394" x2="82.80000000000001" y2="394" />
+    <line x1="82.80000000000001" y1="394" x2="91.20000000000002" y2="394" />
+    <line x1="91.2" y1="394" x2="99.60000000000001" y2="394" />
+    <line x1="99.60000000000001" y1="394" x2="108.00000000000001" y2="394" />
+    <line x1="108" y1="394" x2="116.4" y2="394" />
+    <line x1="116.4" y1="394" x2="124.80000000000001" y2="394" />
+    <line x1="124.80000000000001" y1="394" x2="129" y2="384" />
+    <line x1="179.4" y1="384" x2="183.60000000000002" y2="394" />
+    <line x1="183.6" y1="394" x2="192" y2="394" />
+    <line x1="192" y1="394" x2="200.4" y2="394" />
+    <line x1="200.4" y1="394" x2="208.8" y2="394" />
+    <line x1="208.8" y1="394" x2="217.20000000000002" y2="394" />
+    <line x1="217.20000000000002" y1="394" x2="225.60000000000002" y2="394" />
+    <line x1="225.60000000000002" y1="394" x2="234.00000000000003" y2="394" />
+    <line x1="234" y1="394" x2="242.4" y2="394" />
+    <line x1="242.4" y1="394" x2="250.8" y2="394" />
+    <line x1="250.8" y1="394" x2="255" y2="384" />
+    <line x1="305.4" y1="384" x2="309.59999999999997" y2="394" />
+    <line x1="309.6" y1="394" x2="318" y2="394" />
+    <line x1="318" y1="394" x2="326.4" y2="394" />
+    <line x1="326.40000000000003" y1="394" x2="334.8" y2="394" />
+    <line x1="334.8" y1="394" x2="343.2" y2="394" />
+    <line x1="343.2" y1="394" x2="351.59999999999997" y2="394" />
+    <line x1="351.6" y1="394" x2="360" y2="394" />
+    <line x1="360" y1="394" x2="368.4" y2="394" />
+    <line x1="368.40000000000003" y1="394" x2="376.8" y2="394" />
+    <line x1="376.8" y1="394" x2="381" y2="384" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">Raft splits consensus into 3 sub-problems:</text>
+    <text x="24" y="79" xml:space="preserve">1. LEADER ELECTION (covered in Topic 29)</text>
+    <text x="24" y="99" xml:space="preserve">   → One leader at a time per term</text>
+    <text x="24" y="139" xml:space="preserve">2. LOG REPLICATION</text>
+    <text x="24" y="159" xml:space="preserve">   Client → Leader: &quot;Set X=5&quot;</text>
+    <text x="24" y="179" xml:space="preserve">   Leader appends to its log: [index:7, term:3, cmd:&quot;Set X=5&quot;]</text>
+    <text x="24" y="199" xml:space="preserve">   Leader sends AppendEntries to followers</text>
+    <text x="24" y="219" xml:space="preserve">   Follower appends to its log → ACK</text>
+    <text x="24" y="239" xml:space="preserve">   When majority ACK → Leader commits → applies to state machine</text>
+    <text x="24" y="259" xml:space="preserve">   Leader notifies followers to commit</text>
+    <text x="24" y="319" xml:space="preserve">    Leader         Follow 1       Follow 2 </text>
+    <text x="24" y="339" xml:space="preserve">    Log:           Log:           Log:     </text>
+    <text x="24" y="359" xml:space="preserve">    [1][2][3     ► [1][2][3       [1][2]   </text>
+    <text x="24" y="379" xml:space="preserve">           ]              ]                </text>
+    <text x="24" y="419" xml:space="preserve">   Majority (2/3) have entry 3 → COMMITTED</text>
+    <text x="24" y="459" xml:space="preserve">3. SAFETY</text>
+    <text x="24" y="479" xml:space="preserve">   Only a node with ALL committed entries can become leader.</text>
+    <text x="24" y="499" xml:space="preserve">   Prevents losing committed data during leader changes.</text>
+    <text x="24" y="539" xml:space="preserve">   New leader candidate: &quot;My last log entry is index 7, term 3&quot;</text>
+    <text x="24" y="559" xml:space="preserve">   Voter checks: &quot;My last entry is index 6, term 3&quot; → candidate is more up-to-date → VOTE YES</text>
+    <text x="24" y="579" xml:space="preserve">   Voter checks: &quot;My last entry is index 8, term 3&quot; → I&apos;m more up-to-date → VOTE NO</text>
+  </g>
+</svg>

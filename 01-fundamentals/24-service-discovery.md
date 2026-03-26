@@ -1,4 +1,4 @@
-# Topic 24: Service Discovery
+﻿# Topic 24: Service Discovery
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -35,37 +35,7 @@ WITH service discovery:
 
 ### Client-Side vs Server-Side Discovery
 
-```
-CLIENT-SIDE DISCOVERY:
-  Client queries registry directly, picks an instance, connects.
-  
-  ┌────────┐  1. Query  ┌──────────┐
-  │ Client │───────────►│ Registry │
-  │        │◄───────────│ (Consul) │
-  │        │  2. IPs    └──────────┘
-  │        │
-  │        │  3. Direct call
-  │        │────────────────────────► Service Instance
-  └────────┘
-
-  Client does load balancing (e.g., round-robin across returned IPs).
-  Pros: No extra hop, client controls LB strategy.
-  Cons: Client must implement discovery logic; language-specific.
-
-SERVER-SIDE DISCOVERY:
-  Client calls a load balancer/proxy; the proxy resolves via registry.
-  
-  ┌────────┐     ┌──────┐     ┌──────────┐
-  │ Client │────►│  LB  │────►│ Registry │
-  │        │     │      │────►│          │
-  └────────┘     │      │     └──────────┘
-                 │      │
-                 │      │────► Service Instance
-                 └──────┘
-
-  Pros: Client is simple (just call LB); language-agnostic.
-  Cons: Extra network hop; LB is a potential bottleneck.
-```
+![Client-Side vs Server-Side Discovery diagram](../assets/generated/01-fundamentals-24-service-discovery-diagram-01.svg)
 
 ### Service Registration
 
@@ -196,33 +166,7 @@ Java gotcha: JVM caches DNS forever by default!
 
 ## D. Example: Microservice Discovery with Consul
 
-```
-┌────────────────────────────────────────────────────┐
-│  Service Registration Flow:                         │
-│                                                      │
-│  1. Payment Service starts on 10.0.1.5:8080        │
-│  2. Registers with Consul:                          │
-│     PUT /v1/agent/service/register                  │
-│     { "name": "payment", "address": "10.0.1.5",   │
-│       "port": 8080, "check": { "http": "/health" }}│
-│  3. Consul starts health checking every 10s         │
-│                                                      │
-│  Service Discovery Flow:                            │
-│                                                      │
-│  1. Order Service needs payment-service             │
-│  2. Queries Consul:                                 │
-│     GET /v1/health/service/payment?passing=true     │
-│  3. Gets: [{addr: "10.0.1.5:8080"}, {addr: "10.0.1.6:8080"}] │
-│  4. Client-side LB picks one → calls it            │
-│                                                      │
-│  Failure Flow:                                      │
-│                                                      │
-│  1. 10.0.1.5 crashes → health check fails          │
-│  2. Consul marks instance critical after 2 failures │
-│  3. Next query returns only [10.0.1.6:8080]        │
-│  4. Traffic automatically routes to healthy instance │
-└────────────────────────────────────────────────────┘
-```
+![D. Example: Microservice Discovery with Consul diagram](../assets/generated/01-fundamentals-24-service-discovery-diagram-02.svg)
 
 ---
 
@@ -230,89 +174,92 @@ Java gotcha: JVM caches DNS forever by default!
 
 ### E.1 HLD — Service Discovery Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│                                                        │
-│  ┌──────────┐   register   ┌───────────────┐         │
-│  │ Service A│─────────────►│   Consul      │         │
-│  │ (×3)     │◄─────────────│   Cluster     │         │
-│  └──────────┘  health check│   (3 nodes)   │         │
-│                             │               │         │
-│  ┌──────────┐   register   │  ┌─────────┐  │         │
-│  │ Service B│─────────────►│  │ Leader  │  │         │
-│  │ (×5)     │              │  │Follower │  │         │
-│  └──────────┘              │  │Follower │  │         │
-│                             │  └─────────┘  │         │
-│  ┌──────────┐   discover   │               │         │
-│  │ Service C│─────────────►│  Service      │         │
-│  │ (caller) │◄─────────────│  Catalog:     │         │
-│  └──────────┘  [A: 3 IPs]  │  A: 3 instances│        │
-│                  [B: 5 IPs] │  B: 5 instances│        │
-│                             └───────────────┘         │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Service Discovery Architecture diagram](../assets/generated/01-fundamentals-24-service-discovery-diagram-03.svg)
 
 ### E.2 LLD — Service Registry
 
-```python
-import time
-import threading
+```java
+// Dependencies in the original example:
+// import time
+// import threading
 
-class ServiceInstance:
-    def __init__(self, service_name, host, port, metadata=None):
-        self.service_name = service_name
-        self.host = host
-        self.port = port
-        self.metadata = metadata or {}
-        self.healthy = True
-        self.last_heartbeat = time.time()
-        self.id = f"{service_name}-{host}-{port}"
+public class ServiceInstance {
+    private Object serviceName;
+    private Object host;
+    private int port;
+    private Object metadata;
+    private boolean healthy;
+    private Instant lastHeartbeat;
+    private String id;
 
-class ServiceRegistry:
-    def __init__(self, heartbeat_ttl=30):
-        self.services = {}  # service_name -> {instance_id -> ServiceInstance}
-        self.ttl = heartbeat_ttl
-        self.lock = threading.Lock()
-        self._start_reaper()
+    public ServiceInstance(Object serviceName, Object host, int port, Object metadata) {
+        this.serviceName = serviceName;
+        this.host = host;
+        this.port = port;
+        this.metadata = metadata || {};
+        this.healthy = true;
+        this.lastHeartbeat = System.currentTimeMillis();
+        this.id = "{serviceName}-{host}-" + port;
+    }
+}
 
-    def register(self, instance: ServiceInstance):
-        with self.lock:
-            if instance.service_name not in self.services:
-                self.services[instance.service_name] = {}
-            self.services[instance.service_name][instance.id] = instance
+public class ServiceRegistry {
+    private Map<String, Object> services;
+    private int ttl;
+    private Object lock;
 
-    def deregister(self, service_name: str, instance_id: str):
-        with self.lock:
-            self.services.get(service_name, {}).pop(instance_id, None)
+    public ServiceRegistry(int heartbeatTtl) {
+        this.services = new HashMap<>();
+        this.ttl = heartbeatTtl;
+        this.lock = threading.Lock();
+        // _start_reaper()
+    }
 
-    def heartbeat(self, service_name: str, instance_id: str):
-        with self.lock:
-            instance = self.services.get(service_name, {}).get(instance_id)
-            if instance:
-                instance.last_heartbeat = time.time()
-                instance.healthy = True
+    public Object register(Object instance) {
+        // with lock
+        // if instance.service_name not in services
+        // services[instance.service_name] = {}
+        // services[instance.service_name][instance.id] = instance
+        return null;
+    }
 
-    def discover(self, service_name: str, healthy_only=True) -> list:
-        with self.lock:
-            instances = self.services.get(service_name, {}).values()
-            if healthy_only:
-                return [i for i in instances if i.healthy]
-            return list(instances)
+    public Object deregister(String serviceName, String instanceId) {
+        // with lock
+        // services.get(service_name, {}).pop(instance_id, null)
+        return null;
+    }
 
-    def _start_reaper(self):
-        """Remove instances that missed heartbeats"""
-        def reap():
-            while True:
-                time.sleep(self.ttl // 2)
-                now = time.time()
-                with self.lock:
-                    for svc_name, instances in self.services.items():
-                        for iid, inst in list(instances.items()):
-                            if now - inst.last_heartbeat > self.ttl:
-                                inst.healthy = False
-                            if now - inst.last_heartbeat > self.ttl * 3:
-                                del instances[iid]  # Fully deregister
-        threading.Thread(target=reap, daemon=True).start()
+    public Object heartbeat(String serviceName, String instanceId) {
+        // with lock
+        // instance = services.get(service_name, {}).get(instance_id)
+        // if instance
+        // instance.last_heartbeat = time.time()
+        // instance.healthy = true
+        return null;
+    }
+
+    public List<Object> discover(String serviceName, boolean healthyOnly) {
+        // with lock
+        // instances = services.get(service_name, {}).values()
+        // if healthy_only
+        // return [i for i in instances if i.healthy]
+        // return list(instances)
+        return null;
+    }
+
+    public Object startReaper() {
+        // Remove instances that missed heartbeats
+        // def reap()
+        // while true
+        // time.sleep(ttl // 2)
+        // now = time.time()
+        // with lock
+        // for svc_name, instances in services.items()
+        // for iid, inst in list(instances.items())
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

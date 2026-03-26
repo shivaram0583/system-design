@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="586" height="408" viewBox="0 0 586 408" role="img" aria-labelledby="title desc">
+  <title id="title">Encryption At Rest vs In Transit diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="584.8" height="406.8" rx="16" />
+  <g class="segments">
+    <line x1="108" y1="234" x2="116.4" y2="234" />
+    <line x1="116.4" y1="234" x2="124.80000000000001" y2="234" />
+    <line x1="200.4" y1="234" x2="208.8" y2="234" />
+    <line x1="208.8" y1="234" x2="217.20000000000002" y2="234" />
+    <line x1="133.2" y1="254" x2="141.6" y2="254" />
+    <line x1="141.60000000000002" y1="254" x2="150.00000000000003" y2="254" />
+    <line x1="200.4" y1="254" x2="208.8" y2="254" />
+    <line x1="208.8" y1="254" x2="217.20000000000002" y2="254" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">AT REST: Data stored on disk (database, S3, backups).</text>
+    <text x="24" y="79" xml:space="preserve">  Database: AES-256 encryption on disk</text>
+    <text x="24" y="99" xml:space="preserve">  S3: Server-side encryption (SSE-S3, SSE-KMS)</text>
+    <text x="24" y="119" xml:space="preserve">  Backups: Encrypted before writing to storage</text>
+    <text x="24" y="159" xml:space="preserve">  Protects against: stolen hard drives, unauthorized disk access</text>
+    <text x="24" y="199" xml:space="preserve">IN TRANSIT: Data moving over the network.</text>
+    <text x="24" y="239" xml:space="preserve">  Client ←   TLS 1.3   → Server (HTTPS)</text>
+    <text x="24" y="259" xml:space="preserve">  Service A ←   mTLS   → Service B (service-to-service)</text>
+    <text x="24" y="299" xml:space="preserve">  Protects against: eavesdropping, man-in-the-middle attacks</text>
+    <text x="24" y="339" xml:space="preserve">BOTH are required for a secure system:</text>
+    <text x="24" y="359" xml:space="preserve">  At rest: protects stored data</text>
+    <text x="24" y="379" xml:space="preserve">  In transit: protects data on the wire</text>
+  </g>
+</svg>

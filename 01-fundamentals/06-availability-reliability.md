@@ -1,4 +1,4 @@
-# Topic 6: Availability & Reliability
+﻿# Topic 6: Availability & Reliability
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -56,25 +56,7 @@ Example: System was up 8,750 hours in a year (total 8,760 hours)
 
 ### Availability in Series vs Parallel
 
-```
-SERIES (both must work):
-  ┌──────┐    ┌──────┐
-  │  A   │───►│  B   │    A(total) = A(a) × A(b)
-  │ 99.9%│    │ 99.9%│    = 0.999 × 0.999 = 99.8%
-  └──────┘    └──────┘    
-  Availability DECREASES with more components in series
-
-PARALLEL (either can work):
-  ┌──────┐
-  │  A   │
-  │ 99.9%│    A(total) = 1 - (1-A(a)) × (1-A(b))
-  └──────┘    = 1 - 0.001 × 0.001 = 99.9999%
-  ┌──────┐
-  │  B   │
-  │ 99.9%│
-  └──────┘
-  Availability INCREASES with redundancy
-```
+![Availability in Series vs Parallel diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-01.svg)
 
 ### Reliability Metrics
 
@@ -113,33 +95,7 @@ To improve availability:
 
 ### Redundancy Patterns
 
-```
-ACTIVE-PASSIVE (Failover):
-  ┌──────────┐     ┌──────────┐
-  │  Primary  │     │ Standby  │
-  │ (Active)  │────►│(Passive) │  Standby takes over on failure
-  │ Serves    │ sync│ Idle,    │  Downtime = detection + failover time
-  │ traffic   │     │ ready    │  (typically 30s - 5min)
-  └──────────┘     └──────────┘
-
-ACTIVE-ACTIVE:
-  ┌──────────┐     ┌──────────┐
-  │ Server 1 │     │ Server 2 │
-  │ (Active)  │◄──►│ (Active)  │  Both serve traffic
-  │ 50% load  │sync│ 50% load  │  If one fails, other handles 100%
-  └──────────┘     └──────────┘  No failover delay
-  
-  ┌───────────────┐
-  │ Load Balancer │  Routes to both; detects failures
-  └───────────────┘
-
-N+1 REDUNDANCY:
-  Need N servers to handle load. Deploy N+1.
-  ┌────┐ ┌────┐ ┌────┐ ┌────┐
-  │ S1 │ │ S2 │ │ S3 │ │ S4 │  ← Need 3 to handle load
-  └────┘ └────┘ └────┘ └────┘    S4 is the +1 spare
-  If any one fails, remaining 3 still handle full load.
-```
+![Redundancy Patterns diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-02.svg)
 
 ### Fault Tolerance vs High Availability
 
@@ -312,26 +268,7 @@ Health check response:
 | **Canary** | Route 1-5% to new version, then ramp | Zero | Limited blast radius | Instant |
 | **Feature Flags** | Deploy code but toggle feature | Zero | Feature-level control | Instant |
 
-```
-BLUE-GREEN:
-  ┌──────────────────────┐    ┌──────────────────────┐
-  │  BLUE (v1 - current) │    │ GREEN (v2 - new)     │
-  │  ┌────┐ ┌────┐       │    │ ┌────┐ ┌────┐        │
-  │  │ S1 │ │ S2 │       │    │ │ S1 │ │ S2 │        │
-  │  └────┘ └────┘       │    │ └────┘ └────┘        │
-  └──────────────────────┘    └──────────────────────┘
-         ▲                           
-    ┌────┴─────┐ ──── switch ────►  After validation,
-    │    LB    │                    LB points to GREEN
-    └──────────┘                    BLUE becomes standby
-
-CANARY:
-  Traffic: 95% → v1 (stable)
-            5% → v2 (canary)
-  Monitor canary for errors, latency
-  If OK: ramp 5% → 25% → 50% → 100%
-  If bad: rollback canary, 100% → v1
-```
+![Zero-Downtime Deployment Strategies diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-03.svg)
 
 ### Incident Response
 
@@ -352,33 +289,7 @@ Incident Lifecycle:
 
 ### Multi-AZ and Multi-Region
 
-```
-SINGLE AZ (no redundancy):
-  Availability ≈ 99.9% (AZ SLA)
-  Risk: AZ failure = total outage
-
-MULTI-AZ (standard production):
-  ┌─────────────┐  ┌─────────────┐
-  │    AZ-1     │  │    AZ-2     │
-  │ ┌───┐ ┌───┐ │  │ ┌───┐ ┌───┐ │
-  │ │App│ │App│ │  │ │App│ │App│ │
-  │ └───┘ └───┘ │  │ └───┘ └───┘ │
-  │ ┌─────────┐ │  │ ┌─────────┐ │
-  │ │DB Primary│ │  │ │DB Replica│ │
-  │ └─────────┘ │  │ └─────────┘ │
-  └─────────────┘  └─────────────┘
-  Availability ≈ 99.99%
-  
-MULTI-REGION (highest availability):
-  ┌──────────────┐  ┌──────────────┐
-  │  US-EAST     │  │  EU-WEST     │
-  │  (Primary)   │  │  (Secondary) │
-  │  Full stack  │◄►│  Full stack  │
-  └──────────────┘  └──────────────┘
-  Availability ≈ 99.999%
-  Cost: 2-3× single region
-  Complexity: Data replication, conflict resolution
-```
+![Multi-AZ and Multi-Region diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-04.svg)
 
 ---
 
@@ -393,37 +304,7 @@ MULTI-REGION (highest availability):
 
 ### Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PAYMENT SERVICE                            │
-│                                                               │
-│  ┌─────────┐   ┌──────────┐   ┌───────────────────────┐     │
-│  │   LB    │──►│ App (×3) │──►│  PostgreSQL            │     │
-│  │(Active- │   │ Stateless│   │  Primary + 2 Replicas  │     │
-│  │ Active) │   │ across   │   │  Multi-AZ              │     │
-│  └─────────┘   │ 2 AZs   │   └───────────────────────┘     │
-│                └──────────┘                                   │
-│                     │                                         │
-│                ┌────┴─────┐   ┌──────────────┐               │
-│                │  Redis   │   │ Dead Letter   │               │
-│                │ (Cache + │   │ Queue (DLQ)   │               │
-│                │  Idempot)│   │ Failed txns   │               │
-│                └──────────┘   └──────────────┘               │
-│                     │                                         │
-│                ┌────┴─────┐                                   │
-│                │  Kafka   │  Audit log + downstream events    │
-│                └──────────┘                                   │
-└─────────────────────────────────────────────────────────────┘
-
-Availability Calculation:
-  LB: 99.99% (managed, multi-AZ)
-  App (3 instances): 1-(1-0.999)³ = 99.9999%
-  DB (primary + auto-failover): 99.99%
-  Redis (cluster): 99.99%
-  
-  Series: 0.9999 × 0.999999 × 0.9999 × 0.9999 = 99.97%
-  → Need to optimize further: add caching, circuit breakers
-```
+![Architecture diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-05.svg)
 
 ### Failure Scenarios and Responses
 
@@ -452,46 +333,7 @@ Availability Calculation:
 
 #### Architecture
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  Producers (any service)                                       │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐                       │
-│  │Order Svc │ │Auth Svc  │ │Marketing │                       │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘                       │
-│       └─────────────┼───────────┘                              │
-│                     ▼                                          │
-│  ┌──────────────────────────────┐                              │
-│  │    Kafka (Multi-AZ, 3       │                              │
-│  │    brokers, replication=3)  │  Durability: messages survive │
-│  │    Topic: notifications     │  broker failure               │
-│  └──────────────┬──────────────┘                              │
-│                 │                                              │
-│    ┌────────────┼────────────┐                                 │
-│    ▼            ▼            ▼                                 │
-│  ┌──────┐  ┌──────┐  ┌──────┐                                 │
-│  │Push  │  │Email │  │SMS   │   Consumer groups (independent) │
-│  │Worker│  │Worker│  │Worker│   Each scales independently     │
-│  │(×3)  │  │(×3)  │  │(×2)  │                                 │
-│  └──┬───┘  └──┬───┘  └──┬───┘                                 │
-│     │         │         │                                      │
-│     ▼         ▼         ▼                                      │
-│  ┌──────┐  ┌──────┐  ┌──────┐                                 │
-│  │ FCM/ │  │ SES/ │  │Twilio│   External providers            │
-│  │ APNS │  │ SMTP │  │      │   (with fallback providers)     │
-│  └──────┘  └──────┘  └──────┘                                 │
-│                                                                 │
-│  ┌──────────────────────────┐                                  │
-│  │  Notification DB (Postgres)│  Track delivery status          │
-│  │  + Redis (dedup/rate limit)│  Idempotency check              │
-│  └──────────────────────────┘                                  │
-│                                                                 │
-│  ┌──────────────────────────┐                                  │
-│  │  Dead Letter Queue       │  Failed after N retries          │
-│  │  + Alert on DLQ depth    │  Manual investigation            │
-│  └──────────────────────────┘                                  │
-└───────────────────────────────────────────────────────────────┘
-```
+![Architecture diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-06.svg)
 
 #### Availability Strategy
 
@@ -518,39 +360,7 @@ Availability Calculation:
 
 #### Classes
 
-```
-┌──────────────────────────────┐
-│       HealthChecker          │
-│                              │
-│  - checks: List<HealthCheck> │
-│  - interval: Duration        │
-│  - timeout: Duration         │
-│                              │
-│  + runAll(): HealthReport    │
-│  + register(check): void     │
-│  + isHealthy(): boolean      │
-└──────────────┬───────────────┘
-               │
-      ┌────────┼─────────┐
-      │        │         │
-┌─────┴──┐ ┌──┴────┐ ┌──┴──────┐
-│  DB    │ │ Redis │ │ Custom  │
-│ Check  │ │ Check │ │ Check   │
-└────────┘ └───────┘ └─────────┘
-
-┌──────────────────────────────┐
-│    FailoverManager           │
-│                              │
-│  - primary: Endpoint         │
-│  - secondary: Endpoint       │
-│  - healthChecker: HealthChkr │
-│  - state: PRIMARY|SECONDARY  │
-│                              │
-│  + getCurrentEndpoint()      │
-│  + checkAndFailover(): void  │
-│  + failback(): void          │
-└──────────────────────────────┘
-```
+![Classes diagram](../assets/generated/01-fundamentals-06-availability-reliability-diagram-07.svg)
 
 #### Pseudocode
 

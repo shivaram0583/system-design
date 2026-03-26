@@ -1,4 +1,4 @@
-# Topic 9: ACID vs BASE
+﻿# Topic 9: ACID vs BASE
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -254,36 +254,7 @@ Decision Tree:
 
 ### The Outbox Pattern — Best of Both Worlds
 
-```
-Problem: Service needs to update DB AND publish event atomically
-  If DB write succeeds but event publish fails → inconsistency
-
-Solution: Outbox Pattern
-  1. Write to business table + outbox table in SAME transaction (ACID)
-  2. Background worker reads outbox table, publishes events
-  3. Mark events as published
-
-  ┌─────────────────────────────────────────────┐
-  │  Single DB Transaction (ACID)                │
-  │                                               │
-  │  INSERT INTO orders (id, ...) VALUES (...);   │
-  │  INSERT INTO outbox (event_type, payload)     │
-  │    VALUES ('OrderCreated', '{...}');           │
-  │                                               │
-  │  COMMIT;                                      │
-  └──────────────────────────┬────────────────────┘
-                             │
-  ┌──────────────────────────┴────────────────────┐
-  │  Outbox Worker (async, polls outbox table)     │
-  │                                                 │
-  │  SELECT * FROM outbox WHERE published = false;  │
-  │  → Publish to Kafka                             │
-  │  → UPDATE outbox SET published = true;          │
-  └─────────────────────────────────────────────────┘
-
-  Result: DB is ACID, cross-service communication is BASE
-          No data loss, no dual-write problem
-```
+![The Outbox Pattern — Best of Both Worlds diagram](../assets/generated/01-fundamentals-09-acid-vs-base-diagram-01.svg)
 
 ### Monitoring ACID vs BASE Systems
 
@@ -319,27 +290,7 @@ Cons: Single database, can't scale services independently
 
 ### BASE Approach (Microservices with Saga)
 
-```
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  Order   │───►│ Payment  │───►│Inventory │───►│  Notif   │
-│ Service  │    │ Service  │    │ Service  │    │ Service  │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘
-
-Happy path:
-  1. Order Service: Create order (PENDING)
-  2. Payment Service: Charge card → success
-  3. Inventory Service: Reserve stock → success
-  4. Notification Service: Send email → success
-  5. Order Service: Update order (CONFIRMED)
-
-Failure at step 3 (out of stock):
-  3. Inventory Service: Reserve stock → FAILED
-  Compensate 2: Payment Service: Refund card
-  Compensate 1: Order Service: Cancel order (CANCELLED)
-  
-Each service uses ACID locally (own DB transaction)
-Cross-service coordination is BASE (eventual consistency via events)
-```
+![BASE Approach (Microservices with Saga) diagram](../assets/generated/01-fundamentals-09-acid-vs-base-diagram-02.svg)
 
 ---
 
@@ -347,28 +298,7 @@ Cross-service coordination is BASE (eventual consistency via events)
 
 ### E.1 HLD — Order Service with Saga Orchestration
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                  Saga Orchestrator                        │
-│  (Tracks saga state, coordinates steps)                  │
-└──────────┬────────────────────────────────────┬──────────┘
-           │                                    │
-    ┌──────┴──────┐                      ┌──────┴──────┐
-    │    Kafka    │  Events/Commands     │  Saga DB    │
-    │             │◄────────────────────►│(PostgreSQL) │
-    └──────┬──────┘                      └─────────────┘
-           │
-    ┌──────┼───────────┬───────────┐
-    │      │           │           │
-┌───┴──┐ ┌┴──────┐ ┌──┴─────┐ ┌──┴──────┐
-│Order │ │Payment│ │Inventory│ │Notif    │
-│Svc   │ │Svc    │ │Svc      │ │Svc      │
-│      │ │       │ │         │ │         │
-│Postgres│ │Postgres│ │Postgres │ │Postgres │
-└──────┘ └───────┘ └─────────┘ └─────────┘
-  ACID      ACID      ACID        ACID
-  locally   locally   locally     locally
-```
+![E.1 HLD — Order Service with Saga Orchestration diagram](../assets/generated/01-fundamentals-09-acid-vs-base-diagram-03.svg)
 
 ### E.2 LLD — Saga Orchestrator
 

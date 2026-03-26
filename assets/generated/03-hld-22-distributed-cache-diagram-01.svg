@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="737" height="488" viewBox="0 0 737 488" role="img" aria-labelledby="title desc">
+  <title id="title">Consistent Hashing diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="735.8" height="486.8" rx="16" />
+  <g class="segments">
+    <line x1="108" y1="214" x2="116.4" y2="214" />
+    <line x1="116.4" y1="214" x2="124.80000000000001" y2="214" />
+    <line x1="124.80000000000001" y1="214" x2="133.20000000000002" y2="214" />
+    <line x1="133.2" y1="214" x2="141.6" y2="214" />
+    <line x1="292.8" y1="214" x2="301.2" y2="214" />
+    <line x1="301.2" y1="214" x2="309.59999999999997" y2="214" />
+    <line x1="309.6" y1="214" x2="318" y2="214" />
+    <line x1="318" y1="214" x2="326.4" y2="214" />
+    <line x1="477.6" y1="214" x2="486" y2="214" />
+    <line x1="486" y1="214" x2="494.4" y2="214" />
+    <line x1="494.40000000000003" y1="214" x2="502.8" y2="214" />
+    <line x1="502.8" y1="214" x2="511.2" y2="214" />
+    <line x1="662.4" y1="214" x2="670.8" y2="214" />
+    <line x1="670.8000000000001" y1="214" x2="679.2" y2="214" />
+    <line x1="679.2" y1="214" x2="687.6" y2="214" />
+    <line x1="687.6" y1="214" x2="696" y2="214" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">Problem: Simple hash (key % N) breaks when adding/removing nodes.</text>
+    <text x="24" y="59" xml:space="preserve">  hash(&quot;user:123&quot;) % 3 = node 1</text>
+    <text x="24" y="79" xml:space="preserve">  Add 4th node: hash(&quot;user:123&quot;) % 4 = node 3 → DIFFERENT node!</text>
+    <text x="24" y="99" xml:space="preserve">  All keys rehash → massive cache miss storm.</text>
+    <text x="24" y="139" xml:space="preserve">Consistent hashing:</text>
+    <text x="24" y="159" xml:space="preserve">  Place nodes on a hash ring (0 to 2^32).</text>
+    <text x="24" y="179" xml:space="preserve">  For each key: hash(key) → walk clockwise → first node = owner.</text>
+    <text x="24" y="219" xml:space="preserve">  Ring: 0      Node A (pos 100)      Node B (pos 200)      Node C (pos 300)      0</text>
+    <text x="24" y="259" xml:space="preserve">  hash(&quot;user:123&quot;) = 150 → walks clockwise → Node B</text>
+    <text x="24" y="279" xml:space="preserve">  hash(&quot;user:456&quot;) = 250 → walks clockwise → Node C</text>
+    <text x="24" y="319" xml:space="preserve">  Add Node D at position 250:</text>
+    <text x="24" y="339" xml:space="preserve">    Only keys between 200-250 move from C to D.</text>
+    <text x="24" y="359" xml:space="preserve">    Other keys stay on their current node.</text>
+    <text x="24" y="379" xml:space="preserve">    Only ~1/N keys rehash (not all keys).</text>
+    <text x="24" y="419" xml:space="preserve">  Virtual nodes: Each physical node has 100-200 virtual positions.</text>
+    <text x="24" y="439" xml:space="preserve">    Ensures even distribution of keys.</text>
+    <text x="24" y="459" xml:space="preserve">    Node A: positions [10, 45, 120, 189, ...]</text>
+  </g>
+</svg>

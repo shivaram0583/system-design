@@ -1,4 +1,4 @@
-# Topic 4: Latency vs Throughput
+﻿# Topic 4: Latency vs Throughput
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -291,28 +291,7 @@ SLO is TIGHTER than SLA:
 
 For complex systems, break down the **latency budget** per component:
 
-```
-Total Budget: 200ms (p99)
-
-┌──────────────────────────────────────────────────┐
-│                  API Request                      │
-│                                                   │
-│  Network to LB:          5ms                     │
-│  LB to App Server:       1ms                     │
-│  Auth middleware:         5ms   (JWT validation)  │
-│  Business logic:        10ms                     │
-│  Cache lookup:           1ms   (Redis)           │
-│  DB query (on miss):    30ms   (PostgreSQL)      │
-│  External API call:     80ms   (payment gateway)  │
-│  Response serialization: 3ms                     │
-│  Network back:           5ms                     │
-│  ─────────────────────────                       │
-│  Total:                140ms   (within 200ms)    │
-│  Buffer:                60ms   (for spikes)      │
-└──────────────────────────────────────────────────┘
-
-If any component exceeds its budget, the whole request is at risk.
-```
+![Latency Budget diagram](../assets/generated/01-fundamentals-04-latency-vs-throughput-diagram-01.svg)
 
 ### Monitoring Latency and Throughput
 
@@ -563,34 +542,7 @@ flowchart TD
 
 #### Multi-Layer Caching Strategy
 
-```
-Request arrives:
-
-  ┌─────────────────────────────────────────────┐
-  │ 1. Check CDN cache (edge)                   │
-  │    HIT → Return (5ms)    Miss rate: ~30%    │
-  │    MISS ↓                                   │
-  ├─────────────────────────────────────────────┤
-  │ 2. Check L1 cache (in-process, per server)  │
-  │    HIT → Return (0.01ms) Miss rate: ~50%    │
-  │    MISS ↓                                   │
-  ├─────────────────────────────────────────────┤
-  │ 3. Check L2 cache (Redis, shared)           │
-  │    HIT → Return (0.5ms)  Miss rate: ~10%    │
-  │    MISS ↓                                   │
-  ├─────────────────────────────────────────────┤
-  │ 4. Query DB read replica                    │
-  │    Return + populate L2 + L1 (5-20ms)       │
-  └─────────────────────────────────────────────┘
-
-  Overall cache hit rate: ~97%
-  Only ~3% of requests hit the database
-  
-  Effective avg latency:
-    0.70 × 5ms (CDN) + 0.15 × 0.5ms (L1) + 0.12 × 1ms (L2) + 0.03 × 15ms (DB)
-    = 3.5 + 0.075 + 0.12 + 0.45
-    ≈ 4.1ms average
-```
+![Multi-Layer Caching Strategy diagram](../assets/generated/01-fundamentals-04-latency-vs-throughput-diagram-02.svg)
 
 #### Scaling Approach
 
@@ -630,66 +582,7 @@ Request arrives:
 
 #### Classes and Components
 
-```
-┌────────────────────────────────────┐
-│        LatencyTracker              │
-│                                    │
-│  - histogram: HDRHistogram         │
-│  - windowSize: Duration            │
-│  - serviceName: string             │
-│  - operationName: string           │
-│                                    │
-│  + recordLatency(ms: float): void  │
-│  + getP50(): float                 │
-│  + getP95(): float                 │
-│  + getP99(): float                 │
-│  + getP999(): float                │
-│  + getMean(): float                │
-│  + getMax(): float                 │
-│  + getThroughput(): float          │
-│  + reset(): void                   │
-│  + snapshot(): LatencySnapshot     │
-└────────────────┬───────────────────┘
-                 │
-    ┌────────────┼──────────────┐
-    │            │              │
-┌───┴────┐ ┌────┴─────┐ ┌─────┴──────┐
-│ Timer  │ │Throughput│ │  SLO       │
-│Middleware│ │Counter  │ │  Checker   │
-│        │ │          │ │            │
-│Wraps   │ │Count req │ │Compare     │
-│handlers│ │per second│ │against     │
-│to auto │ │          │ │targets     │
-│record  │ │          │ │            │
-│latency │ │          │ │Alert if    │
-│        │ │          │ │violated    │
-└────────┘ └──────────┘ └────────────┘
-
-┌────────────────────────────────────┐
-│        LatencySnapshot             │
-│                                    │
-│  - timestamp: datetime             │
-│  - p50: float                      │
-│  - p95: float                      │
-│  - p99: float                      │
-│  - p999: float                     │
-│  - mean: float                     │
-│  - max: float                      │
-│  - count: int                      │
-│  - throughput: float               │
-│  - errorRate: float                │
-└────────────────────────────────────┘
-
-┌────────────────────────────────────┐
-│        SLOConfig                   │
-│                                    │
-│  - p99Target: float     (ms)       │
-│  - p95Target: float     (ms)       │
-│  - throughputMin: float (req/sec)  │
-│  - errorRateMax: float  (%)        │
-│  - windowSize: Duration            │
-└────────────────────────────────────┘
-```
+![Classes and Components diagram](../assets/generated/01-fundamentals-04-latency-vs-throughput-diagram-03.svg)
 
 #### Interfaces
 
@@ -863,33 +756,7 @@ public class TimerMiddleware {
 
 #### Sequence Flow — Request with Latency Tracking
 
-```
-Client          LB         TimerMW       Handler       Cache        DB
-  │              │            │             │            │           │
-  │─ GET /item ──►            │             │            │           │
-  │              │─ forward ──►             │            │           │
-  │              │            │─ start_timer│            │           │
-  │              │            │             │            │           │
-  │              │            │─ handler() ─►            │           │
-  │              │            │             │─ GET key ──►           │
-  │              │            │             │◄─ MISS ────│           │
-  │              │            │             │            │           │
-  │              │            │             │─ SELECT ───────────────►
-  │              │            │             │◄─ row data ────────────│
-  │              │            │             │            │           │
-  │              │            │             │─ SET cache ►           │
-  │              │            │             │            │           │
-  │              │            │◄─ response ─│            │           │
-  │              │            │             │            │           │
-  │              │            │─ stop_timer │            │           │
-  │              │            │  latency = 23ms          │           │
-  │              │            │─ tracker.record(         │           │
-  │              │            │   "GET /item", 23)       │           │
-  │              │            │             │            │           │
-  │              │◄─ response─│             │            │           │
-  │◄─ 200 OK ───│            │             │            │           │
-  │  (23ms)      │            │             │            │           │
-```
+![Sequence Flow — Request with Latency Tracking diagram](../assets/generated/01-fundamentals-04-latency-vs-throughput-diagram-04.svg)
 
 #### Edge Cases
 

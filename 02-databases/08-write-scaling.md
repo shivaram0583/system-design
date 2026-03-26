@@ -1,4 +1,4 @@
-# Topic 08: Write Scaling
+﻿# Topic 08: Write Scaling
 
 > **Track**: Databases and Storage
 > **Difficulty**: Advanced
@@ -107,55 +107,11 @@ Split data across multiple database instances by a shard key:
 
 ### Strategy 4: CQRS
 
-```
-CQRS (Command Query Responsibility Segregation):
-  Separate the write model from the read model.
-
-  ┌────────────┐  Commands (writes)  ┌──────────────┐
-  │ Application│─────────────────────►│ Write Store  │
-  │            │                      │ (PostgreSQL) │
-  │            │                      │ Normalized   │
-  └─────┬──────┘                      └──────┬───────┘
-        │                                     │ events
-        │  Queries (reads)              ┌─────┴──────┐
-        │                               │ Event Bus  │
-        │                               │ (Kafka)    │
-        │                               └─────┬──────┘
-        │                                     │
-  ┌─────┴──────────────┐              ┌──────┴───────┐
-  │ Read Store         │◄─────────────│ Projector    │
-  │ (Elasticsearch /   │  Materialized│ (builds read │
-  │  Redis / DynamoDB) │  views       │  models)     │
-  │ Denormalized       │              └──────────────┘
-  └────────────────────┘
-
-  Write store: optimized for writes (normalized, ACID)
-  Read store: optimized for reads (denormalized, fast lookups)
-  
-  Pros: Independent scaling of reads and writes
-  Cons: Eventual consistency, complexity, dual data stores
-```
+![Strategy 4: CQRS diagram](../assets/generated/02-databases-08-write-scaling-diagram-01.svg)
 
 ### Strategy 5: Multi-Leader Replication
 
-```
-Multiple nodes accept writes (contrast with single-leader):
-
-  ┌──────────┐     ┌──────────┐     ┌──────────┐
-  │ Leader A │◄───►│ Leader B │◄───►│ Leader C │
-  │ (US)     │     │ (EU)     │     │ (Asia)   │
-  └──────────┘     └──────────┘     └──────────┘
-
-  Each leader accepts writes for its region.
-  Changes replicated asynchronously to other leaders.
-
-  Conflict resolution (same row updated on two leaders):
-  • Last-writer-wins (LWW): Latest timestamp wins (simple, data loss risk)
-  • Merge: Combine changes (complex, application-specific)
-  • Custom resolution: Application decides on conflict
-
-  Used by: CockroachDB, YugabyteDB, Cassandra, DynamoDB Global Tables
-```
+![Strategy 5: Multi-Leader Replication diagram](../assets/generated/02-databases-08-write-scaling-diagram-02.svg)
 
 ### Strategy 6: Distributed Databases
 
@@ -212,28 +168,40 @@ Purpose-built for horizontal write scaling:
 
 ### Write Batching
 
-```python
-# BAD: Individual inserts (slow)
-for event in events:
-    db.execute("INSERT INTO events (data) VALUES (%s)", (event,))
-    # 1000 events = 1000 round trips = ~5 seconds
+```java
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.List;
 
-# GOOD: Batch insert (fast)
-values = [(e["user_id"], e["type"], e["data"]) for e in events]
-db.executemany(
-    "INSERT INTO events (user_id, type, data) VALUES (%s, %s, %s)",
-    values
-)
-# 1000 events = 1 round trip = ~50ms
+public final class EventBatchWriter {
+    private final Connection connection;
 
-# BEST: COPY command (PostgreSQL, fastest bulk load)
-import io
-buffer = io.StringIO()
-for e in events:
-    buffer.write(f"{e['user_id']}\t{e['type']}\t{e['data']}\n")
-buffer.seek(0)
-cursor.copy_from(buffer, 'events', columns=('user_id', 'type', 'data'))
-# 1000 events = ~10ms
+    public EventBatchWriter(Connection connection) {
+        this.connection = connection;
+    }
+
+    public void insertIndividually(List<String> events) throws SQLException {
+        try (PreparedStatement statement =
+                     connection.prepareStatement("INSERT INTO events (data) VALUES (?)")) {
+            for (String event : events) {
+                statement.setString(1, event);
+                statement.executeUpdate();
+            }
+        }
+    }
+
+    public void insertBatch(List<String> events) throws SQLException {
+        try (PreparedStatement statement =
+                     connection.prepareStatement("INSERT INTO events (data) VALUES (?)")) {
+            for (String event : events) {
+                statement.setString(1, event);
+                statement.addBatch();
+            }
+            statement.executeBatch();
+        }
+    }
+}
 ```
 
 ### Resharding Strategy
@@ -268,34 +236,7 @@ Adding shards without downtime:
 
 ## D. Example: High-Volume Event Ingestion
 
-```
-Analytics platform: 100K events/second write throughput
-
-  ┌────────────┐     ┌──────────────┐
-  │ App/SDK    │────►│  Kafka       │  Buffer events
-  │ (events)   │     │  (10 partns) │
-  └────────────┘     └──────┬───────┘
-                            │
-                     ┌──────┴───────┐
-                     │  Consumers   │  Batch writes
-                     │  (10 workers)│
-                     └──────┬───────┘
-                            │ batch INSERT (1000 rows/batch)
-                     ┌──────┴───────────────────────────┐
-                     │  Sharded PostgreSQL (8 shards)    │
-                     │  Shard key: hash(event_id) % 8   │
-                     │  Each shard: ~12.5K writes/s      │
-                     │  Each shard: primary + 2 replicas │
-                     └───────────────────────────────────┘
-
-  Total write capacity: 8 × 12.5K = 100K events/s
-  Kafka absorbs traffic spikes (burst to 500K/s, consumers drain at 100K/s)
-  
-  Read path (CQRS):
-    Events → Kafka → ClickHouse (analytics queries)
-    Events → Kafka → Elasticsearch (search)
-    Events → Kafka → Redis (real-time counters)
-```
+![D. Example: High-Volume Event Ingestion diagram](../assets/generated/02-databases-08-write-scaling-diagram-03.svg)
 
 ---
 
@@ -303,92 +244,69 @@ Analytics platform: 100K events/second write throughput
 
 ### E.1 HLD — Write-Scaled Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Write Path                                                │
-│  Clients → API Gateway → Kafka (buffer)                   │
-│                              │                             │
-│                       ┌──────┴───────┐                    │
-│                       │  Consumers   │                    │
-│                       └──────┬───────┘                    │
-│                              │ shard router               │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐            │
-│  │ Shard 0   │  │ Shard 1   │  │ Shard 2   │  ...       │
-│  │ Primary   │  │ Primary   │  │ Primary   │            │
-│  │ +2 Replica│  │ +2 Replica│  │ +2 Replica│            │
-│  └───────────┘  └───────────┘  └───────────┘            │
-│                                                            │
-│  Read Path                                                │
-│  Clients → API Gateway → Read Service                     │
-│                              │                             │
-│                     ┌────────┴─────────┐                  │
-│                     │  Read Stores     │                  │
-│                     │  Redis (cache)   │                  │
-│                     │  ES (search)     │                  │
-│                     │  ClickHouse      │                  │
-│                     │  (analytics)     │                  │
-│                     └──────────────────┘                  │
-│                                                            │
-│  Sync: Kafka CDC from shards → Read stores                │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Write-Scaled Architecture diagram](../assets/generated/02-databases-08-write-scaling-diagram-04.svg)
 
 ### E.2 LLD — Shard Router
 
-```python
-import hashlib
+```java
+// Dependencies in the original example:
+// import hashlib
 
-class ShardRouter:
-    """Routes writes to the correct shard based on shard key"""
-    
-    def __init__(self, shard_connections: dict, num_shards: int):
-        self.shards = shard_connections  # {0: pool, 1: pool, ...}
-        self.num_shards = num_shards
+public class ShardRouter {
+    private Object shards;
+    private int numShards;
 
-    def get_shard_id(self, shard_key: str) -> int:
-        hash_val = int(hashlib.md5(shard_key.encode()).hexdigest(), 16)
-        return hash_val % self.num_shards
+    public ShardRouter(Map<String, Object> shardConnections, int numShards) {
+        this.shards = shardConnections;
+        this.numShards = numShards;
+    }
 
-    def get_connection(self, shard_key: str, read_only: bool = False):
-        shard_id = self.get_shard_id(shard_key)
-        pool = self.shards[shard_id]
-        if read_only:
-            return pool.get_replica_connection()
-        return pool.get_primary_connection()
+    public int getShardId(String shardKey) {
+        // hash_val = int(hashlib.md5(shard_key.encode()).hexdigest(), 16)
+        // return hash_val % num_shards
+        return 0;
+    }
 
-    def execute_on_shard(self, shard_key: str, query: str, params=None):
-        conn = self.get_connection(shard_key)
-        result = conn.execute(query, params)
-        conn.commit()
-        return result
+    public Object getConnection(String shardKey, boolean readOnly) {
+        // shard_id = get_shard_id(shard_key)
+        // pool = shards[shard_id]
+        // if read_only
+        // return pool.get_replica_connection()
+        // return pool.get_primary_connection()
+        return null;
+    }
 
-    def execute_on_all_shards(self, query: str, params=None) -> list:
-        """Fan-out query to all shards (expensive, avoid if possible)"""
-        results = []
-        for shard_id, pool in self.shards.items():
-            conn = pool.get_replica_connection()
-            results.extend(conn.execute(query, params))
-        return results
+    public Object executeOnShard(String shardKey, String query, Object params) {
+        // conn = get_connection(shard_key)
+        // result = conn.execute(query, params)
+        // conn.commit()
+        // return result
+        return null;
+    }
 
-    def batch_insert(self, table: str, rows: list, shard_key_field: str):
-        """Group rows by shard and batch insert to each"""
-        shard_batches = {}
-        for row in rows:
-            shard_id = self.get_shard_id(str(row[shard_key_field]))
-            if shard_id not in shard_batches:
-                shard_batches[shard_id] = []
-            shard_batches[shard_id].append(row)
+    public List<Object> executeOnAllShards(String query, Object params) {
+        // Fan-out query to all shards (expensive, avoid if possible)
+        // results = []
+        // for shard_id, pool in shards.items()
+        // conn = pool.get_replica_connection()
+        // results.extend(conn.execute(query, params))
+        // return results
+        return null;
+    }
 
-        for shard_id, batch in shard_batches.items():
-            conn = self.shards[shard_id].get_primary_connection()
-            columns = ", ".join(batch[0].keys())
-            placeholders = ", ".join(["%s"] * len(batch[0]))
-            values = [tuple(row.values()) for row in batch]
-            conn.executemany(
-                f"INSERT INTO {table} ({columns}) VALUES ({placeholders})",
-                values
-            )
-            conn.commit()
+    public Object batchInsert(String table, List<Object> rows, String shardKeyField) {
+        // Group rows by shard and batch insert to each
+        // shard_batches = {}
+        // for row in rows
+        // shard_id = get_shard_id(str(row[shard_key_field]))
+        // if shard_id not in shard_batches
+        // shard_batches[shard_id] = []
+        // shard_batches[shard_id].append(row)
+        // for shard_id, batch in shard_batches.items()
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

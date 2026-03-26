@@ -1,4 +1,4 @@
-# Topic 21: Idempotency
+﻿# Topic 21: Idempotency
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -63,31 +63,7 @@ Scenario: User clicks "Pay" button
 
 ### Idempotency Key Pattern
 
-```
-Client generates a unique key per operation and sends it with the request:
-
-  POST /payments
-  Idempotency-Key: pay_abc123
-  { "amount": 100, "to": "merchant_456" }
-
-Server flow:
-  1. Check if idempotency key "pay_abc123" exists in store
-  2a. EXISTS → return stored response (no re-processing)
-  2b. NOT EXISTS → process payment → store result with key → return response
-
-  ┌────────┐                    ┌──────────┐
-  │ Client │── pay_abc123 ─────►│  Server  │
-  └────────┘                    │          │
-                                │ 1. Check │──► Redis: EXISTS pay_abc123?
-                                │          │
-                                │ 2a. Yes  │──► Return stored result
-                                │ 2b. No   │──► Process → Store → Return
-                                └──────────┘
-
-Key generation (client-side):
-  • UUID v4: "550e8400-e29b-41d4-a716-446655440000"
-  • Deterministic: hash(user_id + action + timestamp_minute)
-```
+![Idempotency Key Pattern diagram](../assets/generated/01-fundamentals-21-idempotency-diagram-01.svg)
 
 ### Idempotency at Different Layers
 
@@ -166,24 +142,7 @@ CREATE UNIQUE INDEX idx_idempotency ON payments (idempotency_key);
 
 ## D. Example: Idempotent Payment Service
 
-```
-┌────────┐                  ┌───────────────┐
-│ Client │── POST /pay ────►│ Payment API   │
-│        │  Key: abc123     │               │
-└────────┘                  │ 1. Check Redis│──► EXISTS abc123?
-                            │ 2. Process    │    YES → return stored
-                            │ 3. Store      │    NO  → process → store
-                            └───────────────┘
-
-Request 1 (first attempt):
-  Key: abc123 not in Redis → charge card → store {key: abc123, result: success} → return 200
-
-Request 2 (retry, same key):
-  Key: abc123 found in Redis → return stored result → 200 (no double charge)
-
-Request 3 (different payment):
-  Key: def456 not in Redis → charge card → store → return 200
-```
+![D. Example: Idempotent Payment Service diagram](../assets/generated/01-fundamentals-21-idempotency-diagram-02.svg)
 
 ---
 
@@ -191,69 +150,38 @@ Request 3 (different payment):
 
 ### E.1 HLD — Idempotent API Layer
 
-```
-┌────────┐   ┌──────────┐   ┌─────────────────┐   ┌──────────┐
-│ Client │──►│ API GW   │──►│ Idempotency     │──►│ Business │
-│  (key) │   │          │   │ Middleware       │   │ Logic    │
-└────────┘   └──────────┘   │                  │   └──────────┘
-                             │ Check Redis ──┐ │
-                             │               │ │
-                             │ ┌─────────┐   │ │
-                             │ │  Redis  │◄──┘ │
-                             │ │  (keys) │     │
-                             │ └─────────┘     │
-                             └─────────────────┘
-```
+![E.1 HLD — Idempotent API Layer diagram](../assets/generated/01-fundamentals-21-idempotency-diagram-03.svg)
 
 ### E.2 LLD — Idempotency Middleware
 
-```python
-class IdempotencyMiddleware:
-    def __init__(self, redis_client, ttl_hours=24):
-        self.redis = redis_client
-        self.ttl = ttl_hours * 3600
+```java
+public class IdempotencyMiddleware {
+    private Object redis;
+    private int ttl;
 
-    def handle(self, request, next_handler):
-        key = request.headers.get("Idempotency-Key")
-        if not key:
-            return next_handler(request)  # No key = normal processing
+    public IdempotencyMiddleware(Object redisClient, int ttlHours) {
+        this.redis = redisClient;
+        this.ttl = ttlHours * 3600;
+    }
 
-        # Check for existing result
-        stored = self.redis.get(f"idemp:{key}")
-        if stored:
-            stored = json.loads(stored)
-            # Verify request params match
-            if stored["params_hash"] != self._hash_params(request):
-                return Response(400, "Idempotency key reused with different params")
-            if stored["status"] == "processing":
-                return Response(409, "Request is still being processed")
-            return Response(stored["status_code"], stored["body"])
+    public Object handle(Object request, Object nextHandler) {
+        // key = request.headers.get("Idempotency-Key")
+        // if not key
+        // return next_handler(request)  # No key = normal processing
+        // Check for existing result
+        // stored = redis.get(f"idemp:{key}")
+        // if stored
+        // stored = json.loads(stored)
+        // Verify request params match
+        // ...
+        return null;
+    }
 
-        # Mark as processing
-        lock_acquired = self.redis.set(
-            f"idemp:{key}",
-            json.dumps({"status": "processing", "params_hash": self._hash_params(request)}),
-            nx=True, ex=self.ttl
-        )
-        if not lock_acquired:
-            return Response(409, "Duplicate request in progress")
-
-        # Process request
-        try:
-            response = next_handler(request)
-            self.redis.setex(f"idemp:{key}", self.ttl, json.dumps({
-                "status": "completed",
-                "status_code": response.status_code,
-                "body": response.body,
-                "params_hash": self._hash_params(request),
-            }))
-            return response
-        except Exception as e:
-            self.redis.delete(f"idemp:{key}")  # Allow retry on failure
-            raise
-
-    def _hash_params(self, request):
-        return hashlib.sha256(json.dumps(request.body, sort_keys=True).encode()).hexdigest()
+    public Object hashParams(Object request) {
+        // return hashlib.sha256(json.dumps(request.body, sort_keys=true).encode()).hexdigest()
+        return null;
+    }
+}
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Topic 17: Message Queues
+﻿# Topic 17: Message Queues
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,23 +23,7 @@
 
 A **message queue** is middleware that enables asynchronous communication between services by buffering messages between a **producer** (sender) and **consumer** (receiver).
 
-```
-SYNCHRONOUS (without queue):
-  Order Service ──── wait 5s ────► Email Service
-  User waits for email to be sent before getting order confirmation.
-
-ASYNCHRONOUS (with queue):
-  Order Service ──► [Queue] ──► Email Service
-  User gets instant confirmation. Email sent in background.
-
-  ┌──────────┐    ┌─────────────┐    ┌──────────┐
-  │ Producer │───►│   Message   │───►│ Consumer │
-  │ (Order)  │    │   Queue     │    │ (Email)  │
-  └──────────┘    │ ┌─┬─┬─┬─┐  │    └──────────┘
-                  │ │M│M│M│M│  │
-                  │ └─┴─┴─┴─┘  │
-                  └─────────────┘
-```
+![What is a Message Queue? diagram](../assets/generated/01-fundamentals-17-message-queues-diagram-01.svg)
 
 ### Why Use Message Queues?
 
@@ -54,23 +38,7 @@ ASYNCHRONOUS (with queue):
 
 ### Queue vs Topic (Point-to-Point vs Pub-Sub)
 
-```
-QUEUE (Point-to-Point):
-  Each message consumed by exactly ONE consumer.
-  ┌──────────┐    ┌──────┐    ┌──────────┐
-  │ Producer │───►│Queue │───►│Consumer 1│  ← Gets message A
-  └──────────┘    │ A,B,C│───►│Consumer 2│  ← Gets message B
-                  └──────┘───►│Consumer 3│  ← Gets message C
-  Use: Task distribution, work queues
-
-TOPIC (Pub-Sub):
-  Each message delivered to ALL subscribers.
-  ┌──────────┐    ┌──────┐    ┌────────────┐
-  │ Producer │───►│Topic │───►│Subscriber 1│  ← Gets ALL messages
-  └──────────┘    │ A,B,C│───►│Subscriber 2│  ← Gets ALL messages
-                  └──────┘───►│Subscriber 3│  ← Gets ALL messages
-  Use: Event broadcasting, notifications
-```
+![Queue vs Topic (Point-to-Point vs Pub-Sub) diagram](../assets/generated/01-fundamentals-17-message-queues-diagram-02.svg)
 
 ### Delivery Guarantees
 
@@ -95,20 +63,7 @@ AT-LEAST-ONCE flow:
 
 ### Dead Letter Queue (DLQ)
 
-```
-When a message can't be processed after N retries:
-
-  ┌──────────┐    ┌─────────┐    ┌──────────┐
-  │ Producer │───►│  Main   │───►│ Consumer │
-  └──────────┘    │  Queue  │    │          │
-                  └────┬────┘    └──────────┘
-                       │ (failed N times)
-                  ┌────┴────┐
-                  │  DLQ    │  ← Messages that couldn't be processed
-                  │(Dead    │    Investigate manually or re-process later
-                  │ Letter) │    Alert if DLQ depth > threshold
-                  └─────────┘
-```
+![Dead Letter Queue (DLQ) diagram](../assets/generated/01-fundamentals-17-message-queues-diagram-03.svg)
 
 ### Popular Message Queue Systems
 
@@ -201,33 +156,7 @@ Alerts:
 
 ## D. Example: Order Processing Pipeline
 
-```
-┌──────────┐    ┌──────────────┐    ┌──────────────┐
-│  Order   │───►│ Kafka Topic: │───►│ Payment      │
-│  Service │    │ order.created│    │ Consumer     │
-└──────────┘    └──────┬───────┘    └──────────────┘
-                       │
-                       ├───────────►┌──────────────┐
-                       │            │ Inventory    │
-                       │            │ Consumer     │
-                       │            └──────────────┘
-                       │
-                       ├───────────►┌──────────────┐
-                       │            │ Notification │
-                       │            │ Consumer     │
-                       │            └──────────────┘
-                       │
-                       └───────────►┌──────────────┐
-                                    │ Analytics    │
-                                    │ Consumer     │
-                                    └──────────────┘
-
-Each consumer is a different consumer group:
-  • Payment: Must process every order (at-least-once)
-  • Inventory: Must process every order (at-least-once)
-  • Notification: Best-effort (at-most-once OK)
-  • Analytics: Can tolerate delay, replays welcome
-```
+![D. Example: Order Processing Pipeline diagram](../assets/generated/01-fundamentals-17-message-queues-diagram-04.svg)
 
 ---
 
@@ -235,32 +164,7 @@ Each consumer is a different consumer group:
 
 ### E.1 HLD — Async Order Processing
 
-```
-┌─────────────────────────────────────────────────────┐
-│  API Gateway                                          │
-│      │                                                │
-│  ┌───┴────────┐                                       │
-│  │ Order Svc  │  Validates + saves order + publishes  │
-│  │ (Postgres) │                                       │
-│  └───┬────────┘                                       │
-│      │                                                │
-│  ┌───┴──────────────────────────┐                    │
-│  │  Kafka (3 brokers, RF=3)     │                    │
-│  │  Topic: orders (6 partitions)│                    │
-│  └───┬──────┬──────┬──────┬────┘                    │
-│      │      │      │      │                          │
-│  ┌───┴──┐ ┌┴────┐ ┌┴────┐ ┌┴──────┐                │
-│  │Pay   │ │Inv  │ │Notif│ │Analyt │                │
-│  │(×3)  │ │(×3) │ │(×2) │ │(×1)   │                │
-│  └──┬───┘ └─┬───┘ └─┬───┘ └───────┘                │
-│     │       │       │                                │
-│  ┌──┴───┐ ┌─┴───┐ ┌─┴──────┐                       │
-│  │Stripe│ │Redis │ │SES/FCM │                       │
-│  └──────┘ └─────┘ └────────┘                        │
-│                                                       │
-│  DLQ: orders.dlq → Alert + manual retry              │
-└─────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Async Order Processing diagram](../assets/generated/01-fundamentals-17-message-queues-diagram-05.svg)
 
 ### E.2 LLD — Message Consumer with Retry
 

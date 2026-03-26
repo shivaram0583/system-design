@@ -1,4 +1,4 @@
-# Topic 28: Partitioning
+﻿# Topic 28: Partitioning
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -221,78 +221,60 @@ Retention: DROP PARTITION for months > 24 months old (instant cleanup)
 
 ### E.1 HLD — Partitioned Data Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Application                                          │
-│      │                                                │
-│  ┌───┴─────────────────────────┐                     │
-│  │  Query Router               │                     │
-│  │  Adds partition key to all  │                     │
-│  │  queries automatically      │                     │
-│  └───┬─────────────────────────┘                     │
-│      │                                                │
-│  ┌───┴─────────────────────────────────────────┐     │
-│  │  PostgreSQL (Partitioned)                    │     │
-│  │                                               │     │
-│  │  events_2024_01  events_2024_02  ...current  │     │
-│  │  (warm: compressed) (warm)      (hot: SSD)   │     │
-│  │                                               │     │
-│  │  events_2023_* → archived to S3              │     │
-│  └───────────────────────────────────────────────┘     │
-│                                                        │
-│  Partition Manager (cron):                            │
-│    • Create next month's partition automatically      │
-│    • Compress partitions older than 3 months          │
-│    • Archive partitions older than 12 months          │
-│    • Drop partitions older than 24 months             │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Partitioned Data Architecture diagram](../assets/generated/01-fundamentals-28-partitioning-diagram-01.svg)
 
 ### E.2 LLD — Partition Manager
 
-```python
-from datetime import datetime, timedelta
+```java
+// Dependencies in the original example:
+// from datetime import datetime, timedelta
 
-class PartitionManager:
-    def __init__(self, db_conn, table_name: str, retention_months: int = 24):
-        self.db = db_conn
-        self.table = table_name
-        self.retention = retention_months
+public class PartitionManager {
+    private Object db;
+    private String table;
+    private int retention;
 
-    def create_future_partitions(self, months_ahead: int = 3):
-        """Pre-create partitions for upcoming months"""
-        for i in range(months_ahead):
-            date = datetime.now() + timedelta(days=30 * (i + 1))
-            partition_name = f"{self.table}_{date.strftime('%Y_%m')}"
-            start = date.replace(day=1).strftime('%Y-%m-%d')
-            end = (date.replace(day=1) + timedelta(days=32)).replace(day=1).strftime('%Y-%m-%d')
-            
-            self.db.execute(f"""
-                CREATE TABLE IF NOT EXISTS {partition_name}
-                PARTITION OF {self.table}
-                FOR VALUES FROM ('{start}') TO ('{end}')
-            """)
+    public PartitionManager(Object dbConn, String tableName, int retentionMonths) {
+        this.db = dbConn;
+        this.table = tableName;
+        this.retention = retentionMonths;
+    }
 
-    def archive_old_partitions(self, archive_after_months: int = 12):
-        """Detach and export partitions older than threshold"""
-        cutoff = datetime.now() - timedelta(days=30 * archive_after_months)
-        old_partitions = self._get_partitions_before(cutoff)
-        
-        for partition in old_partitions:
-            # Export to S3
-            self.db.execute(f"COPY {partition} TO '/tmp/{partition}.csv' CSV")
-            upload_to_s3(f"/tmp/{partition}.csv", f"archive/{partition}.csv")
-            
-            # Detach and drop
-            self.db.execute(f"ALTER TABLE {self.table} DETACH PARTITION {partition}")
-            self.db.execute(f"DROP TABLE {partition}")
+    public Object createFuturePartitions(int monthsAhead) {
+        // Pre-create partitions for upcoming months
+        // for i in range(months_ahead)
+        // date = datetime.now() + timedelta(days=30 * (i + 1))
+        // partition_name = f"{table}_{date.strftime('%Y_%m')}"
+        // start = date.replace(day=1).strftime('%Y-%m-%d')
+        // end = (date.replace(day=1) + timedelta(days=32)).replace(day=1).strftime('%Y-%m-%d')
+        // db.execute(f
+        // CREATE TABLE IF NOT EXISTS {partition_name}
+        // ...
+        return null;
+    }
 
-    def drop_expired_partitions(self):
-        """Drop partitions beyond retention period"""
-        cutoff = datetime.now() - timedelta(days=30 * self.retention)
-        expired = self._get_partitions_before(cutoff)
-        for partition in expired:
-            self.db.execute(f"DROP TABLE IF EXISTS {partition}")
+    public Object archiveOldPartitions(int archiveAfterMonths) {
+        // Detach and export partitions older than threshold
+        // cutoff = datetime.now() - timedelta(days=30 * archive_after_months)
+        // old_partitions = _get_partitions_before(cutoff)
+        // for partition in old_partitions
+        // Export to S3
+        // db.execute(f"COPY {partition} TO '/tmp/{partition}.csv' CSV")
+        // upload_to_s3(f"/tmp/{partition}.csv", f"archive/{partition}.csv")
+        // Detach and drop
+        // ...
+        return null;
+    }
+
+    public Object dropExpiredPartitions() {
+        // Drop partitions beyond retention period
+        // cutoff = datetime.now() - timedelta(days=30 * retention)
+        // expired = _get_partitions_before(cutoff)
+        // for partition in expired
+        // db.execute(f"DROP TABLE IF EXISTS {partition}")
+        return null;
+    }
+}
 ```
 
 ---

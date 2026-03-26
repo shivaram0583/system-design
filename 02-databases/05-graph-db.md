@@ -1,4 +1,4 @@
-# Topic 05: Graph Database
+﻿# Topic 05: Graph Database
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -249,112 +249,85 @@ Neo4j performance:
 
 ### E.1 HLD — Graph-Powered Recommendation Engine
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Clients                                                   │
-│      │                                                     │
-│  ┌───┴───────────┐                                        │
-│  │  API Gateway  │                                        │
-│  └───┬───────────┘                                        │
-│      │                                                     │
-│  ┌───┴────────────┐     ┌──────────────┐                 │
-│  │ Social Service │────►│  Neo4j       │                 │
-│  │ (friends, rec) │     │  Cluster     │                 │
-│  │                │     │  (3 nodes)   │                 │
-│  │ • Friendships  │     │  • Nodes: users, products     │
-│  │ • Suggestions  │     │  • Edges: FRIENDS, PURCHASED  │
-│  │ • Mutual count │     │  • Graph algorithms (GDS lib) │
-│  └────────────────┘     └──────────────┘                 │
-│                                                            │
-│  ┌────────────────┐     ┌──────────────┐                 │
-│  │ User Service   │────►│ PostgreSQL   │ Profile data    │
-│  └────────────────┘     └──────────────┘                 │
-│                                                            │
-│  ┌────────────────┐                                       │
-│  │ Redis Cache    │  Cache top suggestions per user      │
-│  │ TTL: 1 hour    │  Invalidate on new friendship        │
-│  └────────────────┘                                       │
-│                                                            │
-│  Sync: Kafka CDC from PostgreSQL → Neo4j updater service │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Graph-Powered Recommendation Engine diagram](../assets/generated/02-databases-05-graph-db-diagram-01.svg)
 
 ### E.2 LLD — Graph Query Service
 
-```python
-from neo4j import GraphDatabase
+```java
+// Dependencies in the original example:
+// from neo4j import GraphDatabase
 
-class SocialGraphService:
-    def __init__(self, neo4j_driver, cache_client):
-        self.driver = neo4j_driver
-        self.cache = cache_client
+public class SocialGraphService {
+    private Object driver;
+    private Object cache;
 
-    def get_friends(self, user_id: str, limit: int = 50) -> list:
-        with self.driver.session() as session:
-            result = session.run(
-                "MATCH (u:User {id: $uid})-[:FRIENDS_WITH]->(f:User) "
-                "RETURN f.id AS id, f.name AS name "
-                "LIMIT $limit",
-                uid=user_id, limit=limit
-            )
-            return [dict(record) for record in result]
+    public SocialGraphService(Object neo4jDriver, Object cacheClient) {
+        this.driver = neo4jDriver;
+        this.cache = cacheClient;
+    }
 
-    def get_friend_suggestions(self, user_id: str, limit: int = 20) -> list:
-        cache_key = f"suggestions:{user_id}"
-        cached = self.cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
+    public List<Object> getFriends(String userId, int limit) {
+        // with driver.session() as session
+        // result = session.run(
+        // "MATCH (u:User {id: $uid})-[:FRIENDS_WITH]->(f:User) "
+        // "RETURN f.id AS id, f.name AS name "
+        // "LIMIT $limit",
+        // uid=user_id, limit=limit
+        // )
+        // return [dict(record) for record in result]
+        return null;
+    }
 
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (u:User {id: $uid})-[:FRIENDS_WITH]->(friend)
-                      -[:FRIENDS_WITH]->(suggestion:User)
-                WHERE suggestion <> u
-                  AND NOT (u)-[:FRIENDS_WITH]->(suggestion)
-                WITH suggestion, count(friend) AS mutual_count
-                ORDER BY mutual_count DESC
-                LIMIT $limit
-                RETURN suggestion.id AS id,
-                       suggestion.name AS name,
-                       mutual_count
-            """, uid=user_id, limit=limit)
-            suggestions = [dict(r) for r in result]
+    public List<Object> getFriendSuggestions(String userId, int limit) {
+        // cache_key = f"suggestions:{user_id}"
+        // cached = cache.get(cache_key)
+        // if cached
+        // return json.loads(cached)
+        // with driver.session() as session
+        // result = session.run(
+        // MATCH (u:User {id: $uid})-[:FRIENDS_WITH]->(friend)
+        // -[:FRIENDS_WITH]->(suggestion:User)
+        // ...
+        return null;
+    }
 
-        self.cache.setex(cache_key, 3600, json.dumps(suggestions))
-        return suggestions
+    public Object addFriendship(String userA, String userB) {
+        // with driver.session() as session
+        // session.run(
+        // "MATCH (a:User {id: $a}), (b:User {id: $b}) "
+        // "MERGE (a)-[:FRIENDS_WITH]->(b) "
+        // "MERGE (b)-[:FRIENDS_WITH]->(a)",
+        // a=user_a, b=user_b
+        // )
+        // Invalidate suggestion caches
+        // ...
+        return null;
+    }
 
-    def add_friendship(self, user_a: str, user_b: str):
-        with self.driver.session() as session:
-            session.run(
-                "MATCH (a:User {id: $a}), (b:User {id: $b}) "
-                "MERGE (a)-[:FRIENDS_WITH]->(b) "
-                "MERGE (b)-[:FRIENDS_WITH]->(a)",
-                a=user_a, b=user_b
-            )
-        # Invalidate suggestion caches
-        self.cache.delete(f"suggestions:{user_a}")
-        self.cache.delete(f"suggestions:{user_b}")
+    public List<Object> getMutualFriends(String userA, String userB) {
+        // with driver.session() as session
+        // result = session.run(
+        // MATCH (a:User {id: $a})-[:FRIENDS_WITH]->(mutual:User)
+        // <-[:FRIENDS_WITH]-(b:User {id: $b})
+        // RETURN mutual.id AS id, mutual.name AS name
+        // , a=user_a, b=user_b)
+        // return [dict(r) for r in result]
+        return null;
+    }
 
-    def get_mutual_friends(self, user_a: str, user_b: str) -> list:
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (a:User {id: $a})-[:FRIENDS_WITH]->(mutual:User)
-                      <-[:FRIENDS_WITH]-(b:User {id: $b})
-                RETURN mutual.id AS id, mutual.name AS name
-            """, a=user_a, b=user_b)
-            return [dict(r) for r in result]
-
-    def detect_fraud_rings(self, min_ring_size: int = 3,
-                           min_amount: float = 10000) -> list:
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH path = (a:Account)-[:TRANSFERRED*3..6]->(a)
-                WHERE ALL(r IN relationships(path) WHERE r.amount > $min_amount)
-                RETURN [n IN nodes(path) | n.id] AS ring,
-                       length(path) AS ring_size
-                ORDER BY ring_size DESC
-            """, min_amount=min_amount)
-            return [dict(r) for r in result]
+    public List<Object> detectFraudRings(int minRingSize, double minAmount) {
+        // with driver.session() as session
+        // result = session.run(
+        // MATCH path = (a:Account)-[:TRANSFERRED*3..6]->(a)
+        // WHERE ALL(r IN relationships(path) WHERE r.amount > $min_amount)
+        // RETURN [n IN nodes(path) | n.id] AS ring,
+        // length(path) AS ring_size
+        // ORDER BY ring_size DESC
+        // , min_amount=min_amount)
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

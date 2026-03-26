@@ -1,4 +1,4 @@
-# Topic 07: Read Replicas
+﻿# Topic 07: Read Replicas
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -23,28 +23,7 @@
 
 **Read replicas** are copies of the primary database that serve read queries. All writes go to the primary; the primary replicates changes to replicas asynchronously. This scales read throughput horizontally without affecting write performance.
 
-```
-WITHOUT read replicas:
-  All reads + writes → Primary DB (bottleneck at high read load)
-  
-  1000 reads/s + 100 writes/s → 1 DB handles all 1100 queries/s
-
-WITH read replicas:
-  Writes → Primary DB (100 writes/s)
-  Reads  → 3 Read Replicas (333 reads/s each)
-
-  ┌──────────┐
-  │  Primary │◄─── All writes
-  │  (write) │
-  └──┬───┬───┘
-     │   │  async replication
-  ┌──┴┐ ┌┴──┐ ┌────┐
-  │R1 │ │R2 │ │R3  │◄─── All reads (load balanced)
-  └───┘ └───┘ └────┘
-
-  Read capacity: scales linearly by adding replicas
-  Write capacity: unchanged (single primary)
-```
+![What are Read Replicas? diagram](../assets/generated/02-databases-07-read-replicas-diagram-01.svg)
 
 ### Replication Lag
 
@@ -225,32 +204,7 @@ Application-level routing:
 
 ## D. Example: E-Commerce Product Service
 
-```
-Product catalog: 10M products, 50K reads/s, 500 writes/s
-
-  ┌────────────┐     ┌──────────────┐
-  │ App Server │────►│  Primary     │ ← writes (500/s)
-  │ (write)    │     │  PostgreSQL  │    product updates, new products
-  └────────────┘     └──────┬───────┘
-                            │ async replication
-                     ┌──────┼───────────────┐
-                  ┌──┴───┐ ┌┴────┐ ┌────┐  │
-                  │Rep 1 │ │Rep 2│ │Rep 3│  │
-                  └──────┘ └─────┘ └─────┘  │
-                     ▲                       │
-  ┌────────────┐     │                       │
-  │ App Server │─────┘ ← reads (50K/s)     │
-  │ (read)     │  load balanced across 3    │
-  └────────────┘  replicas (~17K each)      │
-
-  Consistency strategy:
-  • Product listings/search: eventual consistency (OK if 2-5s stale)
-  • After admin updates product: read from primary for 5s
-  • Inventory/stock checks: always read from primary (critical)
-  
-  Cache layer (Redis) in front of replicas for hot products
-  Cache invalidation on product update event
-```
+![D. Example: E-Commerce Product Service diagram](../assets/generated/02-databases-07-read-replicas-diagram-02.svg)
 
 ---
 
@@ -258,99 +212,86 @@ Product catalog: 10M products, 50K reads/s, 500 writes/s
 
 ### E.1 HLD — Read Replica Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Application Layer                                         │
-│  ┌───────────────────────────────────────┐                │
-│  │  Connection Router                     │                │
-│  │  Writes → Primary                     │                │
-│  │  Reads  → Replica Pool (round-robin)  │                │
-│  │  Read-after-write → Primary (5s window)│               │
-│  └────────┬──────────────┬───────────────┘                │
-│           │ write         │ read                           │
-│  ┌────────┴────────┐  ┌──┴──────────────────────┐       │
-│  │  Primary DB     │  │  Replica Pool            │       │
-│  │  (us-east-1a)   │  │                          │       │
-│  │  Writes only    │──│→ Replica 1 (us-east-1b) │       │
-│  │                 │  │→ Replica 2 (us-east-1c) │       │
-│  │  Promotes to    │  │→ Replica 3 (eu-west-1a) │       │
-│  │  replica on     │  │                          │       │
-│  │  every commit   │  │  Health checked, lag     │       │
-│  └─────────────────┘  │  monitored               │       │
-│                        └──────────────────────────┘       │
-│                                                            │
-│  Failover: Primary down → promote Replica 1 → DNS update │
-│  Monitoring: Replication lag, connection count, query time │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Read Replica Architecture diagram](../assets/generated/02-databases-07-read-replicas-diagram-03.svg)
 
 ### E.2 LLD — Read/Write Router
 
-```python
-import time
-import random
-import threading
+```java
+// Dependencies in the original example:
+// import time
+// import random
+// import threading
 
-class DatabaseRouter:
-    """Routes queries to primary or replicas with read-after-write consistency"""
-    
-    def __init__(self, primary_pool, replica_pools: list,
-                 read_after_write_window: int = 5):
-        self.primary = primary_pool
-        self.replicas = replica_pools
-        self.raw_window = read_after_write_window
-        self.user_write_times = {}  # user_id → last_write_timestamp
-        self._lock = threading.Lock()
+public class DatabaseRouter {
+    private Object primary;
+    private List<Object> replicas;
+    private int rawWindow;
+    private Object userWriteTimes;
+    private Object lock;
 
-    def get_connection(self, query_type: str, user_id: str = None):
-        if query_type == "write":
-            self._record_write(user_id)
-            return self.primary.get_connection()
+    public DatabaseRouter(Object primaryPool, List<Object> replicaPools, int readAfterWriteWindow) {
+        this.primary = primaryPool;
+        this.replicas = replicaPools;
+        this.rawWindow = readAfterWriteWindow;
+        this.userWriteTimes = new HashMap<>();
+        this.lock = threading.Lock();
+    }
 
-        # Read-after-write: route to primary if recent write
-        if user_id and self._needs_primary_read(user_id):
-            return self.primary.get_connection()
+    public Object getConnection(String queryType, String userId) {
+        // if query_type == "write"
+        // _record_write(user_id)
+        // return primary.get_connection()
+        // Read-after-write: route to primary if recent write
+        // if user_id and _needs_primary_read(user_id)
+        // return primary.get_connection()
+        // Regular read: pick a healthy replica
+        // return _get_healthy_replica()
+        return null;
+    }
 
-        # Regular read: pick a healthy replica
-        return self._get_healthy_replica()
+    public Object recordWrite(String userId) {
+        // if user_id
+        // with _lock
+        // user_write_times[user_id] = time.time()
+        return null;
+    }
 
-    def _record_write(self, user_id: str):
-        if user_id:
-            with self._lock:
-                self.user_write_times[user_id] = time.time()
+    public boolean needsPrimaryRead(String userId) {
+        // with _lock
+        // last_write = user_write_times.get(user_id)
+        // if last_write is null
+        // return false
+        // return (time.time() - last_write) < raw_window
+        return false;
+    }
 
-    def _needs_primary_read(self, user_id: str) -> bool:
-        with self._lock:
-            last_write = self.user_write_times.get(user_id)
-        if last_write is None:
-            return False
-        return (time.time() - last_write) < self.raw_window
+    public boolean getHealthyReplica() {
+        // healthy = [r for r in replicas if r.is_healthy()]
+        // if not healthy
+        // Fallback to primary if all replicas unhealthy
+        // return primary.get_connection()
+        // Round-robin with lag check
+        // replica = random.choice(healthy)
+        // if replica.replication_lag_seconds() > 30
+        // Skip replicas with high lag
+        // ...
+        return false;
+    }
 
-    def _get_healthy_replica(self):
-        healthy = [r for r in self.replicas if r.is_healthy()]
-        if not healthy:
-            # Fallback to primary if all replicas unhealthy
-            return self.primary.get_connection()
-        
-        # Round-robin with lag check
-        replica = random.choice(healthy)
-        if replica.replication_lag_seconds() > 30:
-            # Skip replicas with high lag
-            low_lag = [r for r in healthy if r.replication_lag_seconds() < 30]
-            if low_lag:
-                replica = random.choice(low_lag)
-        
-        return replica.get_connection()
+    public Object executeRead(String query, Object params, String userId) {
+        // conn = get_connection("read", user_id)
+        // return conn.execute(query, params)
+        return null;
+    }
 
-    def execute_read(self, query: str, params=None, user_id: str = None):
-        conn = self.get_connection("read", user_id)
-        return conn.execute(query, params)
-
-    def execute_write(self, query: str, params=None, user_id: str = None):
-        conn = self.get_connection("write", user_id)
-        result = conn.execute(query, params)
-        conn.commit()
-        return result
+    public Object executeWrite(String query, Object params, String userId) {
+        // conn = get_connection("write", user_id)
+        // result = conn.execute(query, params)
+        // conn.commit()
+        // return result
+        return null;
+    }
+}
 ```
 
 ---

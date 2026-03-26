@@ -1,4 +1,4 @@
-# Comparison and Decision Making
+﻿# Comparison and Decision Making
 
 > In system design, choosing the right tool is as important as knowing how to use it. This section provides decision frameworks for the most common choices.
 
@@ -18,29 +18,12 @@
 
 ### Database Selection
 
-```
-Need ACID transactions + joins? ──► SQL (PostgreSQL, MySQL)
-Need flexible schema + scale? ──► Document DB (MongoDB)
-Need simple key-value at speed? ──► Key-Value (Redis, DynamoDB)
-Need analytics on huge data? ──► Columnar (Cassandra, ClickHouse)
-Need relationship traversal? ──► Graph DB (Neo4j)
-Need time-series metrics? ──► Time-Series (InfluxDB, TimescaleDB)
-```
+![Database Selection diagram](../assets/generated/05-comparisons-readme-diagram-01.svg)
 
 ### Communication Protocol
 
-```
-Public API, CRUD operations? ──► REST
-Internal service-to-service, low latency? ──► gRPC
-Mobile/frontend with flexible queries? ──► GraphQL
-Fire-and-forget, event streaming? ──► Kafka / Message Queue
-Real-time bidirectional? ──► WebSocket
-```
+![Communication Protocol diagram](../assets/generated/05-comparisons-readme-diagram-02.svg)
 
 ### Architecture Style
 
-```
-Small team, early stage, simple domain? ──► Monolith
-Large team, complex domain, independent scaling? ──► Microservices
-Need both? ──► Start monolith, extract services as needed
-```
+![Architecture Style diagram](../assets/generated/05-comparisons-readme-diagram-03.svg)

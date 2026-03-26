@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="695" height="288" viewBox="0 0 695 288" role="img" aria-labelledby="title desc">
+  <title id="title">Fan-Out Pattern diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="693.8" height="286.8" rx="16" />
+  <g class="segments">
+    <line x1="87.00000000000001" y1="84" x2="87.00000000000001" y2="104" />
+    <line x1="87.00000000000001" y1="104" x2="87.00000000000001" y2="124" />
+    <line x1="87.00000000000001" y1="114" x2="91.20000000000002" y2="114" />
+    <line x1="91.2" y1="114" x2="99.60000000000001" y2="114" />
+    <line x1="99.60000000000001" y1="114" x2="108.00000000000001" y2="114" />
+    <line x1="87.00000000000001" y1="124" x2="87.00000000000001" y2="144" />
+    <line x1="87.00000000000001" y1="134" x2="91.20000000000002" y2="134" />
+    <line x1="91.2" y1="134" x2="99.60000000000001" y2="134" />
+    <line x1="99.60000000000001" y1="134" x2="108.00000000000001" y2="134" />
+    <line x1="87.00000000000001" y1="144" x2="87.00000000000001" y2="164" />
+    <line x1="87.00000000000001" y1="154" x2="91.20000000000002" y2="154" />
+    <line x1="91.2" y1="154" x2="99.60000000000001" y2="154" />
+    <line x1="99.60000000000001" y1="154" x2="108.00000000000001" y2="154" />
+    <line x1="87.00000000000001" y1="164" x2="87.00000000000001" y2="184" />
+    <line x1="87.00000000000001" y1="174" x2="91.20000000000002" y2="174" />
+    <line x1="91.2" y1="174" x2="99.60000000000001" y2="174" />
+    <line x1="99.60000000000001" y1="174" x2="108.00000000000001" y2="174" />
+    <line x1="87.00000000000001" y1="184" x2="91.20000000000002" y2="194" />
+    <line x1="91.2" y1="194" x2="99.60000000000001" y2="194" />
+    <line x1="99.60000000000001" y1="194" x2="108.00000000000001" y2="194" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">A single event needs to trigger multiple independent actions:</text>
+    <text x="24" y="79" xml:space="preserve">  Order Created Event</text>
+    <text x="24" y="119" xml:space="preserve">          ► Payment Service (charge card)</text>
+    <text x="24" y="139" xml:space="preserve">          ► Inventory Service (reserve stock)</text>
+    <text x="24" y="159" xml:space="preserve">          ► Email Service (send confirmation)</text>
+    <text x="24" y="179" xml:space="preserve">          ► Analytics Service (track conversion)</text>
+    <text x="24" y="199" xml:space="preserve">          ► Fraud Service (check for fraud)</text>
+    <text x="24" y="239" xml:space="preserve">Without pub-sub: Order Service calls each one (tight coupling, slow)</text>
+    <text x="24" y="259" xml:space="preserve">With pub-sub: Order Service publishes once, 5 subscribers react independently</text>
+  </g>
+</svg>

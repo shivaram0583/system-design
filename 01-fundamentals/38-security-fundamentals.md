@@ -1,4 +1,4 @@
-# Topic 38: Security Fundamentals
+﻿# Topic 38: Security Fundamentals
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,19 +23,7 @@
 
 Every system design must address security. A brilliantly designed system that is easily compromised is a failed design. Security should be considered **from the start**, not bolted on later.
 
-```
-CIA Triad — the foundation of information security:
-
-  ┌──────────────────┐
-  │  CONFIDENTIALITY │  Only authorized users can access data
-  ├──────────────────┤
-  │  INTEGRITY       │  Data is not tampered with or corrupted
-  ├──────────────────┤
-  │  AVAILABILITY    │  System is accessible when needed
-  └──────────────────┘
-
-  + Non-repudiation: Cannot deny actions (audit trail)
-```
+![Why Security in System Design? diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-01.svg)
 
 ### Common Threats (OWASP Top 10 Highlights)
 
@@ -53,26 +41,7 @@ CIA Triad — the foundation of information security:
 
 ### Defense in Depth
 
-```
-Multiple layers of security — if one layer is breached, others protect:
-
-  ┌────────────────────────────────────────┐
-  │  Layer 1: NETWORK                      │
-  │  Firewall, VPC, security groups, WAF   │
-  │  ┌──────────────────────────────────┐  │
-  │  │  Layer 2: EDGE                   │  │
-  │  │  API Gateway, rate limiting, DDoS │  │
-  │  │  ┌────────────────────────────┐  │  │
-  │  │  │  Layer 3: APPLICATION      │  │  │
-  │  │  │  Auth, AuthZ, input valid  │  │  │
-  │  │  │  ┌──────────────────────┐  │  │  │
-  │  │  │  │  Layer 4: DATA       │  │  │  │
-  │  │  │  │  Encryption, masking │  │  │  │
-  │  │  │  └──────────────────────┘  │  │  │
-  │  │  └────────────────────────────┘  │  │
-  │  └──────────────────────────────────┘  │
-  └────────────────────────────────────────┘
-```
+![Defense in Depth diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-02.svg)
 
 ### Zero Trust Architecture
 
@@ -178,30 +147,7 @@ GOOD:
 
 ### Network Security
 
-```
-AWS VPC example:
-
-  ┌──── Public Subnet ─────────────┐
-  │  ALB (Load Balancer)           │ ← Internet-facing
-  │  NAT Gateway                   │
-  └────────┬───────────────────────┘
-           │
-  ┌────────┴── Private Subnet ─────┐
-  │  App Servers (EC2 / ECS)       │ ← No direct internet access
-  │  Security Group: Allow ALB:443 │
-  └────────┬───────────────────────┘
-           │
-  ┌────────┴── Private Subnet ─────┐
-  │  Database (RDS)                │ ← Most restricted
-  │  SG: Allow App servers:5432    │
-  │  No internet access at all     │
-  └────────────────────────────────┘
-
-  Principle: Minimize attack surface
-  • Only ALB is internet-facing
-  • App servers can't be reached directly
-  • DB can only be reached from app servers
-```
+![Network Security diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-03.svg)
 
 ### Security Headers
 
@@ -234,33 +180,7 @@ HTTP security headers every API/web app should set:
 
 ## D. Example: Securing an E-Commerce Platform
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Internet                                                  │
-│    │                                                       │
-│  ┌─┴──────────────┐                                      │
-│  │ CloudFlare WAF │ DDoS protection, bot detection       │
-│  └──────┬─────────┘                                      │
-│         │                                                  │
-│  ┌──────┴─────────┐                                      │
-│  │ API Gateway    │ Rate limiting, JWT validation,       │
-│  │                │ input validation, CORS               │
-│  └──────┬─────────┘                                      │
-│         │ mTLS                                            │
-│  ┌──────┴─────────┐     ┌──────────────┐                │
-│  │ App Services   │────►│ Vault        │ Secrets        │
-│  │ (K8s pods)     │     │ (HashiCorp)  │                │
-│  │ • AuthZ checks │     └──────────────┘                │
-│  │ • Input sanit  │                                      │
-│  └──────┬─────────┘                                      │
-│         │ encrypted connection                            │
-│  ┌──────┴─────────┐                                      │
-│  │ Database       │ Encryption at rest (AES-256)         │
-│  │ (RDS, private) │ PII columns encrypted                │
-│  │                │ Audit logging enabled                 │
-│  └────────────────┘                                      │
-└──────────────────────────────────────────────────────────┘
-```
+![D. Example: Securing an E-Commerce Platform diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-04.svg)
 
 ---
 
@@ -268,116 +188,85 @@ HTTP security headers every API/web app should set:
 
 ### E.1 HLD — Security Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  EDGE LAYER                                                │
-│  WAF → CDN → API Gateway (rate limit, auth, validation)   │
-│                                                            │
-│  NETWORK LAYER                                            │
-│  VPC → Subnets → Security Groups → Network ACLs          │
-│                                                            │
-│  APPLICATION LAYER                                        │
-│  AuthN (JWT) → AuthZ (RBAC) → Input validation →         │
-│  Business logic → Output encoding                         │
-│                                                            │
-│  DATA LAYER                                               │
-│  Encryption at rest → Encryption in transit →             │
-│  PII masking → Access logging → Backup encryption         │
-│                                                            │
-│  OPERATIONS LAYER                                         │
-│  Secrets Manager → Audit logs → SIEM → Vulnerability      │
-│  scanning → Penetration testing → Incident response       │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Security Architecture diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-05.svg)
 
 ### E.2 LLD — Input Validation Middleware
 
-```python
-import re
-from dataclasses import dataclass
+```java
+// Dependencies in the original example:
+// import re
+// from dataclasses import dataclass
 
-class InputValidator:
-    """Validates and sanitizes user input"""
-    
-    @staticmethod
-    def validate_email(email: str) -> str:
-        email = email.strip().lower()
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(pattern, email) or len(email) > 254:
-            raise ValueError("Invalid email format")
-        return email
+public class InputValidator {
+    // State inferred from the original Python example.
 
-    @staticmethod
-    def validate_string(value: str, field_name: str,
-                       min_len=1, max_len=255, allow_html=False) -> str:
-        if not isinstance(value, str):
-            raise ValueError(f"{field_name} must be a string")
-        value = value.strip()
-        if len(value) < min_len or len(value) > max_len:
-            raise ValueError(f"{field_name} must be {min_len}-{max_len} chars")
-        if not allow_html:
-            value = re.sub(r'<[^>]+>', '', value)  # Strip HTML tags
-        # Prevent null bytes
-        value = value.replace('\x00', '')
-        return value
+    public String validateEmail(String email) {
+        // email = email.strip().lower()
+        // pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        // if not re.match(pattern, email) or len(email) > 254
+        // raise ValueError("Invalid email format")
+        // return email
+        return null;
+    }
 
-    @staticmethod
-    def validate_amount(amount, min_val=0.01, max_val=1_000_000) -> float:
-        try:
-            amount = float(amount)
-        except (TypeError, ValueError):
-            raise ValueError("Amount must be a number")
-        if amount < min_val or amount > max_val:
-            raise ValueError(f"Amount must be between {min_val} and {max_val}")
-        return round(amount, 2)
+    public String validateString(String value, String fieldName, Object minLen, Object maxLen, boolean allowHtml) {
+        // if not isinstance(value, str)
+        // raise ValueError(f"{field_name} must be a string")
+        // value = value.strip()
+        // if len(value) < min_len or len(value) > max_len
+        // raise ValueError(f"{field_name} must be {min_len}-{max_len} chars")
+        // if not allow_html
+        // value = re.sub(r'<[^>]+>', '', value)  # Strip HTML tags
+        // Prevent null bytes
+        // ...
+        return null;
+    }
 
-    @staticmethod
-    def validate_id(value: str, field_name: str = "id") -> str:
-        """Validate UUID or numeric ID"""
-        value = str(value).strip()
-        uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        numeric_pattern = r'^\d{1,20}$'
-        if not (re.match(uuid_pattern, value) or re.match(numeric_pattern, value)):
-            raise ValueError(f"Invalid {field_name}")
-        return value
+    public double validateAmount(Object amount, Object minVal, Object maxVal) {
+        // try
+        // amount = float(amount)
+        // except (TypeError, ValueError)
+        // raise ValueError("Amount must be a number")
+        // if amount < min_val or amount > max_val
+        // raise ValueError(f"Amount must be between {min_val} and {max_val}")
+        // return round(amount, 2)
+        return 0;
+    }
 
+    public String validateId(String value, String fieldName) {
+        // Validate UUID or numeric ID
+        // value = str(value).strip()
+        // uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        // numeric_pattern = r'^\d{1,20}$'
+        // if not (re.match(uuid_pattern, value) or re.match(numeric_pattern, value))
+        // raise ValueError(f"Invalid {field_name}")
+        // return value
+        return null;
+    }
+}
 
-class SecurityMiddleware:
-    """Applies security checks to incoming requests"""
-    
-    def __init__(self, rate_limiter, auth_service):
-        self.rate_limiter = rate_limiter
-        self.auth = auth_service
+public class SecurityMiddleware {
+    private int rateLimiter;
+    private Object auth;
 
-    def process_request(self, request):
-        # 1. Rate limiting
-        if not self.rate_limiter.allow(request.client_ip):
-            return Response(429, "Too Many Requests")
+    public SecurityMiddleware(int rateLimiter, Object authService) {
+        this.rateLimiter = rateLimiter;
+        this.auth = authService;
+    }
 
-        # 2. Security headers
-        response_headers = {
-            "X-Content-Type-Options": "nosniff",
-            "X-Frame-Options": "DENY",
-            "Strict-Transport-Security": "max-age=31536000",
-            "Content-Security-Policy": "default-src 'self'",
-        }
-
-        # 3. Authentication
-        token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if not token:
-            return Response(401, "Missing authentication")
-        
-        user = self.auth.validate_token(token)
-        if not user:
-            return Response(401, "Invalid token")
-
-        # 4. Request size limit
-        if request.content_length > 10 * 1024 * 1024:  # 10 MB
-            return Response(413, "Request too large")
-
-        request.user = user
-        request.response_headers = response_headers
-        return None  # Continue to handler
+    public Object processRequest(Object request) {
+        // 1. Rate limiting
+        // if not rate_limiter.allow(request.client_ip)
+        // return Response(429, "Too Many Requests")
+        // 2. Security headers
+        // response_headers = {
+        // "X-Content-Type-Options": "nosniff",
+        // "X-Frame-Options": "DENY",
+        // "Strict-Transport-Security": "max-age=31536000",
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

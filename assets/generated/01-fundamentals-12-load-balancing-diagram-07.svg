@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="628" height="348" viewBox="0 0 628 348" role="img" aria-labelledby="title desc">
+  <title id="title">SSL/TLS Termination diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="626.8" height="346.8" rx="16" />
+  <g class="segments">
+    <line x1="99.60000000000001" y1="54" x2="108.00000000000001" y2="54" />
+    <line x1="108" y1="54" x2="116.4" y2="54" />
+    <line x1="158.4" y1="54" x2="166.8" y2="54" />
+    <line x1="166.8" y1="54" x2="175.20000000000002" y2="54" />
+    <line x1="217.20000000000002" y1="54" x2="225.60000000000002" y2="54" />
+    <line x1="225.60000000000002" y1="54" x2="234.00000000000003" y2="54" />
+    <line x1="267.6" y1="54" x2="276" y2="54" />
+    <line x1="276" y1="54" x2="284.4" y2="54" />
+    <line x1="99.60000000000001" y1="294" x2="108.00000000000001" y2="294" />
+    <line x1="108" y1="294" x2="116.4" y2="294" />
+    <line x1="158.4" y1="294" x2="166.8" y2="294" />
+    <line x1="166.8" y1="294" x2="175.20000000000002" y2="294" />
+    <line x1="217.20000000000002" y1="294" x2="225.60000000000002" y2="294" />
+    <line x1="225.60000000000002" y1="294" x2="234.00000000000003" y2="294" />
+    <line x1="276" y1="294" x2="284.4" y2="294" />
+    <line x1="284.40000000000003" y1="294" x2="292.8" y2="294" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">SSL at LB (recommended):</text>
+    <text x="24" y="59" xml:space="preserve">  Client   HTTPS  ► LB   HTTP  ► Servers</text>
+    <text x="24" y="99" xml:space="preserve">  Pros:</text>
+    <text x="24" y="119" xml:space="preserve">  • Servers don&apos;t need SSL certificates</text>
+    <text x="24" y="139" xml:space="preserve">  • LB handles CPU-intensive encryption/decryption</text>
+    <text x="24" y="159" xml:space="preserve">  • Easier certificate management (one place)</text>
+    <text x="24" y="199" xml:space="preserve">  Cons:</text>
+    <text x="24" y="219" xml:space="preserve">  • Traffic between LB and servers is unencrypted (OK within VPC)</text>
+    <text x="24" y="239" xml:space="preserve">  • If compliance requires end-to-end encryption: use SSL passthrough</text>
+    <text x="24" y="279" xml:space="preserve">SSL passthrough (L4):</text>
+    <text x="24" y="299" xml:space="preserve">  Client   HTTPS  ► LB   HTTPS  ► Servers</text>
+    <text x="24" y="319" xml:space="preserve">  LB can&apos;t inspect traffic (just routes TCP)</text>
+  </g>
+</svg>

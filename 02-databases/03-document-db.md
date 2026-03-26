@@ -1,4 +1,4 @@
-# Topic 03: Document Database
+﻿# Topic 03: Document Database
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -192,34 +192,7 @@ With index: B-tree lookup, orders of magnitude faster
 
 ### MongoDB Sharding
 
-```
-  ┌─────────────┐
-  │  mongos     │  Router: directs queries to correct shard
-  │  (router)   │
-  └──────┬──────┘
-         │
-  ┌──────┼──────────────────────────────────┐
-  │      │                                   │
-  ┌──────┴──────┐  ┌────────────┐  ┌────────┴───┐
-  │  Shard A    │  │  Shard B   │  │  Shard C   │
-  │  user_id    │  │  user_id   │  │  user_id   │
-  │  A-H        │  │  I-P       │  │  Q-Z       │
-  │  (replica   │  │  (replica  │  │  (replica  │
-  │   set)      │  │   set)     │  │   set)     │
-  └─────────────┘  └────────────┘  └────────────┘
-
-  Shard key: Determines data distribution
-  
-  Good shard keys:
-  ✓ High cardinality (many unique values)
-  ✓ Even distribution (no hot shards)
-  ✓ Matches query patterns (queries target 1 shard)
-  
-  Bad shard keys:
-  ✗ Low cardinality (status: "active"/"inactive")
-  ✗ Monotonically increasing (timestamps → all writes to last shard)
-  ✗ Not in query patterns (queries scatter to all shards)
-```
+![MongoDB Sharding diagram](../assets/generated/02-databases-03-document-db-diagram-01.svg)
 
 ### MongoDB vs PostgreSQL Decision
 
@@ -306,107 +279,77 @@ E-commerce product catalog with varying attributes per category:
 
 ### E.1 HLD — Document DB Product Service
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Clients                                                   │
-│      │                                                     │
-│  ┌───┴───────────┐                                        │
-│  │  API Gateway  │                                        │
-│  └───┬───────────┘                                        │
-│      │                                                     │
-│  ┌───┴────────────┐                                       │
-│  │ Product Service│                                       │
-│  └───┬────────────┘                                       │
-│      │                                                     │
-│  ┌───┴──────────────────────────────────────────────┐    │
-│  │  MongoDB Cluster (Sharded)                        │    │
-│  │                                                    │    │
-│  │  Shard Key: category + product_id (hashed)        │    │
-│  │                                                    │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐       │    │
-│  │  │ Shard 1  │  │ Shard 2  │  │ Shard 3  │       │    │
-│  │  │ Primary  │  │ Primary  │  │ Primary  │       │    │
-│  │  │ +2 Replicas│ │+2 Replicas│ │+2 Replicas│      │    │
-│  │  └──────────┘  └──────────┘  └──────────┘       │    │
-│  └───────────────────────────────────────────────────┘    │
-│                                                            │
-│  Cache: Redis (popular products, 5 min TTL)               │
-│  Search: Elasticsearch (synced via Change Streams)        │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Document DB Product Service diagram](../assets/generated/02-databases-03-document-db-diagram-02.svg)
 
 ### E.2 LLD — Document Repository
 
-```python
-from pymongo import MongoClient, ASCENDING, DESCENDING, TEXT
+```java
+// Dependencies in the original example:
+// from pymongo import MongoClient, ASCENDING, DESCENDING, TEXT
 
-class ProductRepository:
-    def __init__(self, mongo_client: MongoClient, db_name: str = "catalog"):
-        self.db = mongo_client[db_name]
-        self.collection = self.db["products"]
-        self._ensure_indexes()
+public class ProductRepository {
+    private Object db;
+    private Object collection;
 
-    def _ensure_indexes(self):
-        self.collection.create_index([("category", ASCENDING), ("price", ASCENDING)])
-        self.collection.create_index([("brand", ASCENDING)])
-        self.collection.create_index([("variants.sku", ASCENDING)], unique=True)
-        self.collection.create_index([("name", TEXT), ("brand", TEXT)])
+    public ProductRepository(Object mongoClient, String dbName) {
+        this.db = mongoClient[dbName];
+        this.collection = this.db.get("products");
+        // _ensure_indexes()
+    }
 
-    def get_by_id(self, product_id: str) -> dict | None:
-        return self.collection.find_one({"_id": product_id})
+    public Object ensureIndexes() {
+        // collection.create_index([("category", ASCENDING), ("price", ASCENDING)])
+        // collection.create_index([("brand", ASCENDING)])
+        // collection.create_index([("variants.sku", ASCENDING)], unique=true)
+        // collection.create_index([("name", TEXT), ("brand", TEXT)])
+        return null;
+    }
 
-    def get_by_sku(self, sku: str) -> dict | None:
-        return self.collection.find_one({"variants.sku": sku})
+    public Map<String, Object> getById(String productId) {
+        // return collection.find_one({"_id": product_id})
+        return null;
+    }
 
-    def search(self, query: str, category: str = None,
-               min_price: float = None, max_price: float = None,
-               page: int = 1, size: int = 20) -> dict:
-        filters = {}
-        if query:
-            filters["$text"] = {"$search": query}
-        if category:
-            filters["category"] = category
-        if min_price is not None or max_price is not None:
-            price_filter = {}
-            if min_price is not None:
-                price_filter["$gte"] = min_price
-            if max_price is not None:
-                price_filter["$lte"] = max_price
-            filters["price"] = price_filter
+    public Map<String, Object> getBySku(String sku) {
+        // return collection.find_one({"variants.sku": sku})
+        return null;
+    }
 
-        cursor = self.collection.find(filters) \
-            .sort([("rating.avg", DESCENDING)]) \
-            .skip((page - 1) * size) \
-            .limit(size)
+    public Map<String, Object> search(String query, String category, double minPrice, double maxPrice, int page, int size) {
+        // filters = {}
+        // if query
+        // filters["$text"] = {"$search": query}
+        // if category
+        // filters["category"] = category
+        // if min_price is not null or max_price is not null
+        // price_filter = {}
+        // if min_price is not null
+        // ...
+        return null;
+    }
 
-        total = self.collection.count_documents(filters)
-        return {
-            "products": list(cursor),
-            "total": total,
-            "page": page,
-            "pages": (total + size - 1) // size,
-        }
+    public boolean updateStock(String sku, int quantityChange) {
+        // result = collection.update_one(
+        // {"variants.sku": sku, "variants.stock": {"$gte": -quantity_change}},
+        // {"$inc": {"variants.$.stock": quantity_change}}
+        // )
+        // return result.modified_count > 0
+        return false;
+    }
 
-    def update_stock(self, sku: str, quantity_change: int) -> bool:
-        result = self.collection.update_one(
-            {"variants.sku": sku, "variants.stock": {"$gte": -quantity_change}},
-            {"$inc": {"variants.$.stock": quantity_change}}
-        )
-        return result.modified_count > 0
-
-    def update_rating(self, product_id: str, new_rating: float):
-        """Atomic update of computed rating fields"""
-        product = self.get_by_id(product_id)
-        if not product:
-            return
-        current = product.get("rating", {"avg": 0, "count": 0})
-        new_count = current["count"] + 1
-        new_avg = ((current["avg"] * current["count"]) + new_rating) / new_count
-
-        self.collection.update_one(
-            {"_id": product_id},
-            {"$set": {"rating.avg": round(new_avg, 2), "rating.count": new_count}}
-        )
+    public Object updateRating(String productId, double newRating) {
+        // Atomic update of computed rating fields
+        // product = get_by_id(product_id)
+        // if not product
+        // return
+        // current = product.get("rating", {"avg": 0, "count": 0})
+        // new_count = current["count"] + 1
+        // new_avg = ((current["avg"] * current["count"]) + new_rating) / new_count
+        // collection.update_one(
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Topic 31: Indexing
+﻿# Topic 31: Indexing
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -243,83 +243,43 @@ After: Query 1 takes 2ms (index scan, pre-sorted)
 
 ### E.1 HLD — Search Architecture with Indexes
 
-```
-┌──────────────────────────────────────────────────┐
-│  Application                                      │
-│      │                                            │
-│  ┌───┴──────────────────────────┐                │
-│  │  Query Router                │                │
-│  │  Analyzes query → picks index│                │
-│  └───┬──────────────────────────┘                │
-│      │                                            │
-│  ┌───┴──────────────────────────────────────┐    │
-│  │  PostgreSQL                               │    │
-│  │                                            │    │
-│  │  Table: orders (50M rows, 20 GB)          │    │
-│  │                                            │    │
-│  │  Indexes:                                  │    │
-│  │    idx_orders_pkey (B-tree, id)     1.2 GB│    │
-│  │    idx_orders_user (B-tree, user_id) 800 MB│   │
-│  │    idx_orders_email (Hash, email)    600 MB│   │
-│  │    idx_orders_date (BRIN, created_at) 10 MB│   │
-│  │    idx_orders_search (GIN, JSONB)    2 GB │    │
-│  │                                            │    │
-│  │  Total index size: 4.6 GB (23% of table)  │    │
-│  └────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────┘
-```
+![E.1 HLD — Search Architecture with Indexes diagram](../assets/generated/01-fundamentals-31-indexing-diagram-01.svg)
 
 ### E.2 LLD — Index Advisor
 
-```python
-class IndexAdvisor:
-    """Analyzes slow queries and recommends indexes"""
-    
-    def __init__(self, db_conn):
-        self.db = db_conn
+```java
+public class IndexAdvisor {
+    private Object db;
 
-    def analyze_query(self, query: str) -> dict:
-        """Run EXPLAIN ANALYZE and return recommendations"""
-        plan = self.db.execute(f"EXPLAIN (ANALYZE, FORMAT JSON) {query}")
-        
-        recommendations = []
-        total_cost = plan[0]["Plan"]["Total Cost"]
-        node_type = plan[0]["Plan"]["Node Type"]
-        
-        if node_type == "Seq Scan" and total_cost > 1000:
-            table = plan[0]["Plan"]["Relation Name"]
-            filter_col = self._extract_filter_columns(plan)
-            recommendations.append({
-                "type": "CREATE_INDEX",
-                "table": table,
-                "columns": filter_col,
-                "reason": f"Seq scan with cost {total_cost}; index would reduce to ~10",
-            })
-        
-        if "Sort" in str(plan) and "Sort Key" in str(plan):
-            sort_cols = self._extract_sort_columns(plan)
-            recommendations.append({
-                "type": "ADD_TO_INDEX",
-                "columns": sort_cols,
-                "reason": "Sort operation could be eliminated with index",
-            })
+    public IndexAdvisor(Object dbConn) {
+        this.db = dbConn;
+    }
 
-        return {
-            "current_cost": total_cost,
-            "scan_type": node_type,
-            "recommendations": recommendations,
-        }
+    public Map<String, Object> analyzeQuery(String query) {
+        // Run EXPLAIN ANALYZE and return recommendations
+        // plan = db.execute(f"EXPLAIN (ANALYZE, FORMAT JSON) {query}")
+        // recommendations = []
+        // total_cost = plan[0]["Plan"]["Total Cost"]
+        // node_type = plan[0]["Plan"]["Node Type"]
+        // if node_type == "Seq Scan" and total_cost > 1000
+        // table = plan[0]["Plan"]["Relation Name"]
+        // filter_col = _extract_filter_columns(plan)
+        // ...
+        return null;
+    }
 
-    def find_unused_indexes(self, min_age_days=30):
-        """Find indexes that haven't been used"""
-        query = """
-            SELECT indexrelname, idx_scan, pg_relation_size(indexrelid) as size
-            FROM pg_stat_user_indexes
-            WHERE idx_scan = 0
-            AND schemaname = 'public'
-            ORDER BY pg_relation_size(indexrelid) DESC
-        """
-        return self.db.execute(query)
+    public Object findUnusedIndexes(Object minAgeDays) {
+        // Find indexes that haven't been used
+        // query =
+        // SELECT indexrelname, idx_scan, pg_relation_size(indexrelid) as size
+        // FROM pg_stat_user_indexes
+        // WHERE idx_scan = 0
+        // AND schemaname = 'public'
+        // ORDER BY pg_relation_size(indexrelid) DESC
+        // return db.execute(query)
+        return null;
+    }
+}
 ```
 
 ---

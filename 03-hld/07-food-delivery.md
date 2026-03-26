@@ -1,4 +1,4 @@
-# HLD 07: Food Delivery (DoorDash / Uber Eats)
+﻿# HLD 07: Food Delivery (DoorDash / Uber Eats)
 
 > **Difficulty**: Hard
 > **Key Concepts**: Multi-party system, ETA, dispatch optimization, real-time tracking
@@ -64,18 +64,7 @@ graph TD
 
 ### Order State Machine
 
-```
-PLACED → CONFIRMED → PREPARING → READY → PICKED_UP → ON_THE_WAY → DELIVERED
-  │         │                                                         │
-  └→ CANCELLED (by customer, before PREPARING)                       └→ COMPLETED
-              └→ REJECTED (by restaurant, if can't fulfill)
-              
-Each transition:
-  1. Validate transition is allowed (state machine rules)
-  2. Update DB (PostgreSQL, with optimistic locking)
-  3. Emit event to Kafka (order.status_changed)
-  4. Notify relevant parties (customer, restaurant, driver)
-```
+![Order State Machine diagram](../assets/generated/03-hld-07-food-delivery-diagram-01.svg)
 
 ### Dispatch / Driver Assignment
 

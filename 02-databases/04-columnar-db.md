@@ -1,4 +1,4 @@
-# Topic 04: Columnar Database
+﻿# Topic 04: Columnar Database
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -164,42 +164,7 @@ Wide-column: Row key → many dynamic columns
 
 ### Star Schema
 
-```
-Central FACT table surrounded by DIMENSION tables:
-
-                    ┌──────────┐
-                    │ dim_date │
-                    │ date_id  │
-                    │ year     │
-                    │ quarter  │
-                    │ month    │
-                    └────┬─────┘
-                         │
-  ┌──────────┐    ┌──────┴──────┐    ┌──────────┐
-  │dim_product│    │ fact_sales  │    │dim_store │
-  │product_id │───►│ date_id    │◄───│store_id  │
-  │name       │    │ product_id │    │city      │
-  │category   │    │ store_id   │    │region    │
-  │brand      │    │ customer_id│    └──────────┘
-  └──────────┘    │ quantity   │
-                   │ revenue    │    ┌──────────┐
-                   │ cost       │    │dim_cust  │
-                   └──────┬─────┘───►│cust_id   │
-                          │          │segment   │
-                          │          └──────────┘
-
-  Query: Revenue by product category and region for Q4 2024
-    SELECT p.category, s.region, SUM(f.revenue)
-    FROM fact_sales f
-    JOIN dim_product p ON f.product_id = p.product_id
-    JOIN dim_store s ON f.store_id = s.store_id
-    JOIN dim_date d ON f.date_id = d.date_id
-    WHERE d.quarter = 'Q4' AND d.year = 2024
-    GROUP BY p.category, s.region
-
-  Fact table: millions/billions of rows (events, transactions)
-  Dimension tables: thousands of rows (products, stores, dates)
-```
+![Star Schema diagram](../assets/generated/02-databases-04-columnar-db-diagram-01.svg)
 
 ### Partitioning and Clustering
 
@@ -250,41 +215,7 @@ BigQuery pricing: $5 per TB scanned
 
 ## D. Example: Real-Time Analytics Dashboard
 
-```
-E-commerce analytics: track events, compute metrics, serve dashboards.
-
-  ┌──────────────────────────────────────────────────┐
-  │  Event sources (web, mobile, API)                 │
-  │      │                                            │
-  │  ┌───┴──────────┐                                │
-  │  │  Kafka       │  Event stream                  │
-  │  │  (raw events)│                                │
-  │  └───┬──────────┘                                │
-  │      │                                            │
-  │  ┌───┴──────────┐                                │
-  │  │  ClickHouse  │  10B events, 30-day retention  │
-  │  │  (3 shards,  │  Partitioned by day            │
-  │  │   2 replicas)│  Ordered by event_type, user_id│
-  │  └───┬──────────┘                                │
-  │      │                                            │
-  │  ┌───┴──────────┐                                │
-  │  │  Grafana     │  Real-time dashboards          │
-  │  │  dashboards  │  Sub-second query latency      │
-  │  └─────────────┘                                 │
-  └──────────────────────────────────────────────────┘
-
-  ClickHouse query (executes in <1 second on 10B rows):
-    SELECT
-      toStartOfHour(event_time) AS hour,
-      countIf(event_type = 'page_view') AS views,
-      countIf(event_type = 'add_to_cart') AS adds,
-      countIf(event_type = 'purchase') AS purchases,
-      purchases / views AS conversion_rate
-    FROM events
-    WHERE event_date = today()
-    GROUP BY hour
-    ORDER BY hour
-```
+![D. Example: Real-Time Analytics Dashboard diagram](../assets/generated/02-databases-04-columnar-db-diagram-02.svg)
 
 ---
 
@@ -292,111 +223,59 @@ E-commerce analytics: track events, compute metrics, serve dashboards.
 
 ### E.1 HLD — Analytics Data Pipeline
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  OLTP (Source of Truth)                                    │
-│  PostgreSQL (orders, users, products)                     │
-│      │                                                     │
-│  ┌───┴──────────┐                                         │
-│  │  CDC / ETL   │  Debezium → Kafka → Spark              │
-│  │  (nightly +  │  or Fivetran / Airbyte                  │
-│  │   real-time) │                                         │
-│  └───┬──────────┘                                         │
-│      │                                                     │
-│  ┌───┴──────────────────────────────────────────────┐    │
-│  │  OLAP (Analytics)                                 │    │
-│  │                                                    │    │
-│  │  Data Warehouse (Redshift / BigQuery / Snowflake)  │    │
-│  │  • fact_orders (partitioned by date)              │    │
-│  │  • fact_events (partitioned by date)              │    │
-│  │  • dim_users, dim_products, dim_dates             │    │
-│  │  • Materialized views for common dashboards       │    │
-│  └───┬──────────────────────────────────────────────┘    │
-│      │                                                     │
-│  ┌───┴──────────┐                                         │
-│  │  BI Layer    │  Looker, Metabase, Tableau, Grafana    │
-│  │  (dashboards,│                                         │
-│  │   reports)   │                                         │
-│  └──────────────┘                                         │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Analytics Data Pipeline diagram](../assets/generated/02-databases-04-columnar-db-diagram-03.svg)
 
 ### E.2 LLD — Analytics Query Service
 
-```python
-class AnalyticsService:
-    """Service layer for analytical queries against columnar DB"""
-    
-    def __init__(self, clickhouse_client, cache_client):
-        self.ch = clickhouse_client
-        self.cache = cache_client
+```java
+public class AnalyticsService {
+    private Object ch;
+    private Object cache;
 
-    def get_revenue_by_period(self, start_date: str, end_date: str,
-                              group_by: str = "day") -> list:
-        cache_key = f"revenue:{start_date}:{end_date}:{group_by}"
-        cached = self.cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
+    public AnalyticsService(Object clickhouseClient, Object cacheClient) {
+        this.ch = clickhouseClient;
+        this.cache = cacheClient;
+    }
 
-        time_func = {
-            "hour": "toStartOfHour(order_time)",
-            "day": "toDate(order_time)",
-            "week": "toStartOfWeek(order_time)",
-            "month": "toStartOfMonth(order_time)",
-        }.get(group_by, "toDate(order_time)")
+    public List<Object> getRevenueByPeriod(String startDate, String endDate, String groupBy) {
+        // cache_key = f"revenue:{start_date}:{end_date}:{group_by}"
+        // cached = cache.get(cache_key)
+        // if cached
+        // return json.loads(cached)
+        // time_func = {
+        // "hour": "toStartOfHour(order_time)",
+        // "day": "toDate(order_time)",
+        // "week": "toStartOfWeek(order_time)",
+        // ...
+        return null;
+    }
 
-        query = f"""
-            SELECT
-                {time_func} AS period,
-                count() AS order_count,
-                sum(revenue) AS total_revenue,
-                avg(revenue) AS avg_order_value,
-                uniqExact(user_id) AS unique_customers
-            FROM fact_orders
-            WHERE order_date >= %(start)s AND order_date <= %(end)s
-            GROUP BY period
-            ORDER BY period
-        """
-        result = self.ch.execute(query, {"start": start_date, "end": end_date})
-        
-        # Cache for 5 minutes (analytics can be slightly stale)
-        self.cache.setex(cache_key, 300, json.dumps(result))
-        return result
+    public List<Object> getTopProducts(String date, int limit) {
+        // query =
+        // SELECT
+        // product_id,
+        // any(product_name) AS name,
+        // sum(quantity) AS units_sold,
+        // sum(revenue) AS total_revenue
+        // FROM fact_orders
+        // WHERE order_date = %(date)s
+        // ...
+        return null;
+    }
 
-    def get_top_products(self, date: str, limit: int = 20) -> list:
-        query = """
-            SELECT
-                product_id,
-                any(product_name) AS name,
-                sum(quantity) AS units_sold,
-                sum(revenue) AS total_revenue
-            FROM fact_orders
-            WHERE order_date = %(date)s
-            GROUP BY product_id
-            ORDER BY total_revenue DESC
-            LIMIT %(limit)s
-        """
-        return self.ch.execute(query, {"date": date, "limit": limit})
-
-    def get_funnel(self, date: str) -> dict:
-        query = """
-            SELECT
-                countIf(event_type = 'page_view') AS views,
-                countIf(event_type = 'add_to_cart') AS carts,
-                countIf(event_type = 'checkout_start') AS checkouts,
-                countIf(event_type = 'purchase') AS purchases
-            FROM fact_events
-            WHERE event_date = %(date)s
-        """
-        row = self.ch.execute(query, {"date": date})[0]
-        return {
-            "views": row[0],
-            "carts": row[1],
-            "checkouts": row[2],
-            "purchases": row[3],
-            "view_to_cart": round(row[1] / max(row[0], 1) * 100, 2),
-            "cart_to_purchase": round(row[3] / max(row[1], 1) * 100, 2),
-        }
+    public Map<String, Object> getFunnel(String date) {
+        // query =
+        // SELECT
+        // countIf(event_type = 'page_view') AS views,
+        // countIf(event_type = 'add_to_cart') AS carts,
+        // countIf(event_type = 'checkout_start') AS checkouts,
+        // countIf(event_type = 'purchase') AS purchases
+        // FROM fact_events
+        // WHERE event_date = %(date)s
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

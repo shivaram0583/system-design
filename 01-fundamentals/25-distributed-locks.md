@@ -1,4 +1,4 @@
-# Topic 25: Distributed Locks
+﻿# Topic 25: Distributed Locks
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -203,24 +203,7 @@ Alerts:
 
 ## D. Example: Inventory Reservation with Lock
 
-```
-E-commerce: Reserve last item
-
-  ┌──────────┐     ┌───────┐     ┌───────────┐
-  │ Order    │────►│ Redis │────►│ Inventory │
-  │ Service  │     │ Lock  │     │ DB        │
-  └──────────┘     └───────┘     └───────────┘
-
-  Flow:
-  1. Acquire lock: SET lock:product_456 {owner} NX EX 10
-  2. Read inventory: SELECT stock FROM products WHERE id = 456
-  3. If stock > 0: UPDATE products SET stock = stock - 1 WHERE id = 456
-  4. Release lock: DEL lock:product_456 (with owner check)
-  
-  Better approach (no lock needed):
-  UPDATE products SET stock = stock - 1 WHERE id = 456 AND stock > 0;
-  If rows_affected = 0 → out of stock (atomic, no lock!)
-```
+![D. Example: Inventory Reservation with Lock diagram](../assets/generated/01-fundamentals-25-distributed-locks-diagram-01.svg)
 
 ---
 
@@ -228,101 +211,98 @@ E-commerce: Reserve last item
 
 ### E.1 HLD — Lock Service
 
-```
-┌──────────────────────────────────────────────┐
-│  Clients (multiple services)                  │
-│  ┌──────┐ ┌──────┐ ┌──────┐                 │
-│  │Svc A │ │Svc B │ │Svc C │                 │
-│  └──┬───┘ └──┬───┘ └──┬───┘                 │
-│     └────────┼────────┘                      │
-│              ▼                                │
-│  ┌───────────────────────┐                   │
-│  │  Lock Service API     │                   │
-│  │  POST /lock/acquire   │                   │
-│  │  POST /lock/release   │                   │
-│  │  POST /lock/extend    │                   │
-│  └───────────┬───────────┘                   │
-│              │                                │
-│  ┌───────────┴───────────┐                   │
-│  │  Redis Cluster        │                   │
-│  │  (3 masters, 3 replicas)│                 │
-│  └───────────────────────┘                   │
-└──────────────────────────────────────────────┘
-```
+![E.1 HLD — Lock Service diagram](../assets/generated/01-fundamentals-25-distributed-locks-diagram-02.svg)
 
 ### E.2 LLD — Distributed Lock with Redis
 
-```python
-import uuid
-import time
+```java
+// Dependencies in the original example:
+// import uuid
+// import time
 
-class DistributedLock:
-    def __init__(self, redis_client, lock_name: str, ttl_sec: int = 30):
-        self.redis = redis_client
-        self.lock_name = f"lock:{lock_name}"
-        self.ttl = ttl_sec
-        self.owner_id = str(uuid.uuid4())
-        self._renewal_thread = None
+public class DistributedLock {
+    private Object redis;
+    private String lockName;
+    private int ttl;
+    private String ownerId;
+    private Object renewalThread;
 
-    def acquire(self, wait_timeout: float = 10.0) -> bool:
-        """Try to acquire the lock within wait_timeout seconds"""
-        deadline = time.time() + wait_timeout
-        while time.time() < deadline:
-            acquired = self.redis.set(
-                self.lock_name, self.owner_id, nx=True, ex=self.ttl
-            )
-            if acquired:
-                self._start_renewal()
-                return True
-            time.sleep(0.1)  # Brief wait before retry
-        return False
+    public DistributedLock(Object redisClient, String lockName, int ttlSec) {
+        this.redis = redisClient;
+        this.lockName = "lock:" + lockName;
+        this.ttl = ttlSec;
+        this.ownerId = UUID.randomUUID().toString();
+        this.renewalThread = null;
+    }
 
-    def release(self) -> bool:
-        """Release the lock (only if we own it)"""
-        self._stop_renewal()
-        # Atomic check-and-delete via Lua
-        lua_script = """
-        if redis.call("GET", KEYS[1]) == ARGV[1] then
-            return redis.call("DEL", KEYS[1])
-        else
-            return 0
-        end
-        """
-        result = self.redis.eval(lua_script, 1, self.lock_name, self.owner_id)
-        return result == 1
+    public boolean acquire(double waitTimeout) {
+        // Try to acquire the lock within wait_timeout seconds
+        // deadline = time.time() + wait_timeout
+        // while time.time() < deadline
+        // acquired = redis.set(
+        // lock_name, owner_id, nx=true, ex=ttl
+        // )
+        // if acquired
+        // _start_renewal()
+        // ...
+        return false;
+    }
 
-    def _start_renewal(self):
-        """Renew lock before TTL expires"""
-        import threading
-        def renew():
-            while True:
-                time.sleep(self.ttl // 3)
-                if not self._extend():
-                    break
-        self._renewal_thread = threading.Thread(target=renew, daemon=True)
-        self._renewal_thread.start()
+    public boolean release() {
+        // Release the lock (only if we own it)
+        // _stop_renewal()
+        // Atomic check-and-delete via Lua
+        // lua_script =
+        // if redis.call("GET", KEYS[1]) == ARGV[1] then
+        // return redis.call("DEL", KEYS[1])
+        // else
+        // return 0
+        // ...
+        return false;
+    }
 
-    def _extend(self) -> bool:
-        lua_script = """
-        if redis.call("GET", KEYS[1]) == ARGV[1] then
-            return redis.call("EXPIRE", KEYS[1], ARGV[2])
-        else
-            return 0
-        end
-        """
-        result = self.redis.eval(lua_script, 1, self.lock_name, self.owner_id, self.ttl)
-        return result == 1
+    public Object startRenewal() {
+        // Renew lock before TTL expires
+        // import threading
+        // def renew()
+        // while true
+        // time.sleep(ttl // 3)
+        // if not _extend()
+        // break
+        // _renewal_thread = threading.Thread(target=renew, daemon=true)
+        // ...
+        return null;
+    }
 
-    def _stop_renewal(self):
-        self._renewal_thread = None  # Daemon thread will stop
+    public boolean extend() {
+        // lua_script =
+        // if redis.call("GET", KEYS[1]) == ARGV[1] then
+        // return redis.call("EXPIRE", KEYS[1], ARGV[2])
+        // else
+        // return 0
+        // end
+        // result = redis.eval(lua_script, 1, lock_name, owner_id, ttl)
+        // return result == 1
+        return false;
+    }
 
-    def __enter__(self):
-        if not self.acquire():
-            raise TimeoutError("Could not acquire lock")
-        return self
+    public Object stopRenewal() {
+        // _renewal_thread = null  # Daemon thread will stop
+        return null;
+    }
 
-    def __exit__(self, *args):
-        self.release()
+    public Object enter() {
+        // if not acquire()
+        // raise TimeoutError("Could not acquire lock")
+        // return self
+        return null;
+    }
+
+    public Object exit() {
+        // release()
+        return null;
+    }
+}
 ```
 
 ---

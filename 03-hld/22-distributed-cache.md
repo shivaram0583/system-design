@@ -1,4 +1,4 @@
-# HLD 22: Distributed Cache
+﻿# HLD 22: Distributed Cache
 
 > **Difficulty**: Medium
 > **Key Concepts**: Consistent hashing, eviction policies, replication, cache patterns
@@ -45,30 +45,7 @@ graph TD
 
 ### Consistent Hashing
 
-```
-Problem: Simple hash (key % N) breaks when adding/removing nodes.
-  hash("user:123") % 3 = node 1
-  Add 4th node: hash("user:123") % 4 = node 3 → DIFFERENT node!
-  All keys rehash → massive cache miss storm.
-
-Consistent hashing:
-  Place nodes on a hash ring (0 to 2^32).
-  For each key: hash(key) → walk clockwise → first node = owner.
-
-  Ring: 0 ──── Node A (pos 100) ──── Node B (pos 200) ──── Node C (pos 300) ──── 0
-  
-  hash("user:123") = 150 → walks clockwise → Node B
-  hash("user:456") = 250 → walks clockwise → Node C
-
-  Add Node D at position 250:
-    Only keys between 200-250 move from C to D.
-    Other keys stay on their current node.
-    Only ~1/N keys rehash (not all keys).
-
-  Virtual nodes: Each physical node has 100-200 virtual positions.
-    Ensures even distribution of keys.
-    Node A: positions [10, 45, 120, 189, ...]
-```
+![Consistent Hashing diagram](../assets/generated/03-hld-22-distributed-cache-diagram-01.svg)
 
 ### Eviction Policies
 

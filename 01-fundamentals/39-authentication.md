@@ -1,4 +1,4 @@
-# Topic 39: Authentication (AuthN)
+﻿# Topic 39: Authentication (AuthN)
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -51,61 +51,11 @@ AuthN vs AuthZ:
 
 ### Session-Based Authentication
 
-```
-  ┌────────┐  1. POST /login {user, pass}   ┌──────────┐
-  │ Client │────────────────────────────────►│  Server  │
-  │        │                                  │          │
-  │        │  2. Set-Cookie: session_id=abc   │ Session  │
-  │        │◄────────────────────────────────│ Store:   │
-  │        │                                  │ abc →    │
-  │        │  3. GET /api/data               │ {user:1} │
-  │        │  Cookie: session_id=abc          │          │
-  │        │────────────────────────────────►│ Lookup   │
-  │        │                                  │ abc →    │
-  │        │  4. 200 OK {data}               │ user 1   │
-  │        │◄────────────────────────────────│          │
-  └────────┘                                  └──────────┘
-
-  Session stored in:
-    Memory (single server only)
-    Redis (distributed, recommended)
-    Database (slowest, most durable)
-
-  Pros: Server can invalidate instantly, full control
-  Cons: Stateful, requires session store, sticky sessions or shared store
-```
+![Session-Based Authentication diagram](../assets/generated/01-fundamentals-39-authentication-diagram-01.svg)
 
 ### Token-Based Authentication (JWT)
 
-```
-  ┌────────┐  1. POST /login {user, pass}   ┌──────────┐
-  │ Client │────────────────────────────────►│  Server  │
-  │        │                                  │          │
-  │        │  2. { access_token: "eyJ...",   │ Verify   │
-  │        │       refresh_token: "xyz..." } │ creds    │
-  │        │◄────────────────────────────────│ Sign JWT │
-  │        │                                  └──────────┘
-  │        │  3. GET /api/data
-  │        │  Authorization: Bearer eyJ...
-  │        │────────────────────────────────►┌──────────┐
-  │        │                                  │ Any      │
-  │        │  4. 200 OK {data}               │ Server   │
-  │        │◄────────────────────────────────│ Verify   │
-  └────────┘                                  │ signature│
-                                              └──────────┘
-
-  JWT = Header.Payload.Signature (base64 encoded)
-  
-  Header: {"alg": "RS256", "typ": "JWT"}
-  Payload: {"sub": "usr_123", "role": "admin", "exp": 1705363200}
-  Signature: RS256(header + payload, private_key)
-
-  Verification: Any server with the public key can verify the token.
-  No session store needed → stateless → scales horizontally.
-
-  Pros: Stateless, scalable, cross-service
-  Cons: Can't revoke until expiry (use short expiry + refresh tokens)
-```
+![Token-Based Authentication (JWT) diagram](../assets/generated/01-fundamentals-39-authentication-diagram-02.svg)
 
 ### Access Token + Refresh Token Pattern
 
@@ -208,56 +158,13 @@ Solutions:
 
 ### Authentication in Microservices
 
-```
-API Gateway authenticates → passes identity to downstream services:
-
-  ┌────────┐        ┌────────────┐        ┌──────────┐
-  │ Client │──JWT──►│ API Gateway│──────►│ Service A│
-  └────────┘        │ • Validate │ user_id│          │
-                    │   JWT      │ role   │ Trusts   │
-                    │ • Extract  │ in     │ gateway  │
-                    │   claims   │ header │          │
-                    └────────────┘        └──────────┘
-
-  Gateway validates JWT once.
-  Passes user_id, roles as internal headers (X-User-Id, X-Roles).
-  Downstream services trust the gateway (internal network only).
-  
-  Alternative: Each service validates JWT independently.
-  More secure (zero trust) but more compute overhead.
-```
+![Authentication in Microservices diagram](../assets/generated/01-fundamentals-39-authentication-diagram-03.svg)
 
 ---
 
 ## D. Example: Auth System for SaaS App
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Auth Flow:                                            │
-│                                                        │
-│  1. POST /auth/register                               │
-│     {email, password} → hash password → save user     │
-│                                                        │
-│  2. POST /auth/login                                  │
-│     {email, password} → verify → issue JWT pair       │
-│     { access_token (15 min), refresh_token (30 days)} │
-│     Set refresh_token as httpOnly secure cookie        │
-│                                                        │
-│  3. GET /api/data (Authorization: Bearer <access_token>)│
-│     → Verify JWT signature → extract user_id → serve  │
-│                                                        │
-│  4. POST /auth/refresh (Cookie: refresh_token=xyz)    │
-│     → Verify refresh token → rotate → new access_token│
-│                                                        │
-│  5. POST /auth/logout                                 │
-│     → Revoke refresh token → clear cookie             │
-│                                                        │
-│  Storage:                                              │
-│    Users: PostgreSQL (id, email, password_hash, mfa)  │
-│    Refresh tokens: Redis (token → user_id, expires)   │
-│    Access tokens: Stateless (JWT, verified by signature)│
-└──────────────────────────────────────────────────────┘
-```
+![D. Example: Auth System for SaaS App diagram](../assets/generated/01-fundamentals-39-authentication-diagram-04.svg)
 
 ---
 
@@ -265,120 +172,98 @@ API Gateway authenticates → passes identity to downstream services:
 
 ### E.1 HLD — Authentication Service
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Clients                                               │
-│      │                                                 │
-│  ┌───┴───────────┐                                    │
-│  │  API Gateway  │  Validates JWT on every request    │
-│  └───┬───────────┘                                    │
-│      │                                                 │
-│  ┌───┴───────────┐     ┌──────────────┐              │
-│  │  Auth Service │────►│ PostgreSQL   │ Users table  │
-│  │  /login       │     │              │              │
-│  │  /register    │     └──────────────┘              │
-│  │  /refresh     │                                    │
-│  │  /logout      │     ┌──────────────┐              │
-│  │               │────►│ Redis        │ Refresh      │
-│  │  Signs JWTs   │     │              │ tokens,      │
-│  │  Hashes PWs   │     │              │ blocklist    │
-│  └───────────────┘     └──────────────┘              │
-│                                                        │
-│  JWT signing: RS256 (asymmetric)                      │
-│    Auth service: has private key (signs)               │
-│    All services: have public key (verify)              │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Authentication Service diagram](../assets/generated/01-fundamentals-39-authentication-diagram-05.svg)
 
 ### E.2 LLD — Authentication Service
 
-```python
-import bcrypt
-import jwt
-import uuid
-import time
+```java
+// Dependencies in the original example:
+// import bcrypt
+// import jwt
+// import uuid
+// import time
 
-class AuthService:
-    def __init__(self, db, redis, private_key, public_key):
-        self.db = db
-        self.redis = redis
-        self.private_key = private_key
-        self.public_key = public_key
-        self.access_ttl = 900       # 15 minutes
-        self.refresh_ttl = 2592000  # 30 days
+public class AuthService {
+    private Object db;
+    private Object redis;
+    private Object privateKey;
+    private Object publicKey;
+    private int accessTtl;
+    private int refreshTtl;
 
-    def register(self, email: str, password: str) -> dict:
-        # Validate
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        
-        # Hash password
-        password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(12))
-        
-        # Save user
-        user_id = str(uuid.uuid4())
-        self.db.execute(
-            "INSERT INTO users (id, email, password_hash) VALUES (%s, %s, %s)",
-            (user_id, email, password_hash.decode())
-        )
-        return {"user_id": user_id}
+    public AuthService(Object db, Object redis, Object privateKey, Object publicKey) {
+        this.db = db;
+        this.redis = redis;
+        this.privateKey = privateKey;
+        this.publicKey = publicKey;
+        this.accessTtl = 900;
+        this.refreshTtl = 2592000;
+    }
 
-    def login(self, email: str, password: str) -> dict:
-        user = self.db.get("SELECT * FROM users WHERE email = %s", (email,))
-        if not user:
-            raise AuthError("Invalid credentials")
-        
-        if not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
-            raise AuthError("Invalid credentials")
-        
-        return self._issue_tokens(user["id"], user.get("role", "user"))
+    public Map<String, Object> register(String email, String password) {
+        // Validate
+        // if len(password) < 8
+        // raise ValueError("Password must be at least 8 characters")
+        // Hash password
+        // password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(12))
+        // Save user
+        // user_id = str(uuid.uuid4())
+        // db.execute(
+        // ...
+        return null;
+    }
 
-    def refresh(self, refresh_token: str) -> dict:
-        # Validate refresh token in Redis
-        token_data = self.redis.get(f"refresh:{refresh_token}")
-        if not token_data:
-            raise AuthError("Invalid refresh token")
-        
-        user_id, role = token_data.split(":")
-        
-        # Rotate: delete old, issue new
-        self.redis.delete(f"refresh:{refresh_token}")
-        return self._issue_tokens(user_id, role)
+    public Map<String, Object> login(String email, String password) {
+        // user = db.get("SELECT * FROM users WHERE email = %s", (email,))
+        // if not user
+        // raise AuthError("Invalid credentials")
+        // if not bcrypt.checkpw(password.encode(), user["password_hash"].encode())
+        // raise AuthError("Invalid credentials")
+        // return _issue_tokens(user["id"], user.get("role", "user"))
+        return null;
+    }
 
-    def logout(self, refresh_token: str):
-        self.redis.delete(f"refresh:{refresh_token}")
+    public Map<String, Object> refresh(String refreshToken) {
+        // Validate refresh token in Redis
+        // token_data = redis.get(f"refresh:{refresh_token}")
+        // if not token_data
+        // raise AuthError("Invalid refresh token")
+        // user_id, role = token_data.split(":")
+        // Rotate: delete old, issue new
+        // redis.delete(f"refresh:{refresh_token}")
+        // return _issue_tokens(user_id, role)
+        return null;
+    }
 
-    def verify_access_token(self, token: str) -> dict:
-        try:
-            payload = jwt.decode(token, self.public_key, algorithms=["RS256"])
-            return {"user_id": payload["sub"], "role": payload["role"]}
-        except jwt.ExpiredSignatureError:
-            raise AuthError("Token expired")
-        except jwt.InvalidTokenError:
-            raise AuthError("Invalid token")
+    public Object logout(String refreshToken) {
+        // redis.delete(f"refresh:{refresh_token}")
+        return null;
+    }
 
-    def _issue_tokens(self, user_id: str, role: str) -> dict:
-        now = int(time.time())
-        
-        access_token = jwt.encode({
-            "sub": user_id,
-            "role": role,
-            "iat": now,
-            "exp": now + self.access_ttl,
-        }, self.private_key, algorithm="RS256")
+    public Map<String, Object> verifyAccessToken(String token) {
+        // try
+        // payload = jwt.decode(token, public_key, algorithms=["RS256"])
+        // return {"user_id": payload["sub"], "role": payload["role"]}
+        // except jwt.ExpiredSignatureError
+        // raise AuthError("Token expired")
+        // except jwt.InvalidTokenError
+        // raise AuthError("Invalid token")
+        return null;
+    }
 
-        refresh_token = str(uuid.uuid4())
-        self.redis.setex(
-            f"refresh:{refresh_token}",
-            self.refresh_ttl,
-            f"{user_id}:{role}"
-        )
-
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "expires_in": self.access_ttl,
-        }
+    public Map<String, Object> issueTokens(String userId, String role) {
+        // now = int(time.time())
+        // access_token = jwt.encode({
+        // "sub": user_id,
+        // "role": role,
+        // "iat": now,
+        // "exp": now + access_ttl,
+        // }, private_key, algorithm="RS256")
+        // refresh_token = str(uuid.uuid4())
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

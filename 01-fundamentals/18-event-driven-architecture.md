@@ -1,4 +1,4 @@
-# Topic 18: Event-Driven Architecture
+﻿# Topic 18: Event-Driven Architecture
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -23,19 +23,7 @@
 
 An architectural pattern where services communicate by producing and consuming **events** — records of something that happened — rather than making direct synchronous calls.
 
-```
-REQUEST-DRIVEN (synchronous):
-  Order Service ──call──► Payment Service ──call──► Inventory Service
-  Tight coupling: each service must know about the next.
-
-EVENT-DRIVEN (asynchronous):
-  Order Service ──publishes "OrderCreated"──► Event Bus
-    Payment Service ←── subscribes to "OrderCreated"
-    Inventory Service ←── subscribes to "OrderCreated"
-    Notification Service ←── subscribes to "OrderCreated"
-  
-  Loose coupling: Order Service doesn't know who listens.
-```
+![What is Event-Driven Architecture (EDA)? diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-01.svg)
 
 ### Core Concepts
 
@@ -83,29 +71,7 @@ EVENT SOURCING:
 
 Often paired with Event Sourcing:
 
-```
-TRADITIONAL:
-  Same model for reads and writes
-  ┌───────────┐
-  │ Service   │──read/write──► Database
-  └───────────┘
-
-CQRS:
-  Separate models optimized for reads vs writes
-  ┌───────────┐                    ┌──────────────┐
-  │ Command   │──writes──────────►│ Write DB     │
-  │ Service   │                    │ (normalized) │
-  └───────────┘                    └──────┬───────┘
-                                          │ events
-  ┌───────────┐                    ┌──────┴───────┐
-  │ Query     │──reads───────────►│ Read DB      │
-  │ Service   │                    │(denormalized)│
-  └───────────┘                    └──────────────┘
-  
-  Write DB: Optimized for writes (normalized, ACID)
-  Read DB: Optimized for reads (denormalized, cached, materialized views)
-  Sync: Events from write side update the read side (eventual consistency)
-```
+![CQRS (Command Query Responsibility Segregation) diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-02.svg)
 
 ### Choreography vs Orchestration
 
@@ -230,26 +196,7 @@ DO use EDA for:
 
 ## D. Example: E-Commerce Event Flow
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    Event Bus (Kafka)                       │
-│                                                            │
-│  ┌──────────┐  order.created                              │
-│  │ Order    │──────────────────┬──────────┬──────────┐   │
-│  │ Service  │                  │          │          │   │
-│  └──────────┘                  ▼          ▼          ▼   │
-│                           ┌────────┐ ┌────────┐ ┌──────┐ │
-│                           │Payment │ │Inventory│ │Email │ │
-│                           │Service │ │Service  │ │Svc   │ │
-│                           └───┬────┘ └───┬────┘ └──────┘ │
-│                               │          │                │
-│  payment.processed ◄──────────┘          │                │
-│  inventory.reserved ◄───────────────────┘                │
-│                                                            │
-│  All events stored in Kafka (7 days retention)            │
-│  Analytics consumer replays events for reporting          │
-└──────────────────────────────────────────────────────────┘
-```
+![D. Example: E-Commerce Event Flow diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-03.svg)
 
 ---
 
@@ -257,31 +204,7 @@ DO use EDA for:
 
 ### E.1 HLD — Event-Driven Microservices
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  API Gateway                                              │
-│      │                                                    │
-│  ┌───┴─────────┐ commands (writes)                       │
-│  │ Command API │───────────────────┐                     │
-│  └─────────────┘                   │                     │
-│                                    ▼                     │
-│  ┌──────────────────────────────────────┐               │
-│  │  Kafka (Event Bus)                    │               │
-│  │  Topics: orders, payments, inventory  │               │
-│  │  Partitions: 12 each                  │               │
-│  │  Retention: 7 days                    │               │
-│  └──────┬──────┬──────┬──────┬─────────┘               │
-│         │      │      │      │                          │
-│    ┌────┴┐ ┌──┴──┐ ┌─┴──┐ ┌┴──────┐                  │
-│    │Order│ │Pay  │ │Inv │ │Notif  │  Event consumers   │
-│    │Proj │ │Proc │ │Mgr │ │Worker │                    │
-│    └──┬──┘ └─────┘ └────┘ └───────┘                    │
-│       │                                                  │
-│  ┌────┴────────┐ queries (reads)                        │
-│  │  Query API  │──► Read-optimized DB (materialized)    │
-│  └─────────────┘                                         │
-└─────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Event-Driven Microservices diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-04.svg)
 
 ### E.2 LLD — Event Bus Abstraction
 

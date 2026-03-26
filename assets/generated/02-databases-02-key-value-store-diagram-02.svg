@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="670" height="288" viewBox="0 0 670 288" role="img" aria-labelledby="title desc">
+  <title id="title">Redis Cluster diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="668.8" height="286.8" rx="16" />
+  <g class="segments">
+    <line x1="99.60000000000001" y1="34" x2="108.00000000000001" y2="34" />
+    <line x1="108" y1="34" x2="116.4" y2="34" />
+    <line x1="192" y1="34" x2="200.4" y2="34" />
+    <line x1="200.4" y1="34" x2="208.8" y2="34" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">  Client   hash(key)  ► Slot 0-5460   → Node A (master) + replica</text>
+    <text x="24" y="59" xml:space="preserve">                        Slot 5461-10922 → Node B (master) + replica</text>
+    <text x="24" y="79" xml:space="preserve">                        Slot 10923-16383 → Node C (master) + replica</text>
+    <text x="24" y="119" xml:space="preserve">  16384 hash slots distributed across master nodes.</text>
+    <text x="24" y="139" xml:space="preserve">  Each key maps to a slot: CRC16(key) % 16384</text>
+    <text x="24" y="179" xml:space="preserve">  Automatic failover: if master dies → replica promoted</text>
+    <text x="24" y="199" xml:space="preserve">  Resharding: move slots between nodes for rebalancing</text>
+    <text x="24" y="239" xml:space="preserve">  Limitation: Multi-key operations must be on same slot</text>
+    <text x="24" y="259" xml:space="preserve">  Solution: Hash tags — {user:123}:cart and {user:123}:session → same slot</text>
+  </g>
+</svg>

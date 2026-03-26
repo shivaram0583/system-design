@@ -1,4 +1,4 @@
-# Interview Prep 05: API Design
+﻿# Interview Prep 05: API Design
 
 > Clean API design shows the interviewer you think about contracts, not just boxes and arrows.
 
@@ -33,11 +33,7 @@ flowchart TD
 
 ### URL Structure
 
-```
-https://api.example.com/v1/resource_name
-                         │   │
-                    version   plural noun (never verbs)
-```
+![URL Structure diagram](../assets/generated/06-interview-prep-05-api-design-diagram-01.svg)
 
 **Good**: `GET /api/v1/tweets`, `POST /api/v1/tweets`
 **Bad**: `GET /api/v1/getTweets`, `POST /api/v1/createTweet`

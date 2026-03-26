@@ -1,4 +1,4 @@
-# Topic 09: Schema Design
+﻿# Topic 09: Schema Design
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate → Advanced
@@ -101,31 +101,7 @@ Intentionally adding redundancy to speed up reads.
 
 ### Access Pattern-Driven Design (NoSQL)
 
-```
-NoSQL: Start with queries, design schema to serve them.
-
-  Access patterns for a chat app:
-  1. Get messages for chat X, sorted by time (most recent first)
-  2. Get all chats for user Y
-  3. Get unread count for user Y
-
-  DynamoDB design:
-  
-  Table: Messages
-  PK: chat_id       SK: timestamp#message_id
-  ┌───────────┬──────────────────────┬─────────┬─────────┐
-  │ chat_id   │ SK                   │ sender  │ content │
-  │ chat_123  │ 2024-01-15T10:00#m1 │ alice   │ hello   │
-  │ chat_123  │ 2024-01-15T10:01#m2 │ bob     │ hi      │
-  └───────────┴──────────────────────┴─────────┴─────────┘
-
-  GSI (Global Secondary Index) for pattern 2:
-  GSI-PK: user_id    GSI-SK: last_message_time
-  → Get all chats for a user, sorted by most recent
-
-  Pattern 3: Store unread_count as an attribute on the chat item
-  Increment atomically on new message, reset on read
-```
+![Access Pattern-Driven Design (NoSQL) diagram](../assets/generated/02-databases-09-schema-design-diagram-01.svg)
 
 ### Common Schema Patterns
 
@@ -319,142 +295,86 @@ CREATE TABLE reviews (
 
 ### E.1 HLD — Schema Design Process
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Step 1: IDENTIFY ENTITIES                                 │
-│  Users, Products, Orders, Reviews, Categories             │
-│                                                            │
-│  Step 2: DEFINE RELATIONSHIPS                             │
-│  User 1:N Orders, Order N:M Products, Product 1:N Reviews │
-│                                                            │
-│  Step 3: LIST ACCESS PATTERNS                             │
-│  • Get user profile by ID                                 │
-│  • Get orders for user (sorted by date)                   │
-│  • Get products by category (with filters)                │
-│  • Get reviews for product (sorted by date)               │
-│  • Search products by name                                │
-│  • Get order with all items and product details           │
-│                                                            │
-│  Step 4: CHOOSE DATABASE                                  │
-│  SQL (PostgreSQL): Transactions, JOINs, structured data   │
-│  + JSONB for flexible attributes                          │
-│                                                            │
-│  Step 5: NORMALIZE (3NF baseline)                         │
-│  Separate tables for each entity                          │
-│                                                            │
-│  Step 6: DENORMALIZE FOR PERFORMANCE                      │
-│  • unit_price snapshot on order_items                     │
-│  • avg_rating on products (materialized)                  │
-│  • user_name on orders (for listing without JOIN)         │
-│                                                            │
-│  Step 7: ADD INDEXES                                      │
-│  Based on access patterns (WHERE, ORDER BY, JOIN columns) │
-│                                                            │
-│  Step 8: PLAN MIGRATIONS                                  │
-│  Schema changes must be backward-compatible               │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Schema Design Process diagram](../assets/generated/02-databases-09-schema-design-diagram-02.svg)
 
 ### E.2 LLD — Schema Migration Manager
 
-```python
-import hashlib
-import datetime
+```java
+// Dependencies in the original example:
+// import hashlib
+// import datetime
 
-class SchemaMigration:
-    def __init__(self, version: str, description: str, up_sql: str, down_sql: str):
-        self.version = version
-        self.description = description
-        self.up_sql = up_sql
-        self.down_sql = down_sql
-        self.checksum = hashlib.md5(up_sql.encode()).hexdigest()
+public class SchemaMigration {
+    private String version;
+    private String description;
+    private String upSql;
+    private String downSql;
+    private Object checksum;
 
+    public SchemaMigration(String version, String description, String upSql, String downSql) {
+        this.version = version;
+        this.description = description;
+        this.upSql = upSql;
+        this.downSql = downSql;
+        this.checksum = hashlib.md5(upSql.encode()).hexdigest();
+    }
+}
 
-class MigrationRunner:
-    """Applies schema migrations in order with tracking"""
-    
-    def __init__(self, db_connection):
-        self.db = db_connection
-        self._ensure_migration_table()
+public class MigrationRunner {
+    private Object db;
 
-    def _ensure_migration_table(self):
-        self.db.execute("""
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                version TEXT PRIMARY KEY,
-                description TEXT,
-                checksum TEXT,
-                applied_at TIMESTAMPTZ DEFAULT now()
-            )
-        """)
-        self.db.commit()
+    public MigrationRunner(Object dbConnection) {
+        this.db = dbConnection;
+        // _ensure_migration_table()
+    }
 
-    def get_applied_versions(self) -> set:
-        rows = self.db.execute(
-            "SELECT version FROM schema_migrations ORDER BY version"
-        )
-        return {row["version"] for row in rows}
+    public Object ensureMigrationTable() {
+        // db.execute(
+        // CREATE TABLE IF NOT EXISTS schema_migrations (
+        // version TEXT PRIMARY KEY,
+        // description TEXT,
+        // checksum TEXT,
+        // applied_at TIMESTAMPTZ DEFAULT now()
+        // )
+        // )
+        // ...
+        return null;
+    }
 
-    def migrate(self, migrations: list):
-        """Apply pending migrations in order"""
-        applied = self.get_applied_versions()
-        pending = [m for m in migrations if m.version not in applied]
-        pending.sort(key=lambda m: m.version)
+    public Set<Object> getAppliedVersions() {
+        // rows = db.execute(
+        // "SELECT version FROM schema_migrations ORDER BY version"
+        // )
+        // return {row["version"] for row in rows}
+        return null;
+    }
 
-        for migration in pending:
-            print(f"Applying {migration.version}: {migration.description}")
-            try:
-                self.db.execute(migration.up_sql)
-                self.db.execute(
-                    "INSERT INTO schema_migrations (version, description, checksum) "
-                    "VALUES (%s, %s, %s)",
-                    (migration.version, migration.description, migration.checksum)
-                )
-                self.db.commit()
-                print(f"  ✓ Applied {migration.version}")
-            except Exception as e:
-                self.db.rollback()
-                print(f"  ✗ Failed {migration.version}: {e}")
-                raise
+    public Object migrate(List<Object> migrations) {
+        // Apply pending migrations in order
+        // applied = get_applied_versions()
+        // pending = [m for m in migrations if m.version not in applied]
+        // pending.sort(key=lambda m: m.version)
+        // for migration in pending
+        // print(f"Applying {migration.version}: {migration.description}")
+        // try
+        // db.execute(migration.up_sql)
+        // ...
+        return null;
+    }
 
-    def rollback(self, migrations: list, target_version: str):
-        """Rollback migrations down to target version"""
-        applied = self.get_applied_versions()
-        to_rollback = [
-            m for m in reversed(migrations)
-            if m.version in applied and m.version > target_version
-        ]
-        for migration in to_rollback:
-            print(f"Rolling back {migration.version}")
-            self.db.execute(migration.down_sql)
-            self.db.execute(
-                "DELETE FROM schema_migrations WHERE version = %s",
-                (migration.version,)
-            )
-            self.db.commit()
-
-
-# Example migrations:
-migrations = [
-    SchemaMigration(
-        "001", "Create users table",
-        up_sql="CREATE TABLE users (id UUID PRIMARY KEY, email TEXT UNIQUE, name TEXT)",
-        down_sql="DROP TABLE users"
-    ),
-    SchemaMigration(
-        "002", "Add created_at to users",
-        up_sql="ALTER TABLE users ADD COLUMN created_at TIMESTAMPTZ DEFAULT now()",
-        down_sql="ALTER TABLE users DROP COLUMN created_at"
-    ),
-    SchemaMigration(
-        "003", "Create orders table",
-        up_sql="""CREATE TABLE orders (
-            id UUID PRIMARY KEY, user_id UUID REFERENCES users(id),
-            total DECIMAL(10,2), status TEXT DEFAULT 'pending',
-            created_at TIMESTAMPTZ DEFAULT now()
-        )""",
-        down_sql="DROP TABLE orders"
-    ),
-]
+    public Object rollback(List<Object> migrations, String targetVersion) {
+        // Rollback migrations down to target version
+        // applied = get_applied_versions()
+        // to_rollback = [
+        // m for m in reversed(migrations)
+        // if m.version in applied and m.version > target_version
+        // ]
+        // for migration in to_rollback
+        // print(f"Rolling back {migration.version}")
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

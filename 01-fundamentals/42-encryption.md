@@ -1,4 +1,4 @@
-# Topic 42: Encryption
+﻿# Topic 42: Encryption
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -23,41 +23,11 @@
 
 **Encryption** transforms readable data (plaintext) into unreadable data (ciphertext) using an algorithm and a key. Only someone with the correct key can reverse it (decrypt).
 
-```
-Plaintext:  "Credit card: 4111-1111-1111-1111"
-     │
-     ▼  Encrypt (key)
-Ciphertext: "aGVsbG8gd29ybGQ1Nz..."
-     │
-     ▼  Decrypt (key)
-Plaintext:  "Credit card: 4111-1111-1111-1111"
-
-Without the key → ciphertext is meaningless gibberish.
-```
+![What is Encryption? diagram](../assets/generated/01-fundamentals-42-encryption-diagram-01.svg)
 
 ### Symmetric vs Asymmetric Encryption
 
-```
-SYMMETRIC: Same key for encrypt and decrypt.
-  
-  Alice ──── key="secret123" ────► Encrypt → ciphertext
-  Bob   ──── key="secret123" ────► Decrypt → plaintext
-  
-  Problem: How to share the key securely?
-  Fast. Used for: data at rest, bulk data encryption.
-  Algorithms: AES-256, ChaCha20
-
-ASYMMETRIC: Two keys — public key (encrypt) and private key (decrypt).
-
-  Alice's PUBLIC key:  Anyone can encrypt with it
-  Alice's PRIVATE key: Only Alice can decrypt
-  
-  Bob   ──── Alice's public key  ────► Encrypt → ciphertext
-  Alice ──── Alice's private key ────► Decrypt → plaintext
-  
-  Slow but solves key distribution. Used for: key exchange, digital signatures.
-  Algorithms: RSA, ECDSA, Ed25519
-```
+![Symmetric vs Asymmetric Encryption diagram](../assets/generated/01-fundamentals-42-encryption-diagram-02.svg)
 
 ### Comparison
 
@@ -71,58 +41,11 @@ ASYMMETRIC: Two keys — public key (encrypt) and private key (decrypt).
 
 ### Encryption At Rest vs In Transit
 
-```
-AT REST: Data stored on disk (database, S3, backups).
-  
-  Database: AES-256 encryption on disk
-  S3: Server-side encryption (SSE-S3, SSE-KMS)
-  Backups: Encrypted before writing to storage
-  
-  Protects against: stolen hard drives, unauthorized disk access
-
-IN TRANSIT: Data moving over the network.
-  
-  Client ←── TLS 1.3 ──→ Server (HTTPS)
-  Service A ←── mTLS ──→ Service B (service-to-service)
-  
-  Protects against: eavesdropping, man-in-the-middle attacks
-
-BOTH are required for a secure system:
-  At rest: protects stored data
-  In transit: protects data on the wire
-```
+![Encryption At Rest vs In Transit diagram](../assets/generated/01-fundamentals-42-encryption-diagram-03.svg)
 
 ### TLS (Transport Layer Security)
 
-```
-TLS secures data in transit (HTTPS = HTTP + TLS).
-
-TLS 1.3 Handshake (simplified):
-
-  Client                          Server
-    │                               │
-    │──── ClientHello ────────────►│  (supported ciphers, random)
-    │                               │
-    │◄─── ServerHello ────────────│  (chosen cipher, certificate)
-    │                               │
-    │  Verify server certificate    │
-    │  (trusted CA? domain match?)  │
-    │                               │
-    │──── Key Exchange ──────────►│  (Diffie-Hellman)
-    │                               │
-    │◄─── Key Exchange ──────────│
-    │                               │
-    │  Both derive shared secret    │
-    │  (symmetric key for session)  │
-    │                               │
-    │◄══ Encrypted data (AES) ═══►│  (all subsequent data encrypted)
-
-  TLS uses ASYMMETRIC crypto for key exchange (handshake)
-  then SYMMETRIC crypto for actual data (fast, bulk encryption).
-
-mTLS (Mutual TLS): Both client AND server present certificates.
-  Used for service-to-service auth in service mesh (Istio/Envoy).
-```
+![TLS (Transport Layer Security) diagram](../assets/generated/01-fundamentals-42-encryption-diagram-04.svg)
 
 ### Hashing vs Encryption
 
@@ -148,41 +71,7 @@ When to use which:
 
 ### Key Management
 
-```
-The encryption is only as strong as the key management.
-
-KEY MANAGEMENT SERVICE (KMS):
-  AWS KMS, Google Cloud KMS, Azure Key Vault, HashiCorp Vault
-
-ENVELOPE ENCRYPTION:
-  Don't encrypt data directly with the master key.
-  
-  1. Generate a Data Encryption Key (DEK)
-  2. Encrypt data with DEK (fast, symmetric)
-  3. Encrypt DEK with Master Key (KEK) from KMS
-  4. Store encrypted DEK alongside encrypted data
-  5. Discard plaintext DEK from memory
-
-  To decrypt:
-  1. Send encrypted DEK to KMS
-  2. KMS decrypts DEK using Master Key
-  3. Use DEK to decrypt data
-
-  ┌──────────────────────────────────────────┐
-  │  Stored together:                         │
-  │  encrypted_data = AES(data, DEK)         │
-  │  encrypted_dek  = KMS_Encrypt(DEK, KEK)  │
-  │                                            │
-  │  Master Key (KEK) NEVER leaves KMS        │
-  │  Rotate DEKs frequently, KEK rarely       │
-  └──────────────────────────────────────────┘
-
-  Why envelope encryption?
-  • Master key never exposed (stays in KMS hardware)
-  • Each record/file can have its own DEK
-  • Rotating DEKs doesn't require re-encrypting all data
-  • KMS only handles small keys, not bulk data
-```
+![Key Management diagram](../assets/generated/01-fundamentals-42-encryption-diagram-05.svg)
 
 ---
 
@@ -220,28 +109,7 @@ ENVELOPE ENCRYPTION:
 
 ### Field-Level Encryption
 
-```
-Instead of encrypting the entire database, encrypt specific sensitive fields:
-
-  Table: users
-  ┌──────┬──────────┬──────────────────────┬──────────┐
-  │  id  │  name    │  ssn (encrypted)     │  email   │
-  ├──────┼──────────┼──────────────────────┼──────────┤
-  │  1   │  Alice   │  enc:aGVsbG8gd29y... │  a@b.com │
-  │  2   │  Bob     │  enc:c29ybGQ1Nz...   │  b@c.com │
-  └──────┴──────────┴──────────────────────┴──────────┘
-
-  Only SSN is encrypted. Name and email are plaintext.
-  Application decrypts SSN only when explicitly needed.
-
-  Benefits:
-  • Limits blast radius (compromised DB doesn't expose SSN)
-  • Different keys for different fields (SSN key vs address key)
-  • Meets PCI-DSS, HIPAA requirements for specific fields
-  
-  Limitation: Can't query encrypted fields (WHERE ssn = '...' won't work)
-  Solution: Store a blind index (hash of plaintext) for lookups
-```
+![Field-Level Encryption diagram](../assets/generated/01-fundamentals-42-encryption-diagram-06.svg)
 
 ### Key Rotation
 
@@ -297,30 +165,7 @@ SOC 2:
 
 ## D. Example: Securing Payment Data
 
-```
-┌────────┐  Card: 4111...  ┌──────────┐  Tokenize  ┌──────────────┐
-│ Client │────────────────►│ Payment  │───────────►│ Card Vault   │
-│ (TLS)  │                 │ Service  │            │ (HSM-backed) │
-└────────┘                 └──────────┘            │              │
-                                                    │ Stores:      │
-                                                    │ tok_abc →    │
-                                                    │  enc(4111...)│
-                                                    └──────────────┘
-
-  Flow:
-  1. Client sends card number over HTTPS (TLS 1.3)
-  2. Payment service sends card to vault for tokenization
-  3. Vault encrypts card (AES-256-GCM) with envelope encryption
-  4. Vault returns token: "tok_abc123"
-  5. Payment service stores token (not real card number)
-  6. To charge: Payment service sends token → Vault decrypts → calls Stripe
-
-  Architecture:
-  • Card number NEVER stored in application database
-  • Vault is PCI-DSS compliant (isolated, audited, HSM)
-  • Application only handles tokens (not in PCI scope)
-  • HSM (Hardware Security Module): tamper-proof key storage
-```
+![D. Example: Securing Payment Data diagram](../assets/generated/01-fundamentals-42-encryption-diagram-07.svg)
 
 ---
 
@@ -328,106 +173,59 @@ SOC 2:
 
 ### E.1 HLD — Encryption Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Client ←── TLS 1.3 ──→ Load Balancer                    │
-│                             │                              │
-│  ┌──────────────────────────┴────────────────────────┐   │
-│  │  Application Services                              │   │
-│  │  • Field-level encryption for PII                  │   │
-│  │  • Token-based card handling                       │   │
-│  └──────────┬──────────────────────────┬─────────────┘   │
-│             │                          │                  │
-│  ┌──────────┴──────────┐  ┌───────────┴────────────┐    │
-│  │  Database (RDS)     │  │  AWS KMS               │    │
-│  │  • Encrypted at rest│  │  • Master keys (KEK)   │    │
-│  │    (AES-256)        │  │  • Key rotation        │    │
-│  │  • Encrypted fields │  │  • Audit trail         │    │
-│  │  • TLS connection   │  │  • HSM-backed          │    │
-│  └─────────────────────┘  └────────────────────────┘    │
-│                                                          │
-│  ┌─────────────────────┐  ┌────────────────────────┐    │
-│  │  S3 (backups)       │  │  Card Vault            │    │
-│  │  • SSE-KMS          │  │  • PCI-DSS scope       │    │
-│  │  • Bucket policy    │  │  • HSM encryption      │    │
-│  └─────────────────────┘  │  • Tokenization        │    │
-│                            └────────────────────────┘    │
-│                                                          │
-│  Service-to-service: mTLS (Istio/Envoy sidecar)        │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Encryption Architecture diagram](../assets/generated/01-fundamentals-42-encryption-diagram-08.svg)
 
 ### E.2 LLD — Encryption Service
 
-```python
-import os
-import json
-import base64
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+```java
+// Dependencies in the original example:
+// import os
+// import json
+// import base64
+// from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-class EncryptionService:
-    """Field-level encryption using envelope encryption with KMS"""
-    
-    def __init__(self, kms_client, master_key_id: str):
-        self.kms = kms_client
-        self.master_key_id = master_key_id
+public class EncryptionService {
+    private Object kms;
+    private String masterKeyId;
 
-    def encrypt_field(self, plaintext: str) -> str:
-        """Encrypt a sensitive field using envelope encryption"""
-        # 1. Generate a data encryption key (DEK)
-        dek_response = self.kms.generate_data_key(
-            KeyId=self.master_key_id,
-            KeySpec='AES_256'
-        )
-        plaintext_dek = dek_response['Plaintext']      # 32 bytes
-        encrypted_dek = dek_response['CiphertextBlob']  # KMS-encrypted DEK
+    public EncryptionService(Object kmsClient, String masterKeyId) {
+        this.kms = kmsClient;
+        this.masterKeyId = masterKeyId;
+    }
 
-        # 2. Encrypt the data with DEK (AES-256-GCM)
-        nonce = os.urandom(12)
-        aesgcm = AESGCM(plaintext_dek)
-        ciphertext = aesgcm.encrypt(nonce, plaintext.encode(), None)
+    public String encryptField(String plaintext) {
+        // Encrypt a sensitive field using envelope encryption
+        // 1. Generate a data encryption key (DEK)
+        // dek_response = kms.generate_data_key(
+        // KeyId=master_key_id,
+        // KeySpec='AES_256'
+        // )
+        // plaintext_dek = dek_response['Plaintext']      # 32 bytes
+        // encrypted_dek = dek_response['CiphertextBlob']  # KMS-encrypted DEK
+        // ...
+        return null;
+    }
 
-        # 3. Package: encrypted_dek + nonce + ciphertext
-        envelope = {
-            "v": 1,  # Version for key rotation
-            "dek": base64.b64encode(encrypted_dek).decode(),
-            "nonce": base64.b64encode(nonce).decode(),
-            "data": base64.b64encode(ciphertext).decode(),
-        }
+    public String decryptField(String encryptedValue) {
+        // Decrypt a field encrypted with encrypt_field
+        // if not encrypted_value.startswith("enc:")
+        // return encrypted_value  # Not encrypted
+        // 1. Parse envelope
+        // envelope = json.loads(base64.b64decode(encrypted_value[4:]))
+        // encrypted_dek = base64.b64decode(envelope["dek"])
+        // nonce = base64.b64decode(envelope["nonce"])
+        // ciphertext = base64.b64decode(envelope["data"])
+        // ...
+        return null;
+    }
 
-        # 4. Wipe plaintext DEK from memory
-        plaintext_dek = None
-
-        return "enc:" + base64.b64encode(json.dumps(envelope).encode()).decode()
-
-    def decrypt_field(self, encrypted_value: str) -> str:
-        """Decrypt a field encrypted with encrypt_field"""
-        if not encrypted_value.startswith("enc:"):
-            return encrypted_value  # Not encrypted
-
-        # 1. Parse envelope
-        envelope = json.loads(base64.b64decode(encrypted_value[4:]))
-        encrypted_dek = base64.b64decode(envelope["dek"])
-        nonce = base64.b64decode(envelope["nonce"])
-        ciphertext = base64.b64decode(envelope["data"])
-
-        # 2. Decrypt DEK using KMS
-        dek_response = self.kms.decrypt(CiphertextBlob=encrypted_dek)
-        plaintext_dek = dek_response['Plaintext']
-
-        # 3. Decrypt data with DEK
-        aesgcm = AESGCM(plaintext_dek)
-        plaintext = aesgcm.decrypt(nonce, ciphertext, None)
-
-        # 4. Wipe DEK
-        plaintext_dek = None
-
-        return plaintext.decode()
-
-    def rotate_field(self, encrypted_value: str) -> str:
-        """Re-encrypt with current master key (for key rotation)"""
-        plaintext = self.decrypt_field(encrypted_value)
-        return self.encrypt_field(plaintext)
+    public String rotateField(String encryptedValue) {
+        // Re-encrypt with current master key (for key rotation)
+        // plaintext = decrypt_field(encrypted_value)
+        // return encrypt_field(plaintext)
+        return null;
+    }
+}
 ```
 
 ---

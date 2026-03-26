@@ -1,4 +1,4 @@
-# Topic 13: Reverse Proxy
+﻿# Topic 13: Reverse Proxy
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -21,25 +21,7 @@
 
 ### Forward Proxy vs Reverse Proxy
 
-```
-FORWARD PROXY (acts on behalf of CLIENTS):
-  ┌────────┐   ┌───────────┐   ┌──────────┐
-  │ Client │──►│  Forward  │──►│  Server  │
-  │        │   │   Proxy   │   │          │
-  └────────┘   └───────────┘   └──────────┘
-  Client knows it's using a proxy.
-  Server sees proxy's IP, not client's.
-  Use: Corporate firewalls, content filtering, anonymity (VPN/Tor).
-
-REVERSE PROXY (acts on behalf of SERVERS):
-  ┌────────┐   ┌───────────┐   ┌──────────┐
-  │ Client │──►│  Reverse  │──►│  Server  │
-  │        │   │   Proxy   │   │          │
-  └────────┘   └───────────┘   └──────────┘
-  Client doesn't know there's a proxy.
-  Client sees proxy's IP, not server's.
-  Use: Load balancing, SSL termination, caching, security.
-```
+![Forward Proxy vs Reverse Proxy diagram](../assets/generated/01-fundamentals-13-reverse-proxy-diagram-01.svg)
 
 ### What a Reverse Proxy Does
 
@@ -166,17 +148,7 @@ server {
 
 ## D. Example: API Gateway Pattern with Reverse Proxy
 
-```
-┌────────┐     ┌─────────────────┐     ┌─────────────────────┐
-│ Client │────►│  Nginx (Reverse │     │  Backend Services    │
-│        │     │  Proxy)          │────►│                     │
-└────────┘     │                  │     │  /api/users → :8081 │
-               │  • SSL termination│     │  /api/orders → :8082│
-               │  • Rate limiting │     │  /api/products→:8083│
-               │  • Compression   │     │  /static → S3       │
-               │  • Access logging│     └─────────────────────┘
-               └─────────────────┘
-```
+![D. Example: API Gateway Pattern with Reverse Proxy diagram](../assets/generated/01-fundamentals-13-reverse-proxy-diagram-02.svg)
 
 ---
 
@@ -184,21 +156,7 @@ server {
 
 ### E.1 HLD — Reverse Proxy Layer
 
-```
-┌───────────────────────────────────────────────────────┐
-│  Internet → CDN (Cloudflare) → Nginx (Reverse Proxy) │
-│                                                         │
-│  Nginx handles:                                        │
-│    SSL termination, rate limiting, routing              │
-│                                                         │
-│  Routes:                                                │
-│    /api/*       → API Service cluster (port 8080)      │
-│    /auth/*      → Auth Service cluster (port 8081)     │
-│    /ws/*        → WebSocket cluster (port 8082)        │
-│    /static/*    → S3 bucket                            │
-│    /health      → 200 OK (self)                        │
-└───────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Reverse Proxy Layer diagram](../assets/generated/01-fundamentals-13-reverse-proxy-diagram-03.svg)
 
 ### E.2 LLD — Request Router
 

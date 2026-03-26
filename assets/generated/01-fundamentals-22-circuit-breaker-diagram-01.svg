@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="729" height="348" viewBox="0 0 729 348" role="img" aria-labelledby="title desc">
+  <title id="title">What is a Circuit Breaker? diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="727.8" height="346.8" rx="16" />
+  <g class="segments">
+    <line x1="124.80000000000001" y1="174" x2="133.20000000000002" y2="174" />
+    <line x1="133.2" y1="174" x2="141.6" y2="174" />
+    <line x1="141.60000000000002" y1="174" x2="150.00000000000003" y2="174" />
+    <line x1="150" y1="174" x2="158.4" y2="174" />
+    <line x1="259.20000000000005" y1="174" x2="267.6" y2="174" />
+    <line x1="267.6" y1="174" x2="276" y2="174" />
+    <line x1="276" y1="174" x2="284.4" y2="174" />
+    <line x1="284.40000000000003" y1="174" x2="292.8" y2="174" />
+    <line x1="124.80000000000001" y1="274" x2="133.20000000000002" y2="274" />
+    <line x1="133.2" y1="274" x2="141.6" y2="274" />
+    <line x1="292.8" y1="274" x2="301.2" y2="274" />
+    <line x1="301.2" y1="274" x2="309.59999999999997" y2="274" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">Inspired by electrical circuit breakers:</text>
+    <text x="24" y="59" xml:space="preserve">  Too much current → breaker trips → circuit disconnected → prevents fire</text>
+    <text x="24" y="99" xml:space="preserve">In software:</text>
+    <text x="24" y="119" xml:space="preserve">  Too many failures → breaker opens → requests fail fast → prevents cascade</text>
+    <text x="24" y="159" xml:space="preserve">WITHOUT Circuit Breaker:</text>
+    <text x="24" y="179" xml:space="preserve">  Service A      timeout 5s     ► Service B (down)</text>
+    <text x="24" y="199" xml:space="preserve">  Every request waits 5 seconds, then fails.</text>
+    <text x="24" y="219" xml:space="preserve">  100 concurrent requests × 5s = thread pool exhaustion → Service A also crashes!</text>
+    <text x="24" y="259" xml:space="preserve">WITH Circuit Breaker:</text>
+    <text x="24" y="279" xml:space="preserve">  Service A   ► Circuit Breaker   ► Service B (down)</text>
+    <text x="24" y="299" xml:space="preserve">  After 5 failures → breaker OPENS → requests fail immediately (no waiting)</text>
+    <text x="24" y="319" xml:space="preserve">  Periodically checks if B is back → if yes, breaker CLOSES</text>
+  </g>
+</svg>

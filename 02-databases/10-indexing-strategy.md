@@ -1,4 +1,4 @@
-# Topic 10: Indexing Strategy
+﻿# Topic 10: Indexing Strategy
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate → Advanced
@@ -311,130 +311,95 @@ CREATE UNIQUE INDEX idx_orders_tracking ON orders(tracking_number)
 
 ### E.1 HLD — Index Management System
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Query Analysis Pipeline                                   │
-│                                                            │
-│  ┌────────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ pg_stat_       │  │ Slow query   │  │ Application  │ │
-│  │ statements     │  │ log          │  │ query logs   │ │
-│  └───────┬────────┘  └──────┬───────┘  └──────┬───────┘ │
-│          └──────────────────┼──────────────────┘         │
-│                             ▼                             │
-│                    ┌────────────────┐                     │
-│                    │ Query Analyzer │                     │
-│                    │ • Group similar│                     │
-│                    │ • Rank by cost │                     │
-│                    │ • EXPLAIN each │                     │
-│                    └───────┬────────┘                     │
-│                            ▼                              │
-│                    ┌────────────────┐                     │
-│                    │ Index Advisor  │                     │
-│                    │ • Suggest new  │                     │
-│                    │ • Find unused  │                     │
-│                    │ • Find dupes   │                     │
-│                    └───────┬────────┘                     │
-│                            ▼                              │
-│                    ┌────────────────┐                     │
-│                    │ Review + Apply │                     │
-│                    │ CREATE INDEX   │                     │
-│                    │ CONCURRENTLY   │                     │
-│                    └────────────────┘                     │
-│                                                            │
-│  Monitoring: Index usage, bloat, size → Grafana dashboard │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Index Management System diagram](../assets/generated/02-databases-10-indexing-strategy-diagram-01.svg)
 
 ### E.2 LLD — Index Advisor
 
-```python
-class IndexAdvisor:
-    """Analyzes queries and suggests optimal indexes"""
-    
-    def __init__(self, db_connection):
-        self.db = db_connection
+```java
+public class IndexAdvisor {
+    private Object db;
 
-    def get_slow_queries(self, min_avg_time_ms: float = 100,
-                        min_calls: int = 100) -> list:
-        return self.db.execute("""
-            SELECT query, calls, mean_exec_time, total_exec_time,
-                   rows AS avg_rows
-            FROM pg_stat_statements
-            WHERE mean_exec_time > %s AND calls > %s
-            ORDER BY total_exec_time DESC
-            LIMIT 50
-        """, (min_avg_time_ms, min_calls))
+    public IndexAdvisor(Object dbConnection) {
+        this.db = dbConnection;
+    }
 
-    def analyze_query(self, query: str) -> dict:
-        plan = self.db.execute(f"EXPLAIN (FORMAT JSON, ANALYZE) {query}")
-        plan_data = plan[0][0][0]["Plan"]
-        
-        return {
-            "node_type": plan_data["Node Type"],
-            "total_cost": plan_data["Total Cost"],
-            "actual_time": plan_data.get("Actual Total Time"),
-            "rows": plan_data.get("Actual Rows"),
-            "is_seq_scan": "Seq Scan" in str(plan_data),
-            "filter_removed": plan_data.get("Rows Removed by Filter", 0),
-        }
+    public List<Object> getSlowQueries(double minAvgTimeMs, int minCalls) {
+        // return db.execute(
+        // SELECT query, calls, mean_exec_time, total_exec_time,
+        // rows AS avg_rows
+        // FROM pg_stat_statements
+        // WHERE mean_exec_time > %s AND calls > %s
+        // ORDER BY total_exec_time DESC
+        // LIMIT 50
+        // , (min_avg_time_ms, min_calls))
+        return null;
+    }
 
-    def get_unused_indexes(self, min_age_days: int = 30) -> list:
-        return self.db.execute("""
-            SELECT schemaname, indexrelname,
-                   pg_size_pretty(pg_relation_size(indexrelid)) AS size,
-                   idx_scan AS scans
-            FROM pg_stat_user_indexes
-            WHERE idx_scan = 0
-              AND indexrelname NOT LIKE '%%pkey'
-              AND indexrelname NOT LIKE '%%unique%%'
-            ORDER BY pg_relation_size(indexrelid) DESC
-        """)
+    public Map<String, Object> analyzeQuery(String query) {
+        // plan = db.execute(f"EXPLAIN (FORMAT JSON, ANALYZE) {query}")
+        // plan_data = plan[0][0][0]["Plan"]
+        // return {
+        // "node_type": plan_data["Node Type"],
+        // "total_cost": plan_data["Total Cost"],
+        // "actual_time": plan_data.get("Actual Total Time"),
+        // "rows": plan_data.get("Actual Rows"),
+        // "is_seq_scan": "Seq Scan" in str(plan_data),
+        // ...
+        return null;
+    }
 
-    def get_duplicate_indexes(self) -> list:
-        return self.db.execute("""
-            SELECT a.indexrelid::regclass AS index_a,
-                   b.indexrelid::regclass AS index_b,
-                   pg_size_pretty(pg_relation_size(a.indexrelid)) AS size_a
-            FROM pg_index a
-            JOIN pg_index b ON a.indrelid = b.indrelid
-              AND a.indexrelid != b.indexrelid
-              AND a.indkey::text = LEFT(b.indkey::text, length(a.indkey::text))
-            WHERE a.indisunique = false
-        """)
+    public List<Object> getUnusedIndexes(int minAgeDays) {
+        // return db.execute(
+        // SELECT schemaname, indexrelname,
+        // pg_size_pretty(pg_relation_size(indexrelid)) AS size,
+        // idx_scan AS scans
+        // FROM pg_stat_user_indexes
+        // WHERE idx_scan = 0
+        // AND indexrelname NOT LIKE '%%pkey'
+        // AND indexrelname NOT LIKE '%%unique%%'
+        // ...
+        return null;
+    }
 
-    def get_index_bloat(self, bloat_threshold: float = 0.3) -> list:
-        return self.db.execute("""
-            SELECT indexrelname,
-                   pg_size_pretty(pg_relation_size(indexrelid)) AS size,
-                   idx_scan AS scans,
-                   pg_stat_get_dead_tuples(indrelid) AS dead_tuples
-            FROM pg_stat_user_indexes
-            JOIN pg_index ON pg_stat_user_indexes.indexrelid = pg_index.indexrelid
-            ORDER BY pg_relation_size(pg_stat_user_indexes.indexrelid) DESC
-            LIMIT 20
-        """)
+    public List<Object> getDuplicateIndexes() {
+        // return db.execute(
+        // SELECT a.indexrelid::regclass AS index_a,
+        // b.indexrelid::regclass AS index_b,
+        // pg_size_pretty(pg_relation_size(a.indexrelid)) AS size_a
+        // FROM pg_index a
+        // JOIN pg_index b ON a.indrelid = b.indrelid
+        // AND a.indexrelid != b.indexrelid
+        // AND a.indkey::text = LEFT(b.indkey::text, length(a.indkey::text))
+        // ...
+        return null;
+    }
 
-    def suggest_index(self, table: str, where_cols: list,
-                     sort_cols: list = None, select_cols: list = None) -> str:
-        """Generate CREATE INDEX statement based on query pattern"""
-        # Equality columns first, then range/sort
-        idx_cols = where_cols[:]
-        if sort_cols:
-            for col in sort_cols:
-                if col not in idx_cols:
-                    idx_cols.append(col)
+    public List<Object> getIndexBloat(double bloatThreshold) {
+        // return db.execute(
+        // SELECT indexrelname,
+        // pg_size_pretty(pg_relation_size(indexrelid)) AS size,
+        // idx_scan AS scans,
+        // pg_stat_get_dead_tuples(indrelid) AS dead_tuples
+        // FROM pg_stat_user_indexes
+        // JOIN pg_index ON pg_stat_user_indexes.indexrelid = pg_index.indexrelid
+        // ORDER BY pg_relation_size(pg_stat_user_indexes.indexrelid) DESC
+        // ...
+        return null;
+    }
 
-        cols_str = ", ".join(idx_cols)
-        idx_name = f"idx_{table}_{'_'.join(where_cols)}"
-        
-        stmt = f"CREATE INDEX CONCURRENTLY {idx_name} ON {table}({cols_str})"
-        
-        if select_cols:
-            include = [c for c in select_cols if c not in idx_cols]
-            if include:
-                stmt += f" INCLUDE ({', '.join(include)})"
-        
-        return stmt + ";"
+    public String suggestIndex(String table, List<Object> whereCols, List<Object> sortCols, List<Object> selectCols) {
+        // Generate CREATE INDEX statement based on query pattern
+        // Equality columns first, then range/sort
+        // idx_cols = where_cols[:]
+        // if sort_cols
+        // for col in sort_cols
+        // if col not in idx_cols
+        // idx_cols.append(col)
+        // cols_str = ", ".join(idx_cols)
+        // ...
+        return null;
+    }
+}
 ```
 
 ---

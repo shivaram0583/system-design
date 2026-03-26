@@ -1,4 +1,4 @@
-# Topic 11: Stateless vs Stateful
+﻿# Topic 11: Stateless vs Stateful
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -50,34 +50,7 @@ STATEFUL SERVER:
 
 ### Making Stateful Services Stateless
 
-```
-Pattern: Externalize State
-
-BEFORE (stateful):
-  ┌────────────┐
-  │  Server 1  │ ← User A's session lives here
-  │  session:  │   If server 1 dies, session is LOST
-  │  {user: A} │
-  └────────────┘
-
-AFTER (stateless with external store):
-  ┌────────────┐  ┌────────────┐
-  │  Server 1  │  │  Server 2  │  ← Both servers are identical
-  │  (no state)│  │  (no state)│    Any can serve any user
-  └─────┬──────┘  └─────┬──────┘
-        └──────┬─────────┘
-         ┌─────┴─────┐
-         │   Redis   │  ← Session data lives here
-         │ {A: {...}}│    Shared, persistent, replicated
-         └───────────┘
-
-  Request flow:
-  1. Client sends request with session_id cookie
-  2. ANY server receives request
-  3. Server looks up session_id in Redis
-  4. Server processes request
-  5. Server returns response
-```
+![Making Stateful Services Stateless diagram](../assets/generated/01-fundamentals-11-stateless-vs-stateful-diagram-01.svg)
 
 ### Where State Must Live
 
@@ -222,20 +195,7 @@ STATELESS (externalized cart):
 
 ### E.1 HLD — Stateless API with External State
 
-```
-┌────────┐   ┌────┐   ┌────────────────────┐
-│ Client │──►│ LB │──►│ App Servers (×N)   │
-│  JWT   │   │    │   │ Stateless          │
-└────────┘   └────┘   └─────────┬──────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    │           │           │
-              ┌─────┴───┐ ┌────┴───┐ ┌─────┴───┐
-              │  Redis  │ │  S3    │ │Postgres │
-              │Sessions │ │Files   │ │Data     │
-              │ + Cart  │ │        │ │         │
-              └─────────┘ └────────┘ └─────────┘
-```
+![E.1 HLD — Stateless API with External State diagram](../assets/generated/01-fundamentals-11-stateless-vs-stateful-diagram-02.svg)
 
 ### E.2 LLD — Session Manager
 

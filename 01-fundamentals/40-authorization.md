@@ -1,4 +1,4 @@
-# Topic 40: Authorization (AuthZ)
+﻿# Topic 40: Authorization (AuthZ)
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -166,29 +166,7 @@ Every user/service should have the MINIMUM permissions needed.
 
 ### Centralized Authorization Service
 
-```
-Instead of each microservice implementing its own AuthZ logic:
-
-  Centralized policy engine (OPA, Cedar, Oso):
-
-  ┌──────────┐    "Can user X do action Y on resource Z?"
-  │ Service A│───────────────────────────────────────────►┌──────────┐
-  │          │◄─── allow / deny ─────────────────────────│  Policy  │
-  └──────────┘                                            │  Engine  │
-  ┌──────────┐    "Can user X do action Y on resource Z?" │  (OPA)   │
-  │ Service B│───────────────────────────────────────────►│          │
-  │          │◄─── allow / deny ─────────────────────────│ Policies:│
-  └──────────┘                                            │ RBAC +   │
-                                                          │ ABAC     │
-                                                          └──────────┘
-
-  Tools:
-  • OPA (Open Policy Agent): General-purpose, Rego policy language
-  • AWS Cedar: Amazon's policy language (Verified Permissions)
-  • Oso: Developer-friendly, embedded policy engine
-  • Casbin: Lightweight, multiple model support (RBAC, ABAC, ReBAC)
-  • SpiceDB: Open-source Zanzibar implementation (ReBAC)
-```
+![Centralized Authorization Service diagram](../assets/generated/01-fundamentals-40-authorization-diagram-01.svg)
 
 ### Audit Logging
 
@@ -253,118 +231,64 @@ SaaS project management tool (like Jira):
 
 ### E.1 HLD — Authorization Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Client → API Gateway (AuthN: JWT validation)         │
-│                │                                       │
-│           ┌────┴─────────────┐                        │
-│           │  Microservices   │                        │
-│           │  (Order, Payment,│                        │
-│           │   User, etc.)    │                        │
-│           └────┬─────────────┘                        │
-│                │ "Can user X do Y on Z?"              │
-│           ┌────┴─────────────┐                        │
-│           │  AuthZ Service   │                        │
-│           │  (OPA / Cedar)   │                        │
-│           │                  │                        │
-│           │  Policy Store:   │                        │
-│           │  • RBAC rules    │                        │
-│           │  • ABAC policies │                        │
-│           │  • Resource rules│                        │
-│           └────┬─────────────┘                        │
-│                │                                       │
-│           ┌────┴─────────────┐                        │
-│           │  Permission DB   │                        │
-│           │  (PostgreSQL)    │                        │
-│           │  • user_roles    │                        │
-│           │  • role_perms    │                        │
-│           │  • resource_acls │                        │
-│           └──────────────────┘                        │
-│                                                        │
-│  Audit Log → Kafka → Elasticsearch (searchable)       │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Authorization Architecture diagram](../assets/generated/01-fundamentals-40-authorization-diagram-02.svg)
 
 ### E.2 LLD — Authorization Service
 
-```python
-from enum import Enum
+```java
+// Dependencies in the original example:
+// from enum import Enum
 
-class Permission(Enum):
-    READ = "read"
-    CREATE = "create"
-    UPDATE = "update"
-    DELETE = "delete"
-    MANAGE_USERS = "manage_users"
-    MANAGE_BILLING = "manage_billing"
-
-# Role → Permissions mapping
-ROLE_PERMISSIONS = {
-    "org_admin":    {Permission.READ, Permission.CREATE, Permission.UPDATE,
-                     Permission.DELETE, Permission.MANAGE_USERS, Permission.MANAGE_BILLING},
-    "project_lead": {Permission.READ, Permission.CREATE, Permission.UPDATE, Permission.DELETE},
-    "member":       {Permission.READ, Permission.CREATE, Permission.UPDATE},
-    "guest":        {Permission.READ},
+public enum Permission {
+    READ,
+    CREATE,
+    UPDATE,
+    DELETE,
+    MANAGE_USERS,
+    MANAGE_BILLING
 }
 
+public class AuthorizationService {
+    private Object db;
+    private Object audit;
 
-class AuthorizationService:
-    def __init__(self, db, audit_logger):
-        self.db = db
-        self.audit = audit_logger
+    public AuthorizationService(Object db, Object auditLogger) {
+        this.db = db;
+        this.audit = auditLogger;
+    }
 
-    def check_permission(self, user_id: str, action: str,
-                        resource_type: str, resource_id: str,
-                        org_id: str) -> bool:
-        """Central authorization check"""
-        
-        # 1. Get user's role in the organization
-        user_role = self.db.get(
-            "SELECT role FROM user_org_roles WHERE user_id = %s AND org_id = %s",
-            (user_id, org_id)
-        )
-        if not user_role:
-            self._log_decision(user_id, action, resource_id, False, "not_in_org")
-            return False
+    public boolean checkPermission(String userId, String action, String resourceType, String resourceId, String orgId) {
+        // Central authorization check
+        // 1. Get user's role in the organization
+        // user_role = db.get(
+        // "SELECT role FROM user_org_roles WHERE user_id = %s AND org_id = %s",
+        // (user_id, org_id)
+        // )
+        // if not user_role
+        // _log_decision(user_id, action, resource_id, false, "not_in_org")
+        // ...
+        return false;
+    }
 
-        # 2. Check tenant isolation (CRITICAL)
-        resource_org = self.db.get(
-            f"SELECT org_id FROM {resource_type}s WHERE id = %s", (resource_id,)
-        )
-        if resource_org != org_id:
-            self._log_decision(user_id, action, resource_id, False, "wrong_tenant")
-            return False
+    public boolean isResourceOwner(Object userId, Object resourceType, Object resourceId) {
+        // owner = db.get(
+        // f"SELECT created_by FROM {resource_type}s WHERE id = %s", (resource_id,)
+        // )
+        // return owner == user_id
+        return false;
+    }
 
-        # 3. Check role-based permission
-        role_name = user_role["role"]
-        required_perm = Permission(action)
-        if required_perm in ROLE_PERMISSIONS.get(role_name, set()):
-            self._log_decision(user_id, action, resource_id, True, f"role:{role_name}")
-            return True
-
-        # 4. Check resource-specific permission (e.g., owner can delete own tasks)
-        if self._is_resource_owner(user_id, resource_type, resource_id):
-            if required_perm in {Permission.UPDATE, Permission.DELETE}:
-                self._log_decision(user_id, action, resource_id, True, "owner")
-                return True
-
-        self._log_decision(user_id, action, resource_id, False, "insufficient_perms")
-        return False
-
-    def _is_resource_owner(self, user_id, resource_type, resource_id) -> bool:
-        owner = self.db.get(
-            f"SELECT created_by FROM {resource_type}s WHERE id = %s", (resource_id,)
-        )
-        return owner == user_id
-
-    def _log_decision(self, user_id, action, resource_id, allowed, reason):
-        self.audit.log({
-            "user_id": user_id,
-            "action": action,
-            "resource": resource_id,
-            "decision": "allowed" if allowed else "denied",
-            "reason": reason,
-        })
+    public Object logDecision(Object userId, Object action, Object resourceId, boolean allowed, Object reason) {
+        // audit.log({
+        // "user_id": user_id,
+        // "action": action,
+        // "resource": resource_id,
+        // "decision": "allowed" if allowed else "denied",
+        // "reason": reason,
+        // })
+        return null;
+    }
+}
 ```
 
 ---

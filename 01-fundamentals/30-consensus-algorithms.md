@@ -1,4 +1,4 @@
-# Topic 30: Consensus Algorithms
+﻿# Topic 30: Consensus Algorithms
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Advanced
@@ -69,36 +69,7 @@ Byzantine Generals Problem:
 
 ### Raft Consensus (Detailed)
 
-```
-Raft splits consensus into 3 sub-problems:
-
-1. LEADER ELECTION (covered in Topic 29)
-   → One leader at a time per term
-
-2. LOG REPLICATION
-   Client → Leader: "Set X=5"
-   Leader appends to its log: [index:7, term:3, cmd:"Set X=5"]
-   Leader sends AppendEntries to followers
-   Follower appends to its log → ACK
-   When majority ACK → Leader commits → applies to state machine
-   Leader notifies followers to commit
-
-   ┌────────┐     ┌────────┐     ┌────────┐
-   │Leader  │     │Follow 1│     │Follow 2│
-   │Log:    │     │Log:    │     │Log:    │
-   │[1][2][3│────►│[1][2][3│     │[1][2]  │
-   │       ]│     │       ]│     │        │
-   └────────┘     └────────┘     └────────┘
-   Majority (2/3) have entry 3 → COMMITTED
-
-3. SAFETY
-   Only a node with ALL committed entries can become leader.
-   Prevents losing committed data during leader changes.
-   
-   New leader candidate: "My last log entry is index 7, term 3"
-   Voter checks: "My last entry is index 6, term 3" → candidate is more up-to-date → VOTE YES
-   Voter checks: "My last entry is index 8, term 3" → I'm more up-to-date → VOTE NO
-```
+![Raft Consensus (Detailed) diagram](../assets/generated/01-fundamentals-30-consensus-algorithms-diagram-01.svg)
 
 ### Paxos (Simplified)
 
@@ -221,29 +192,7 @@ Multi-Raft (CockroachDB, TiKV):
 
 ## D. Example: Distributed Configuration Store
 
-```
-etcd cluster (3 nodes) for service configuration:
-
-  ┌──────────┐     ┌──────────┐     ┌──────────┐
-  │  etcd 1  │◄───►│  etcd 2  │◄───►│  etcd 3  │
-  │ (Leader) │     │(Follower)│     │(Follower)│
-  └──────────┘     └──────────┘     └──────────┘
-
-Write: PUT /config/db_host = "10.0.1.5"
-  1. Client sends to leader (etcd 1)
-  2. Leader appends to log
-  3. Leader replicates to etcd 2 and etcd 3
-  4. etcd 2 ACKs → majority (2/3) → committed
-  5. Leader applies to state machine → returns success to client
-
-Read (linearizable):
-  Client → Leader → read from state machine → return
-  (Guaranteed to see latest committed value)
-
-Read (serializable, faster):
-  Client → any node → read from local state machine → return
-  (May return slightly stale value if follower is behind)
-```
+![D. Example: Distributed Configuration Store diagram](../assets/generated/01-fundamentals-30-consensus-algorithms-diagram-02.svg)
 
 ---
 
@@ -251,114 +200,92 @@ Read (serializable, faster):
 
 ### E.1 HLD — Consensus-Based Replicated Store
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Clients                                               │
-│  ┌──────┐ ┌──────┐ ┌──────┐                          │
-│  │App 1 │ │App 2 │ │App 3 │                          │
-│  └──┬───┘ └──┬───┘ └──┬───┘                          │
-│     └────────┼────────┘                               │
-│              ▼                                         │
-│  ┌──────────────────────────────────┐                 │
-│  │  Consensus Group (Raft)          │                 │
-│  │                                    │                 │
-│  │  ┌────────┐ ┌────────┐ ┌────────┐│                │
-│  │  │Node 1  │ │Node 2  │ │Node 3  ││                │
-│  │  │Leader  │ │Follower│ │Follower││                │
-│  │  │        │ │        │ │        ││                │
-│  │  │Log:    │ │Log:    │ │Log:    ││                │
-│  │  │[1..N]  │ │[1..N]  │ │[1..N]  ││                │
-│  │  │        │ │        │ │        ││                │
-│  │  │State   │ │State   │ │State   ││                │
-│  │  │Machine │ │Machine │ │Machine ││                │
-│  │  └────────┘ └────────┘ └────────┘│                │
-│  └──────────────────────────────────┘                 │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Consensus-Based Replicated Store diagram](../assets/generated/01-fundamentals-30-consensus-algorithms-diagram-03.svg)
 
 ### E.2 LLD — Simplified Raft Log Replication
 
-```python
-class RaftNode:
-    def __init__(self, node_id, peers):
-        self.id = node_id
-        self.peers = peers  # Other node addresses
-        self.role = "follower"  # follower, candidate, leader
-        self.current_term = 0
-        self.voted_for = None
-        self.log = []  # List of {term, command}
-        self.commit_index = 0
-        self.state_machine = {}  # key-value store
+```java
+public class RaftNode {
+    private Object id;
+    private Object peers;
+    private String role;
+    private Object currentTerm;
+    private Object votedFor;
+    private Object log;
+    private Object commitIndex;
+    private Object stateMachine;
 
-    def propose(self, command: dict) -> bool:
-        """Leader proposes a new entry (client write)"""
-        if self.role != "leader":
-            return False  # Redirect to leader
+    public RaftNode(Object nodeId, List<Object> peers) {
+        this.id = nodeId;
+        this.peers = peers;
+        this.role = "follower";
+        this.currentTerm = 0;
+        this.votedFor = null;
+        this.log = new ArrayList<>();
+        this.commitIndex = 0;
+        this.stateMachine = new HashMap<>();
+    }
 
-        # Append to local log
-        entry = {"term": self.current_term, "command": command}
-        self.log.append(entry)
-        index = len(self.log)
+    public boolean propose(Map<String, Object> command) {
+        // Leader proposes a new entry (client write)
+        // if role != "leader"
+        // return false  # Redirect to leader
+        // Append to local log
+        // entry = {"term": current_term, "command": command}
+        // log.append(entry)
+        // index = len(log)
+        // Replicate to followers
+        // ...
+        return false;
+    }
 
-        # Replicate to followers
-        ack_count = 1  # Self
-        for peer in self.peers:
-            success = self._send_append_entries(peer, [entry], index)
-            if success:
-                ack_count += 1
+    public Object sendAppendEntries(Object peer, Object entries, Object leaderCommit) {
+        // Send AppendEntries RPC to a follower
+        // response = rpc_call(peer, "append_entries", {
+        // "term": current_term,
+        // "leader_id": id,
+        // "entries": entries,
+        // "leader_commit": leader_commit,
+        // })
+        // return response.get("success", false)
+        return null;
+    }
 
-        # Check quorum
-        if ack_count > (len(self.peers) + 1) // 2:
-            self.commit_index = index
-            self._apply_to_state_machine(entry["command"])
-            return True  # Committed
+    public Object handleAppendEntries(Object request) {
+        // Follower handles AppendEntries from leader
+        // if request["term"] < current_term
+        // return {"success": false, "term": current_term}
+        // current_term = request["term"]
+        // role = "follower"
+        // Append new entries
+        // for entry in request["entries"]
+        // log.append(entry)
+        // ...
+        return null;
+    }
 
-        return False  # Failed to get majority
+    public Object applyToStateMachine(Object command) {
+        // if command["type"] == "set"
+        // state_machine[command["key"]] = command["value"]
+        return null;
+    }
 
-    def _send_append_entries(self, peer, entries, leader_commit):
-        """Send AppendEntries RPC to a follower"""
-        response = rpc_call(peer, "append_entries", {
-            "term": self.current_term,
-            "leader_id": self.id,
-            "entries": entries,
-            "leader_commit": leader_commit,
-        })
-        return response.get("success", False)
+    public Object applyCommitted() {
+        // Apply all committed but unapplied entries
+        // for i in range(commit_index)
+        // if i < len(log)
+        // _apply_to_state_machine(log[i]["command"])
+        return null;
+    }
 
-    def handle_append_entries(self, request):
-        """Follower handles AppendEntries from leader"""
-        if request["term"] < self.current_term:
-            return {"success": False, "term": self.current_term}
-
-        self.current_term = request["term"]
-        self.role = "follower"
-
-        # Append new entries
-        for entry in request["entries"]:
-            self.log.append(entry)
-
-        # Update commit index
-        if request["leader_commit"] > self.commit_index:
-            self.commit_index = min(request["leader_commit"], len(self.log))
-            self._apply_committed()
-
-        return {"success": True, "term": self.current_term}
-
-    def _apply_to_state_machine(self, command):
-        if command["type"] == "set":
-            self.state_machine[command["key"]] = command["value"]
-
-    def _apply_committed(self):
-        """Apply all committed but unapplied entries"""
-        for i in range(self.commit_index):
-            if i < len(self.log):
-                self._apply_to_state_machine(self.log[i]["command"])
-
-    def read(self, key: str):
-        """Read from state machine (linearizable if leader)"""
-        if self.role == "leader":
-            return self.state_machine.get(key)
-        return None  # Redirect to leader for linearizable read
+    public Object read(String key) {
+        // Read from state machine (linearizable if leader)
+        // if role == "leader"
+        // return state_machine.get(key)
+        // return null  # Redirect to leader for linearizable read
+        return null;
+    }
+}
 ```
 
 ---

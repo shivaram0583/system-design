@@ -1,4 +1,4 @@
-# Topic 41: OAuth 2.0 and JWT
+﻿# Topic 41: OAuth 2.0 and JWT
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate → Advanced
@@ -36,25 +36,7 @@ WITH OAuth:
 
 ### OAuth 2.0 Roles
 
-```
-RESOURCE OWNER:  The user who owns the data (e.g., you)
-CLIENT:          The application requesting access (e.g., a todo app)
-AUTHORIZATION SERVER: Issues tokens after user consent (e.g., Google Auth)
-RESOURCE SERVER: Hosts the protected data (e.g., Google Calendar API)
-
-  ┌──────────────┐         ┌─────────────────────┐
-  │ Resource     │ consent │ Authorization Server │
-  │ Owner (User) │────────►│ (Google Accounts)    │
-  └──────────────┘         └──────────┬──────────┘
-                                      │ token
-  ┌──────────────┐                    │
-  │ Client       │◄───────────────────┘
-  │ (Todo App)   │
-  │              │──── token ────────►┌─────────────────┐
-  │              │◄─── data ─────────│ Resource Server  │
-  └──────────────┘                    │ (Google Calendar)│
-                                      └─────────────────┘
-```
+![OAuth 2.0 Roles diagram](../assets/generated/01-fundamentals-41-oauth-jwt-diagram-01.svg)
 
 ### OAuth 2.0 Grant Types
 
@@ -293,34 +275,7 @@ Rotate signing keys periodically without downtime:
 
 ## D. Example: "Login with Google" for a Web App
 
-```
-┌────────┐   1. Click "Login with Google"    ┌──────────┐
-│ Browser│──────────────────────────────────►│ Your App │
-│        │                                    │ Server   │
-│        │   2. Redirect to Google            │          │
-│        │◄──────────────────────────────────│          │
-│        │                                    └──────────┘
-│        │   3. Login at Google
-│        │──────────────────────────────────►┌──────────┐
-│        │   4. Approve scopes               │ Google   │
-│        │◄──────────────────────────────────│ Auth     │
-│        │   5. Redirect with auth code      │          │
-│        │──────────────────────────────────►└──────────┘
-│        │
-│        │──── code ────────────────────────►┌──────────┐
-│        │                                    │ Your App │
-│        │                                    │ Server   │
-│        │   6. Exchange code for tokens      │  ↓       │
-│        │      (server-to-server)            │ Google   │
-│        │                                    │ token EP │
-│        │                                    │  ↓       │
-│        │   7. Get user info from ID token   │ Create   │
-│        │      or /userinfo endpoint         │ session  │
-│        │                                    │          │
-│        │   8. Set session cookie            │          │
-│        │◄──────────────────────────────────│          │
-└────────┘                                    └──────────┘
-```
+![D. Example: "Login with Google" for a Web App diagram](../assets/generated/01-fundamentals-41-oauth-jwt-diagram-02.svg)
 
 ---
 
@@ -328,120 +283,87 @@ Rotate signing keys periodically without downtime:
 
 ### E.1 HLD — OAuth/OIDC Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Client (Browser / Mobile)                                 │
-│      │                                                     │
-│  ┌───┴───────────────┐     ┌──────────────────────┐      │
-│  │  API Gateway      │     │  Identity Providers   │      │
-│  │  (validates JWT)  │     │  • Google (OIDC)      │      │
-│  └───┬───────────────┘     │  • GitHub (OAuth)     │      │
-│      │                      │  • Internal (OIDC)    │      │
-│  ┌───┴───────────────┐     └──────────┬───────────┘      │
-│  │  Auth Service     │◄───────────────┘                   │
-│  │                    │                                     │
-│  │  • OAuth flows     │     ┌──────────────────────┐      │
-│  │  • Token issuance │────►│  PostgreSQL           │      │
-│  │  • JWKS endpoint  │     │  • users              │      │
-│  │  • User creation  │     │  • oauth_connections  │      │
-│  │                    │     └──────────────────────┘      │
-│  │                    │                                     │
-│  │  • Refresh tokens │────►┌──────────────────────┐      │
-│  │  • Sessions       │     │  Redis                │      │
-│  └───────────────────┘     └──────────────────────┘      │
-│                                                            │
-│  JWKS: https://auth.yourapp.com/.well-known/jwks.json    │
-│  Discovery: /.well-known/openid-configuration             │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — OAuth/OIDC Architecture diagram](../assets/generated/01-fundamentals-41-oauth-jwt-diagram-03.svg)
 
 ### E.2 LLD — OAuth Client
 
-```python
-import requests
-import jwt
-import hashlib
-import base64
-import os
+```java
+// Dependencies in the original example:
+// import requests
+// import jwt
+// import hashlib
+// import base64
+// import os
 
-class OAuthClient:
-    def __init__(self, client_id: str, client_secret: str,
-                 auth_url: str, token_url: str, redirect_uri: str,
-                 jwks_url: str):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.auth_url = auth_url
-        self.token_url = token_url
-        self.redirect_uri = redirect_uri
-        self.jwks_url = jwks_url
-        self._jwks_cache = None
+public class OAuthClient {
+    private String clientId;
+    private String clientSecret;
+    private String authUrl;
+    private String tokenUrl;
+    private String redirectUri;
+    private String jwksUrl;
+    private Object jwksCache;
 
-    def get_authorization_url(self, scopes: list, state: str,
-                              use_pkce=False) -> dict:
-        """Generate the URL to redirect the user to the identity provider"""
-        params = {
-            "response_type": "code",
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
-            "scope": " ".join(scopes),
-            "state": state,
-        }
-        
-        pkce_verifier = None
-        if use_pkce:
-            pkce_verifier = base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode()
-            challenge = base64.urlsafe_b64encode(
-                hashlib.sha256(pkce_verifier.encode()).digest()
-            ).rstrip(b"=").decode()
-            params["code_challenge"] = challenge
-            params["code_challenge_method"] = "S256"
+    public OAuthClient(String clientId, String clientSecret, String authUrl, String tokenUrl, String redirectUri, String jwksUrl) {
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+        this.authUrl = authUrl;
+        this.tokenUrl = tokenUrl;
+        this.redirectUri = redirectUri;
+        this.jwksUrl = jwksUrl;
+        this.jwksCache = null;
+    }
 
-        query = "&".join(f"{k}={v}" for k, v in params.items())
-        return {
-            "url": f"{self.auth_url}?{query}",
-            "pkce_verifier": pkce_verifier,
-        }
+    public Map<String, Object> getAuthorizationUrl(List<Object> scopes, String state, Object usePkce) {
+        // Generate the URL to redirect the user to the identity provider
+        // params = {
+        // "response_type": "code",
+        // "client_id": client_id,
+        // "redirect_uri": redirect_uri,
+        // "scope": " ".join(scopes),
+        // "state": state,
+        // }
+        // ...
+        return null;
+    }
 
-    def exchange_code(self, code: str, pkce_verifier: str = None) -> dict:
-        """Exchange authorization code for tokens"""
-        data = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": self.redirect_uri,
-            "client_id": self.client_id,
-        }
-        
-        if self.client_secret:
-            data["client_secret"] = self.client_secret
-        if pkce_verifier:
-            data["code_verifier"] = pkce_verifier
+    public Map<String, Object> exchangeCode(String code, String pkceVerifier) {
+        // Exchange authorization code for tokens
+        // data = {
+        // "grant_type": "authorization_code",
+        // "code": code,
+        // "redirect_uri": redirect_uri,
+        // "client_id": client_id,
+        // }
+        // if client_secret
+        // ...
+        return null;
+    }
 
-        response = requests.post(self.token_url, data=data)
-        response.raise_for_status()
-        return response.json()  # {access_token, id_token, refresh_token, ...}
+    public Map<String, Object> verifyIdToken(String idToken) {
+        // Verify and decode the OIDC ID token
+        // header = jwt.get_unverified_header(id_token)
+        // public_key = _get_public_key(header["kid"])
+        // claims = jwt.decode(
+        // id_token,
+        // public_key,
+        // algorithms=["RS256"],
+        // audience=client_id,
+        // ...
+        return null;
+    }
 
-    def verify_id_token(self, id_token: str) -> dict:
-        """Verify and decode the OIDC ID token"""
-        header = jwt.get_unverified_header(id_token)
-        public_key = self._get_public_key(header["kid"])
-        
-        claims = jwt.decode(
-            id_token,
-            public_key,
-            algorithms=["RS256"],
-            audience=self.client_id,
-        )
-        return claims  # {sub, email, name, picture, ...}
-
-    def _get_public_key(self, kid: str):
-        if not self._jwks_cache:
-            response = requests.get(self.jwks_url)
-            self._jwks_cache = response.json()
-        
-        for key in self._jwks_cache["keys"]:
-            if key["kid"] == kid:
-                return jwt.algorithms.RSAAlgorithm.from_jwk(key)
-        raise ValueError(f"Key {kid} not found in JWKS")
+    public Object getPublicKey(String kid) {
+        // if not _jwks_cache
+        // response = requests.get(jwks_url)
+        // _jwks_cache = response.json()
+        // for key in _jwks_cache["keys"]
+        // if key["kid"] == kid
+        // return jwt.algorithms.RSAAlgorithm.from_jwk(key)
+        // raise ValueError(f"Key {kid} not found in JWKS")
+        return null;
+    }
+}
 ```
 
 ---

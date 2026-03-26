@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="653" height="508" viewBox="0 0 653 508" role="img" aria-labelledby="title desc">
+  <title id="title">Point-in-Time Recovery (PITR) diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="651.8" height="506.8" rx="16" />
+  <g class="segments">
+    <line x1="208.8" y1="314" x2="217.20000000000002" y2="314" />
+    <line x1="217.20000000000002" y1="314" x2="225.60000000000002" y2="314" />
+    <line x1="250.8" y1="314" x2="259.2" y2="314" />
+    <line x1="259.20000000000005" y1="314" x2="267.6" y2="314" />
+    <line x1="292.8" y1="314" x2="301.2" y2="314" />
+    <line x1="301.2" y1="314" x2="309.59999999999997" y2="314" />
+    <line x1="334.8" y1="314" x2="343.2" y2="314" />
+    <line x1="343.2" y1="314" x2="351.59999999999997" y2="314" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">Scenario: At 3:00 PM, someone runs DELETE FROM orders (no WHERE clause).</text>
+    <text x="24" y="59" xml:space="preserve">  All 10M orders deleted. Replicas replicate the delete.</text>
+    <text x="24" y="99" xml:space="preserve">Without PITR:</text>
+    <text x="24" y="119" xml:space="preserve">  Restore last night&apos;s full backup → lose everything since midnight.</text>
+    <text x="24" y="139" xml:space="preserve">  13 hours of data lost!</text>
+    <text x="24" y="179" xml:space="preserve">With PITR:</text>
+    <text x="24" y="199" xml:space="preserve">  1. Restore last full backup (midnight)</text>
+    <text x="24" y="219" xml:space="preserve">  2. Replay WAL logs from midnight to 2:59:59 PM</text>
+    <text x="24" y="239" xml:space="preserve">  3. Stop before the DELETE statement</text>
+    <text x="24" y="259" xml:space="preserve">  4. Result: Recover to exactly 1 second before the disaster</text>
+    <text x="24" y="299" xml:space="preserve">  Timeline:</text>
+    <text x="24" y="319" xml:space="preserve">  [Full backup 00:00]   WAL  WAL  WAL   [Disaster 15:00]</text>
+    <text x="24" y="339" xml:space="preserve">                                         ↑</text>
+    <text x="24" y="359" xml:space="preserve">                         Recover to 14:59:59</text>
+    <text x="24" y="399" xml:space="preserve">  PostgreSQL PITR:</text>
+    <text x="24" y="419" xml:space="preserve">    recovery_target_time = &apos;2024-01-15 14:59:59&apos;</text>
+    <text x="24" y="459" xml:space="preserve">  AWS RDS: Automated backups + PITR with 1-second granularity</text>
+    <text x="24" y="479" xml:space="preserve">    &quot;Restore to any point in the last 35 days&quot;</text>
+  </g>
+</svg>

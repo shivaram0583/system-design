@@ -1,4 +1,4 @@
-# Topic 02: Key-Value Store
+﻿# Topic 02: Key-Value Store
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -23,23 +23,7 @@
 
 A **key-value store** is the simplest NoSQL database model. Every piece of data is stored as a **key** (unique identifier) and a **value** (the data itself — a string, JSON, binary blob, etc.). Think of it as a giant hash map / dictionary.
 
-```
-  Key                     Value
-  ─────────────────────   ─────────────────────────────
-  "user:123"              {"name":"Alice","email":"a@b.com"}
-  "session:abc"           {"user_id":123,"expires":1705363200}
-  "cart:456"              {"items":[{"sku":"A1","qty":2}]}
-  "rate_limit:10.0.0.1"  {"count":42,"window_start":1705359600}
-
-  Operations:
-    GET  "user:123"         → returns the value
-    SET  "user:123" value   → stores/overwrites
-    DEL  "user:123"         → removes
-    TTL  "session:abc" 3600 → auto-expire in 1 hour
-
-  No schema, no joins, no complex queries.
-  Just GET and SET by key — blazing fast.
-```
+![What is a Key-Value Store? diagram](../assets/generated/02-databases-02-key-value-store-diagram-01.svg)
 
 ### Why Key-Value Stores?
 
@@ -176,77 +160,17 @@ Hybrid (recommended):
 
 ### Redis Cluster
 
-```
-  Client ──hash(key)──► Slot 0-5460   → Node A (master) + replica
-                        Slot 5461-10922 → Node B (master) + replica
-                        Slot 10923-16383 → Node C (master) + replica
-
-  16384 hash slots distributed across master nodes.
-  Each key maps to a slot: CRC16(key) % 16384
-  
-  Automatic failover: if master dies → replica promoted
-  Resharding: move slots between nodes for rebalancing
-
-  Limitation: Multi-key operations must be on same slot
-  Solution: Hash tags — {user:123}:cart and {user:123}:session → same slot
-```
+![Redis Cluster diagram](../assets/generated/02-databases-02-key-value-store-diagram-02.svg)
 
 ### DynamoDB Key Design
 
-```
-DynamoDB uses:
-  Partition Key (PK): Determines which partition stores the item
-  Sort Key (SK): Optional, enables range queries within a partition
-
-  Table: UserOrders
-  ┌─────────────────┬──────────────────┬────────┬────────┐
-  │ PK (user_id)    │ SK (order_id)    │ total  │ status │
-  ├─────────────────┼──────────────────┼────────┼────────┤
-  │ user_123        │ order_2024_001   │ 99.99  │ paid   │
-  │ user_123        │ order_2024_002   │ 49.50  │ pending│
-  │ user_456        │ order_2024_003   │ 75.00  │ paid   │
-  └─────────────────┴──────────────────┴────────┴────────┘
-
-  Query by user: PK = "user_123" → all orders for user 123
-  Query specific: PK = "user_123" AND SK = "order_2024_001"
-  Range query: PK = "user_123" AND SK BETWEEN "order_2024" AND "order_2025"
-
-  Hot partition problem:
-    One user with 10M orders → one partition gets all traffic
-    Solution: Add random suffix to PK for write-heavy keys
-```
+![DynamoDB Key Design diagram](../assets/generated/02-databases-02-key-value-store-diagram-03.svg)
 
 ---
 
 ## D. Example: Session Store with Redis
 
-```
-  ┌────────┐  Login   ┌──────────┐  Store session  ┌─────────┐
-  │ Client │────────►│ Auth Svc │────────────────►│  Redis  │
-  │        │         │          │                  │ Cluster │
-  │        │◄────────│          │◄────────────────│         │
-  │        │ Cookie  │          │  session_id      │  TTL:   │
-  └────────┘         └──────────┘                  │  30 min │
-                                                    └─────────┘
-  Login:
-    1. Verify credentials
-    2. session_id = uuid4()
-    3. HSET "session:{session_id}" "user_id" "123" "role" "admin"
-    4. EXPIRE "session:{session_id}" 1800  (30 min)
-    5. Set-Cookie: session_id=...; HttpOnly; Secure
-
-  Each request:
-    1. Read session_id from cookie
-    2. HGETALL "session:{session_id}"
-    3. If exists → authenticated; EXPIRE to refresh TTL
-    4. If not → 401 Unauthorized
-
-  Logout:
-    DEL "session:{session_id}"
-
-  Scaling: Redis Cluster with 3 masters + 3 replicas
-  Capacity: 1M concurrent sessions × 1 KB = 1 GB RAM
-```
+![D. Example: Session Store with Redis diagram](../assets/generated/02-databases-02-key-value-store-diagram-04.svg)
 
 ---
 
@@ -254,103 +178,91 @@ DynamoDB uses:
 
 ### E.1 HLD — Distributed Key-Value Store
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Clients                                                   │
-│      │                                                     │
-│  ┌───┴───────────┐                                        │
-│  │  Application  │                                        │
-│  │  (Redis SDK)  │                                        │
-│  └───┬───────────┘                                        │
-│      │ hash(key) → slot → node                            │
-│      │                                                     │
-│  ┌───┴──────────────────────────────────────────────┐    │
-│  │  Redis Cluster (6 nodes)                          │    │
-│  │                                                    │    │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐          │    │
-│  │  │Master A │  │Master B │  │Master C │          │    │
-│  │  │Slots    │  │Slots    │  │Slots    │          │    │
-│  │  │0-5460   │  │5461-    │  │10923-   │          │    │
-│  │  │         │  │10922    │  │16383    │          │    │
-│  │  └────┬────┘  └────┬────┘  └────┬────┘          │    │
-│  │       │            │            │                │    │
-│  │  ┌────┴────┐  ┌────┴────┐  ┌────┴────┐          │    │
-│  │  │Replica A│  │Replica B│  │Replica C│          │    │
-│  │  └─────────┘  └─────────┘  └─────────┘          │    │
-│  └───────────────────────────────────────────────────┘    │
-│                                                            │
-│  Persistence: AOF (everysec) + RDB snapshots (hourly)     │
-│  Monitoring: Redis Exporter → Prometheus → Grafana        │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Distributed Key-Value Store diagram](../assets/generated/02-databases-02-key-value-store-diagram-05.svg)
 
 ### E.2 LLD — Key-Value Client Wrapper
 
-```python
-import redis
-import json
-import time
+```java
+// Dependencies in the original example:
+// import redis
+// import json
+// import time
 
-class KeyValueStore:
-    """Application-level wrapper around Redis with serialization and patterns"""
-    
-    def __init__(self, redis_client: redis.Redis):
-        self.redis = redis_client
+public class KeyValueStore {
+    private Object redis;
 
-    def get(self, key: str) -> dict | None:
-        raw = self.redis.get(key)
-        if raw is None:
-            return None
-        return json.loads(raw)
+    public KeyValueStore(Object redisClient) {
+        this.redis = redisClient;
+    }
 
-    def set(self, key: str, value: dict, ttl_seconds: int = None):
-        serialized = json.dumps(value)
-        if ttl_seconds:
-            self.redis.setex(key, ttl_seconds, serialized)
-        else:
-            self.redis.set(key, serialized)
+    public Map<String, Object> get(String key) {
+        // raw = redis.get(key)
+        // if raw is null
+        // return null
+        // return json.loads(raw)
+        return null;
+    }
 
-    def delete(self, key: str):
-        self.redis.delete(key)
+    public Object set(String key, Map<String, Object> value, int ttlSeconds) {
+        // serialized = json.dumps(value)
+        // if ttl_seconds
+        // redis.setex(key, ttl_seconds, serialized)
+        // else
+        // redis.set(key, serialized)
+        return null;
+    }
 
-    # --- Session Pattern ---
-    def create_session(self, session_id: str, user_data: dict,
-                      ttl: int = 1800) -> str:
-        key = f"session:{session_id}"
-        self.redis.hset(key, mapping=user_data)
-        self.redis.expire(key, ttl)
-        return session_id
+    public Object delete(String key) {
+        // redis.delete(key)
+        return null;
+    }
 
-    def get_session(self, session_id: str) -> dict | None:
-        key = f"session:{session_id}"
-        data = self.redis.hgetall(key)
-        if not data:
-            return None
-        self.redis.expire(key, 1800)  # Refresh TTL on access
-        return {k.decode(): v.decode() for k, v in data.items()}
+    public String createSession(String sessionId, Map<String, Object> userData, int ttl) {
+        // key = f"session:{session_id}"
+        // redis.hset(key, mapping=user_data)
+        // redis.expire(key, ttl)
+        // return session_id
+        return null;
+    }
 
-    # --- Rate Limiting Pattern ---
-    def check_rate_limit(self, identifier: str, max_requests: int,
-                        window_seconds: int = 60) -> bool:
-        key = f"rate:{identifier}:{int(time.time()) // window_seconds}"
-        pipe = self.redis.pipeline()
-        pipe.incr(key)
-        pipe.expire(key, window_seconds)
-        results = pipe.execute()
-        current_count = results[0]
-        return current_count <= max_requests
+    public Map<String, Object> getSession(String sessionId) {
+        // key = f"session:{session_id}"
+        // data = redis.hgetall(key)
+        // if not data
+        // return null
+        // redis.expire(key, 1800)  # Refresh TTL on access
+        // return {k.decode(): v.decode() for k, v in data.items()}
+        return null;
+    }
 
-    # --- Leaderboard Pattern ---
-    def update_score(self, leaderboard: str, member: str, score: float):
-        self.redis.zadd(leaderboard, {member: score})
+    public boolean checkRateLimit(String identifier, int maxRequests, int windowSeconds) {
+        // key = f"rate:{identifier}:{int(time.time()) // window_seconds}"
+        // pipe = redis.pipeline()
+        // pipe.incr(key)
+        // pipe.expire(key, window_seconds)
+        // results = pipe.execute()
+        // current_count = results[0]
+        // return current_count <= max_requests
+        return false;
+    }
 
-    def get_top(self, leaderboard: str, count: int = 10) -> list:
-        results = self.redis.zrevrange(leaderboard, 0, count - 1, withscores=True)
-        return [{"member": m.decode(), "score": s} for m, s in results]
+    public Object updateScore(String leaderboard, String member, double score) {
+        // redis.zadd(leaderboard, {member: score})
+        return null;
+    }
 
-    def get_rank(self, leaderboard: str, member: str) -> int | None:
-        rank = self.redis.zrevrank(leaderboard, member)
-        return rank + 1 if rank is not None else None
+    public List<Object> getTop(String leaderboard, int count) {
+        // results = redis.zrevrange(leaderboard, 0, count - 1, withscores=true)
+        // return [{"member": m.decode(), "score": s} for m, s in results]
+        return null;
+    }
+
+    public int getRank(String leaderboard, String member) {
+        // rank = redis.zrevrank(leaderboard, member)
+        // return rank + 1 if rank is not null else null
+        return 0;
+    }
+}
 ```
 
 ---

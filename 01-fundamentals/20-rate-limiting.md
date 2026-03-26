@@ -1,4 +1,4 @@
-# Topic 20: Rate Limiting
+﻿# Topic 20: Rate Limiting
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -212,49 +212,13 @@ Apply different limits at different levels:
 
 ### Distributed Rate Limiting with Redis
 
-```
-Challenge: Multiple API servers need shared rate limit state.
-
-  ┌──────┐  ┌──────┐  ┌──────┐
-  │ API1 │  │ API2 │  │ API3 │  All check the SAME counter
-  └──┬───┘  └──┬───┘  └──┬───┘
-     └─────────┼────────┘
-          ┌────┴────┐
-          │  Redis  │  Atomic increment: INCR user:123:minute:1700000
-          └─────────┘  TTL auto-expires old keys
-
-Redis Lua script for atomic token bucket:
-  local tokens = redis.call('get', KEYS[1])
-  if tokens == false then tokens = ARGV[1] end  -- bucket capacity
-  if tonumber(tokens) > 0 then
-    redis.call('decr', KEYS[1])
-    return 1  -- allowed
-  else
-    return 0  -- denied
-  end
-```
+![Distributed Rate Limiting with Redis diagram](../assets/generated/01-fundamentals-20-rate-limiting-diagram-01.svg)
 
 ---
 
 ## D. Example: API Rate Limiting for SaaS Platform
 
-```
-Plan-based limits:
-  Free:       100 req/min, 1000 req/day
-  Starter:    500 req/min, 10K req/day
-  Pro:        2000 req/min, 100K req/day
-  Enterprise: Custom, 1M+ req/day
-
-Architecture:
-  ┌────────┐     ┌──────────────┐     ┌──────────┐
-  │ Client │────►│ API Gateway  │────►│ Backend  │
-  └────────┘     │ (Rate Limit) │     │ Services │
-                 └──────┬───────┘     └──────────┘
-                        │
-                   ┌────┴────┐
-                   │  Redis  │  Rate limit counters
-                   └─────────┘
-```
+![D. Example: API Rate Limiting for SaaS Platform diagram](../assets/generated/01-fundamentals-20-rate-limiting-diagram-02.svg)
 
 ---
 
@@ -262,25 +226,7 @@ Architecture:
 
 ### E.1 HLD — Rate Limiting Service
 
-```
-┌──────────────────────────────────────────────────┐
-│  Clients                                          │
-│      │                                            │
-│  ┌───┴──────────────┐                             │
-│  │  API Gateway     │                             │
-│  │  (Nginx/Kong)    │─── check ──► Rate Limit    │
-│  │                  │◄── allow/deny ── Service    │
-│  └───┬──────────────┘              │              │
-│      │                        ┌────┴────┐         │
-│  ┌───┴────────┐               │  Redis  │         │
-│  │  Backend   │               │ Cluster │         │
-│  │  Services  │               └─────────┘         │
-│  └────────────┘                                   │
-│                                                    │
-│  Config DB: rate limit rules per plan/endpoint    │
-│  Dashboard: real-time rate limit metrics           │
-└──────────────────────────────────────────────────┘
-```
+![E.1 HLD — Rate Limiting Service diagram](../assets/generated/01-fundamentals-20-rate-limiting-diagram-03.svg)
 
 ### E.2 LLD — Token Bucket Rate Limiter
 

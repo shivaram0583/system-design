@@ -1,4 +1,4 @@
-# HLD 16: API Rate Limiting Gateway
+﻿# HLD 16: API Rate Limiting Gateway
 
 > **Difficulty**: Medium
 > **Key Concepts**: Token bucket, distributed state, API gateway, multi-tenant
@@ -71,24 +71,33 @@ Rate limits applied in layers:
 
 ### Distributed Counter with Redis
 
-```lua
--- Atomic rate limit check + increment (Redis Lua script)
-local key = KEYS[1]
-local limit = tonumber(ARGV[1])
-local window = tonumber(ARGV[2])
+```java
+import java.time.Duration;
+import org.redisson.api.RRateLimiter;
+import org.redisson.api.RateIntervalUnit;
+import org.redisson.api.RateType;
+import org.redisson.api.RedissonClient;
 
-local current = redis.call('INCR', key)
-if current == 1 then
-    redis.call('EXPIRE', key, window)
-end
+public final class DistributedRateLimiter {
+    private final RedissonClient redissonClient;
 
-if current > limit then
-    local ttl = redis.call('TTL', key)
-    return {0, current, ttl}  -- REJECT: {allowed, count, reset_seconds}
-end
+    public DistributedRateLimiter(RedissonClient redissonClient) {
+        this.redissonClient = redissonClient;
+    }
 
-local ttl = redis.call('TTL', key)
-return {1, current, ttl}  -- ALLOW: {allowed, count, reset_seconds}
+    public RateLimitDecision check(String key, long limit, Duration window) {
+        RRateLimiter limiter = redissonClient.getRateLimiter("rate:" + key);
+        limiter.trySetRate(RateType.OVERALL, limit, window.getSeconds(), RateIntervalUnit.SECONDS);
+
+        boolean allowed = limiter.tryAcquire(1);
+        long remaining = allowed ? limiter.availablePermits() : 0L;
+        long resetSeconds = window.getSeconds();
+
+        return new RateLimitDecision(allowed, remaining, resetSeconds);
+    }
+
+    public record RateLimitDecision(boolean allowed, long remaining, long resetSeconds) {}
+}
 ```
 
 ### Response Headers

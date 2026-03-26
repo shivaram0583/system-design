@@ -1,4 +1,4 @@
-# Topic 13: Backup & Recovery
+﻿# Topic 13: Backup & Recovery
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate → Advanced
@@ -42,39 +42,7 @@ Disasters happen: hardware failure, accidental deletion, ransomware, software bu
 
 ### Key Metrics
 
-```
-RPO (Recovery Point Objective):
-  Maximum acceptable data loss measured in time.
-  "How much data can we afford to lose?"
-  
-  RPO = 1 hour → backups every hour → lose at most 1 hour of data
-  RPO = 0 → synchronous replication → no data loss (expensive)
-
-RTO (Recovery Time Objective):
-  Maximum acceptable downtime.
-  "How long can we be down?"
-  
-  RTO = 4 hours → must restore and be operational within 4 hours
-  RTO = 0 → hot standby, automatic failover (expensive)
-
-  ┌──────────────────────────────────────────────┐
-  │  Cost vs. RPO/RTO                             │
-  │                                                │
-  │  RPO=24h, RTO=8h   → nightly backup to S3    │
-  │                       Cost: $                  │
-  │                                                │
-  │  RPO=1h, RTO=1h    → hourly backups + replica │
-  │                       Cost: $$                 │
-  │                                                │
-  │  RPO=1min, RTO=5min → WAL archiving + hot     │
-  │                       standby + auto-failover  │
-  │                       Cost: $$$                │
-  │                                                │
-  │  RPO=0, RTO=0      → synchronous multi-region │
-  │                       replication              │
-  │                       Cost: $$$$               │
-  └──────────────────────────────────────────────┘
-```
+![Key Metrics diagram](../assets/generated/02-databases-13-backup-recovery-diagram-01.svg)
 
 ### Backup Types
 
@@ -114,31 +82,7 @@ RTO (Recovery Time Objective):
 
 ### Point-in-Time Recovery (PITR)
 
-```
-Scenario: At 3:00 PM, someone runs DELETE FROM orders (no WHERE clause).
-  All 10M orders deleted. Replicas replicate the delete.
-
-Without PITR:
-  Restore last night's full backup → lose everything since midnight.
-  13 hours of data lost!
-
-With PITR:
-  1. Restore last full backup (midnight)
-  2. Replay WAL logs from midnight to 2:59:59 PM
-  3. Stop before the DELETE statement
-  4. Result: Recover to exactly 1 second before the disaster
-
-  Timeline:
-  [Full backup 00:00] ──WAL──WAL──WAL── [Disaster 15:00]
-                                         ↑
-                         Recover to 14:59:59
-
-  PostgreSQL PITR:
-    recovery_target_time = '2024-01-15 14:59:59'
-
-  AWS RDS: Automated backups + PITR with 1-second granularity
-    "Restore to any point in the last 35 days"
-```
+![Point-in-Time Recovery (PITR) diagram](../assets/generated/02-databases-13-backup-recovery-diagram-02.svg)
 
 ---
 
@@ -286,45 +230,7 @@ Challenge: Microservices with 10 databases.
 
 ## D. Example: E-Commerce Backup Strategy
 
-```
-Requirements:
-  RPO: 5 minutes (lose at most 5 min of orders)
-  RTO: 30 minutes (be operational within 30 min)
-  Retention: 35 days online, 7 years archived
-  Compliance: PCI-DSS (encrypted, access-controlled)
-
-  ┌────────────────────────────────────────────────────┐
-  │  PRIMARY: PostgreSQL on RDS (us-east-1)            │
-  │                                                      │
-  │  Automated backups:                                 │
-  │  • Daily snapshot at 2 AM (full backup)             │
-  │  • WAL archiving every 5 minutes                    │
-  │  • PITR: any point in last 35 days                  │
-  │  • Encrypted: AES-256 (KMS managed key)            │
-  │                                                      │
-  │  Cross-region:                                      │
-  │  • Daily snapshot replicated to eu-west-1            │
-  │  • Enables DR in case of us-east-1 failure          │
-  │                                                      │
-  │  Long-term:                                         │
-  │  • Monthly snapshots copied to S3 Glacier           │
-  │  • Retained for 7 years (SOX compliance)            │
-  │  • S3 Object Lock (immutable)                       │
-  │                                                      │
-  │  Verification:                                      │
-  │  • Weekly automated restore test                    │
-  │  • Quarterly DR drill (restore in eu-west-1)        │
-  │  • Alert if backup age > 6 hours                    │
-  │                                                      │
-  │  Recovery procedure:                                │
-  │  1. Detect failure (automated health checks)        │
-  │  2. Initiate PITR to latest available point         │
-  │  3. New RDS instance spins up (~15 min)             │
-  │  4. Update Route53 DNS to new instance              │
-  │  5. Verify application connectivity                 │
-  │  6. Total RTO: ~25 minutes ✓                        │
-  └────────────────────────────────────────────────────┘
-```
+![D. Example: E-Commerce Backup Strategy diagram](../assets/generated/02-databases-13-backup-recovery-diagram-03.svg)
 
 ---
 
@@ -332,175 +238,97 @@ Requirements:
 
 ### E.1 HLD — Backup & Recovery Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Production (us-east-1)                                    │
-│  ┌──────────────┐     ┌──────────────┐                   │
-│  │  Primary DB  │────►│  Read Replica │ (HA)             │
-│  │  (RDS)       │     └──────────────┘                   │
-│  └──────┬───────┘                                         │
-│         │                                                  │
-│  ┌──────┴────────────────────────────────────┐           │
-│  │  AWS Backup                                │           │
-│  │  • Daily snapshots                         │           │
-│  │  • WAL every 5 min                         │           │
-│  │  • PITR (35 days)                          │           │
-│  │  • Encrypted (KMS)                         │           │
-│  └──────┬────────────────────────────────────┘           │
-│         │ cross-region copy                               │
-│  ┌──────┴────────────────────────────────────┐           │
-│  │  DR Region (eu-west-1)                     │           │
-│  │  • Daily snapshot copy                     │           │
-│  │  • Can restore new RDS instance            │           │
-│  └───────────────────────────────────────────┘           │
-│                                                            │
-│  ┌────────────────────────────────────────────┐          │
-│  │  Long-Term Archive (S3)                    │          │
-│  │  • Monthly snapshots → S3 Glacier          │          │
-│  │  • 7-year retention                        │          │
-│  │  • Object Lock (immutable)                 │          │
-│  └────────────────────────────────────────────┘          │
-│                                                            │
-│  ┌────────────────────────────────────────────┐          │
-│  │  Verification                              │          │
-│  │  • Weekly restore test (automated)         │          │
-│  │  • Quarterly DR drill (manual)             │          │
-│  │  • Alert: backup age, size, failures       │          │
-│  └────────────────────────────────────────────┘          │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Backup & Recovery Architecture diagram](../assets/generated/02-databases-13-backup-recovery-diagram-04.svg)
 
 ### E.2 LLD — Backup Verification Service
 
-```python
-import datetime
+```java
+// Dependencies in the original example:
+// import datetime
 
-class BackupVerificationService:
-    """Automated backup verification — runs weekly"""
-    
-    def __init__(self, rds_client, s3_client, db_connector,
-                 alert_service, config):
-        self.rds = rds_client
-        self.s3 = s3_client
-        self.db_connector = db_connector
-        self.alert = alert_service
-        self.config = config
+public class BackupVerificationService {
+    private Object rds;
+    private Object s3;
+    private Object dbConnector;
+    private Object alert;
+    private Object config;
 
-    def verify_latest_backup(self) -> dict:
-        report = {"timestamp": datetime.datetime.utcnow().isoformat()}
-        
-        try:
-            # 1. Check backup exists and is recent
-            backup = self._get_latest_backup()
-            report["backup_id"] = backup["id"]
-            report["backup_age_hours"] = backup["age_hours"]
-            
-            if backup["age_hours"] > self.config["max_backup_age_hours"]:
-                self.alert.critical(
-                    f"Backup too old: {backup['age_hours']}h "
-                    f"(max: {self.config['max_backup_age_hours']}h)"
-                )
-                report["status"] = "FAIL_AGE"
-                return report
+    public BackupVerificationService(Object rdsClient, Object s3Client, Object dbConnector, Object alertService, Object config) {
+        this.rds = rdsClient;
+        this.s3 = s3Client;
+        this.dbConnector = dbConnector;
+        this.alert = alertService;
+        this.config = config;
+    }
 
-            # 2. Restore to test instance
-            test_instance = self._restore_to_test(backup["id"])
-            report["test_instance"] = test_instance["id"]
+    public Map<String, Object> verifyLatestBackup() {
+        // report = {"timestamp": datetime.datetime.utcnow().isoformat()}
+        // try
+        // 1. Check backup exists and is recent
+        // backup = _get_latest_backup()
+        // report["backup_id"] = backup["id"]
+        // report["backup_age_hours"] = backup["age_hours"]
+        // if backup["age_hours"] > config["max_backup_age_hours"]
+        // alert.critical(
+        // ...
+        return null;
+    }
 
-            # 3. Run integrity checks
-            checks = self._run_integrity_checks(test_instance)
-            report["integrity_checks"] = checks
+    public Map<String, Object> getLatestBackup() {
+        // snapshots = rds.describe_db_snapshots(
+        // DBInstanceIdentifier=config["db_instance_id"],
+        // SnapshotType="automated"
+        // )["DBSnapshots"]
+        // latest = sorted(snapshots, key=lambda s: s["SnapshotCreateTime"])[-1]
+        // age = (datetime.datetime.utcnow().replace(tzinfo=null) -
+        // latest["SnapshotCreateTime"].replace(tzinfo=null))
+        // return {
+        // ...
+        return null;
+    }
 
-            if not all(c["passed"] for c in checks):
-                failed = [c for c in checks if not c["passed"]]
-                self.alert.critical(
-                    f"Backup integrity check failed: {failed}"
-                )
-                report["status"] = "FAIL_INTEGRITY"
-            else:
-                report["status"] = "PASS"
+    public Map<String, Object> restoreToTest(String snapshotId) {
+        // test_id = f"backup-verify-{datetime.date.today().isoformat()}"
+        // rds.restore_db_instance_from_db_snapshot(
+        // DBInstanceIdentifier=test_id,
+        // DBSnapshotIdentifier=snapshot_id,
+        // DBInstanceClass="db.t3.medium",
+        // Tags=[{"Key": "purpose", "Value": "backup-verification"}]
+        // )
+        // Wait for instance to be available
+        // ...
+        return null;
+    }
 
-            # 4. Cleanup test instance
-            self._cleanup_test_instance(test_instance["id"])
+    public List<Object> runIntegrityChecks(Map<String, Object> testInstance) {
+        // conn = db_connector.connect(test_instance["id"])
+        // checks = []
+        // Check 1: Key table row counts
+        // for table in config["verify_tables"]
+        // prod_count = _get_production_count(table)
+        // test_count = conn.execute(f"SELECT count(*) FROM {table}")[0][0]
+        // deviation = abs(prod_count - test_count) / max(prod_count, 1)
+        // checks.append({
+        // ...
+        return null;
+    }
 
-        except Exception as e:
-            report["status"] = "FAIL_ERROR"
-            report["error"] = str(e)
-            self.alert.critical(f"Backup verification failed: {e}")
+    public Object cleanupTestInstance(String instanceId) {
+        // rds.delete_db_instance(
+        // DBInstanceIdentifier=instance_id,
+        // SkipFinalSnapshot=true
+        // )
+        return null;
+    }
 
-        return report
-
-    def _get_latest_backup(self) -> dict:
-        snapshots = self.rds.describe_db_snapshots(
-            DBInstanceIdentifier=self.config["db_instance_id"],
-            SnapshotType="automated"
-        )["DBSnapshots"]
-        
-        latest = sorted(snapshots, key=lambda s: s["SnapshotCreateTime"])[-1]
-        age = (datetime.datetime.utcnow().replace(tzinfo=None) -
-               latest["SnapshotCreateTime"].replace(tzinfo=None))
-        
-        return {
-            "id": latest["DBSnapshotIdentifier"],
-            "age_hours": age.total_seconds() / 3600,
-            "size_gb": latest.get("AllocatedStorage"),
-        }
-
-    def _restore_to_test(self, snapshot_id: str) -> dict:
-        test_id = f"backup-verify-{datetime.date.today().isoformat()}"
-        self.rds.restore_db_instance_from_db_snapshot(
-            DBInstanceIdentifier=test_id,
-            DBSnapshotIdentifier=snapshot_id,
-            DBInstanceClass="db.t3.medium",
-            Tags=[{"Key": "purpose", "Value": "backup-verification"}]
-        )
-        # Wait for instance to be available
-        waiter = self.rds.get_waiter('db_instance_available')
-        waiter.wait(DBInstanceIdentifier=test_id)
-        return {"id": test_id}
-
-    def _run_integrity_checks(self, test_instance: dict) -> list:
-        conn = self.db_connector.connect(test_instance["id"])
-        checks = []
-
-        # Check 1: Key table row counts
-        for table in self.config["verify_tables"]:
-            prod_count = self._get_production_count(table)
-            test_count = conn.execute(f"SELECT count(*) FROM {table}")[0][0]
-            deviation = abs(prod_count - test_count) / max(prod_count, 1)
-            checks.append({
-                "check": f"row_count_{table}",
-                "prod": prod_count,
-                "backup": test_count,
-                "deviation": round(deviation, 4),
-                "passed": deviation < 0.01,  # <1% deviation acceptable
-            })
-
-        # Check 2: Sample data integrity
-        for table in self.config["verify_tables"]:
-            sample = conn.execute(
-                f"SELECT * FROM {table} ORDER BY random() LIMIT 10"
-            )
-            checks.append({
-                "check": f"sample_data_{table}",
-                "rows_returned": len(sample),
-                "passed": len(sample) > 0,
-            })
-
-        conn.close()
-        return checks
-
-    def _cleanup_test_instance(self, instance_id: str):
-        self.rds.delete_db_instance(
-            DBInstanceIdentifier=instance_id,
-            SkipFinalSnapshot=True
-        )
-
-    def _get_production_count(self, table: str) -> int:
-        conn = self.db_connector.connect(self.config["db_instance_id"])
-        count = conn.execute(f"SELECT count(*) FROM {table}")[0][0]
-        conn.close()
-        return count
+    public int getProductionCount(String table) {
+        // conn = db_connector.connect(config["db_instance_id"])
+        // count = conn.execute(f"SELECT count(*) FROM {table}")[0][0]
+        // conn.close()
+        // return count
+        return 0;
+    }
+}
 ```
 
 ---

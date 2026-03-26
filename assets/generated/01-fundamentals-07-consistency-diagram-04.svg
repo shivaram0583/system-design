@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="695" height="468" viewBox="0 0 695 468" role="img" aria-labelledby="title desc">
+  <title id="title">Quorum Reads and Writes diagram</title>
+  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
+  <defs>
+    <style>
+      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
+      text {
+        fill: #0f172a;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+      }
+    </style>
+  </defs>
+  <rect class="card" x="0.6" y="0.6" width="693.8" height="466.8" rx="16" />
+  <g class="segments">
+    <line x1="112.2" y1="204" x2="116.4" y2="194" />
+    <line x1="116.4" y1="194" x2="124.80000000000001" y2="194" />
+    <line x1="124.80000000000001" y1="194" x2="133.20000000000002" y2="194" />
+    <line x1="133.2" y1="194" x2="141.6" y2="194" />
+    <line x1="141.60000000000002" y1="194" x2="145.8" y2="204" />
+    <line x1="162.6" y1="204" x2="166.8" y2="194" />
+    <line x1="166.8" y1="194" x2="175.20000000000002" y2="194" />
+    <line x1="175.20000000000002" y1="194" x2="183.60000000000002" y2="194" />
+    <line x1="183.6" y1="194" x2="192" y2="194" />
+    <line x1="192" y1="194" x2="196.2" y2="204" />
+    <line x1="213" y1="204" x2="217.20000000000002" y2="194" />
+    <line x1="217.20000000000002" y1="194" x2="225.60000000000002" y2="194" />
+    <line x1="225.60000000000002" y1="194" x2="234.00000000000003" y2="194" />
+    <line x1="234" y1="194" x2="242.4" y2="194" />
+    <line x1="242.4" y1="194" x2="246.6" y2="204" />
+    <line x1="112.2" y1="204" x2="112.2" y2="224" />
+    <line x1="154.2" y1="204" x2="154.2" y2="224" />
+    <line x1="171" y1="204" x2="171" y2="224" />
+    <line x1="213" y1="204" x2="213" y2="224" />
+    <line x1="229.8" y1="204" x2="229.8" y2="224" />
+    <line x1="271.8" y1="204" x2="271.8" y2="224" />
+    <line x1="112.2" y1="224" x2="116.4" y2="234" />
+    <line x1="116.4" y1="234" x2="124.80000000000001" y2="234" />
+    <line x1="124.80000000000001" y1="234" x2="133.20000000000002" y2="234" />
+    <line x1="133.2" y1="234" x2="141.6" y2="234" />
+    <line x1="141.60000000000002" y1="234" x2="145.8" y2="224" />
+    <line x1="162.6" y1="224" x2="166.8" y2="234" />
+    <line x1="166.8" y1="234" x2="175.20000000000002" y2="234" />
+    <line x1="175.20000000000002" y1="234" x2="183.60000000000002" y2="234" />
+    <line x1="183.6" y1="234" x2="192" y2="234" />
+    <line x1="192" y1="234" x2="196.2" y2="224" />
+    <line x1="213" y1="224" x2="217.20000000000002" y2="234" />
+    <line x1="217.20000000000002" y1="234" x2="225.60000000000002" y2="234" />
+    <line x1="225.60000000000002" y1="234" x2="234.00000000000003" y2="234" />
+    <line x1="234" y1="234" x2="242.4" y2="234" />
+    <line x1="242.4" y1="234" x2="246.6" y2="224" />
+    <line x1="112.2" y1="284" x2="116.4" y2="274" />
+    <line x1="116.4" y1="274" x2="124.80000000000001" y2="274" />
+    <line x1="124.80000000000001" y1="274" x2="133.20000000000002" y2="274" />
+    <line x1="133.2" y1="274" x2="141.6" y2="274" />
+    <line x1="141.60000000000002" y1="274" x2="145.8" y2="284" />
+    <line x1="162.6" y1="284" x2="166.8" y2="274" />
+    <line x1="166.8" y1="274" x2="175.20000000000002" y2="274" />
+    <line x1="175.20000000000002" y1="274" x2="183.60000000000002" y2="274" />
+    <line x1="183.6" y1="274" x2="192" y2="274" />
+    <line x1="192" y1="274" x2="196.2" y2="284" />
+    <line x1="213" y1="284" x2="217.20000000000002" y2="274" />
+    <line x1="217.20000000000002" y1="274" x2="225.60000000000002" y2="274" />
+    <line x1="225.60000000000002" y1="274" x2="234.00000000000003" y2="274" />
+    <line x1="234" y1="274" x2="242.4" y2="274" />
+    <line x1="242.4" y1="274" x2="246.6" y2="284" />
+    <line x1="112.2" y1="284" x2="112.2" y2="304" />
+    <line x1="154.2" y1="284" x2="154.2" y2="304" />
+    <line x1="171" y1="284" x2="171" y2="304" />
+    <line x1="213" y1="284" x2="213" y2="304" />
+    <line x1="229.8" y1="284" x2="229.8" y2="304" />
+    <line x1="271.8" y1="284" x2="271.8" y2="304" />
+    <line x1="112.2" y1="304" x2="116.4" y2="314" />
+    <line x1="116.4" y1="314" x2="124.80000000000001" y2="314" />
+    <line x1="124.80000000000001" y1="314" x2="133.20000000000002" y2="314" />
+    <line x1="133.2" y1="314" x2="141.6" y2="314" />
+    <line x1="141.60000000000002" y1="314" x2="145.8" y2="304" />
+    <line x1="162.6" y1="304" x2="166.8" y2="314" />
+    <line x1="166.8" y1="314" x2="175.20000000000002" y2="314" />
+    <line x1="175.20000000000002" y1="314" x2="183.60000000000002" y2="314" />
+    <line x1="183.6" y1="314" x2="192" y2="314" />
+    <line x1="192" y1="314" x2="196.2" y2="304" />
+    <line x1="213" y1="304" x2="217.20000000000002" y2="314" />
+    <line x1="217.20000000000002" y1="314" x2="225.60000000000002" y2="314" />
+    <line x1="225.60000000000002" y1="314" x2="234.00000000000003" y2="314" />
+    <line x1="234" y1="314" x2="242.4" y2="314" />
+    <line x1="242.4" y1="314" x2="246.6" y2="304" />
+  </g>
+  <g>
+    <text x="24" y="39" xml:space="preserve">N = total replicas = 3</text>
+    <text x="24" y="59" xml:space="preserve">W = write quorum (how many must confirm a write)</text>
+    <text x="24" y="79" xml:space="preserve">R = read quorum (how many must respond to a read)</text>
+    <text x="24" y="119" xml:space="preserve">STRONG CONSISTENCY: W + R &gt; N</text>
+    <text x="24" y="139" xml:space="preserve">  Example: W=2, R=2, N=3</text>
+    <text x="24" y="159" xml:space="preserve">  Write to 2 of 3 replicas → At least 1 replica in every read has latest data</text>
+    <text x="24" y="199" xml:space="preserve">  Write:                   </text>
+    <text x="24" y="219" xml:space="preserve">            A ✓    B ✓    C ✗   (2 of 3 confirmed = success)</text>
+    <text x="24" y="279" xml:space="preserve">  Read:                    </text>
+    <text x="24" y="299" xml:space="preserve">            A ✓    B      C ✓   (read from 2: at least one has latest)</text>
+    <text x="24" y="359" xml:space="preserve">  Common configs:</text>
+    <text x="24" y="379" xml:space="preserve">    W=N, R=1   → Strong writes, fast reads (read from any replica)</text>
+    <text x="24" y="399" xml:space="preserve">    W=1, R=N   → Fast writes, strong reads (read from all)</text>
+    <text x="24" y="419" xml:space="preserve">    W=⌈N/2⌉+1, R=⌈N/2⌉+1 → Balanced</text>
+    <text x="24" y="439" xml:space="preserve">    W=1, R=1   → Eventual consistency (fastest, weakest)</text>
+  </g>
+</svg>

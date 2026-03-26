@@ -1,4 +1,4 @@
-# Topic 33: Blob Storage
+﻿# Topic 33: Blob Storage
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Intermediate
@@ -34,21 +34,7 @@ RELATIONAL DB:              BLOB/OBJECT STORAGE:
 
 ### Object Storage Model
 
-```
-  Bucket: my-app-uploads
-    │
-    ├── images/profile/user_123.jpg    (200 KB)
-    ├── images/profile/user_456.jpg    (150 KB)
-    ├── videos/upload_789.mp4          (500 MB)
-    ├── backups/db_2024_01_15.sql.gz   (2 GB)
-    └── logs/2024/01/15/app.log.gz     (50 MB)
-
-  Each object:
-    Key:      "images/profile/user_123.jpg"
-    Data:     Binary content (the actual image)
-    Metadata: Content-Type, size, upload date, custom headers
-    URL:      https://my-app-uploads.s3.amazonaws.com/images/profile/user_123.jpg
-```
+![Object Storage Model diagram](../assets/generated/01-fundamentals-33-blob-storage-diagram-01.svg)
 
 ### Object Storage Providers
 
@@ -180,33 +166,7 @@ Automate cost optimization:
 
 ## D. Example: Image Upload Service
 
-```
-┌────────┐  1. Request upload URL  ┌──────────┐
-│ Client │────────────────────────►│  API     │
-│        │◄────────────────────────│  Server  │
-│        │  2. Pre-signed PUT URL  │          │
-│        │                          └──────────┘
-│        │  3. PUT image directly
-│        │─────────────────────────►┌──────────┐
-│        │                          │   S3     │
-└────────┘                          │  Bucket  │
-                                    └────┬─────┘
-                                         │ S3 Event
-                                    ┌────┴─────┐
-                                    │ Lambda   │ 4. Resize image
-                                    │ (resize) │    (thumb, medium, large)
-                                    └────┬─────┘
-                                         │ Save variants
-                                    ┌────┴─────┐
-                                    │   S3     │
-                                    │ (output) │
-                                    └────┬─────┘
-                                         │
-                                    ┌────┴─────┐
-                                    │CloudFront│ 5. Serve via CDN
-                                    │  (CDN)   │
-                                    └──────────┘
-```
+![D. Example: Image Upload Service diagram](../assets/generated/01-fundamentals-33-blob-storage-diagram-02.svg)
 
 ---
 
@@ -214,96 +174,59 @@ Automate cost optimization:
 
 ### E.1 HLD — File Storage Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Client                                                │
-│    │ upload                    │ download               │
-│    ▼                          ▼                        │
-│  ┌──────────┐           ┌──────────┐                  │
-│  │ API Svc  │           │ CDN      │ (cache + serve)  │
-│  │ (signed  │           │CloudFront│                   │
-│  │  URLs)   │           └────┬─────┘                  │
-│  └────┬─────┘                │ origin                  │
-│       │                      │                         │
-│  ┌────┴──────────────────────┴─────┐                  │
-│  │  S3 Bucket                       │                  │
-│  │  /uploads/raw/    (original)     │                  │
-│  │  /uploads/thumb/  (200px)        │                  │
-│  │  /uploads/medium/ (800px)        │                  │
-│  │  /uploads/large/  (1920px)       │                  │
-│  └──────────────────────────────────┘                  │
-│                                                        │
-│  Metadata DB (PostgreSQL):                            │
-│    files (id, user_id, s3_key, size, content_type,    │
-│           upload_status, created_at)                   │
-│                                                        │
-│  Processing: S3 Event → Lambda → resize + virus scan  │
-│  Lifecycle: Standard → IA (30d) → Glacier (90d)       │
-└──────────────────────────────────────────────────────┘
-```
+![E.1 HLD — File Storage Architecture diagram](../assets/generated/01-fundamentals-33-blob-storage-diagram-03.svg)
 
 ### E.2 LLD — Upload Service
 
-```python
-import boto3
-import uuid
+```java
+// Dependencies in the original example:
+// import boto3
+// import uuid
 
-class FileUploadService:
-    def __init__(self, s3_client, db, bucket: str, cdn_domain: str):
-        self.s3 = s3_client
-        self.db = db
-        self.bucket = bucket
-        self.cdn = cdn_domain
+public class FileUploadService {
+    private Object s3;
+    private Object db;
+    private String bucket;
+    private String cdn;
 
-    def request_upload(self, user_id: str, filename: str,
-                      content_type: str, size_bytes: int) -> dict:
-        # Validate
-        if size_bytes > 50 * 1024 * 1024:  # 50 MB limit
-            raise ValueError("File too large. Use multipart upload.")
-        
-        allowed_types = ["image/jpeg", "image/png", "image/webp"]
-        if content_type not in allowed_types:
-            raise ValueError(f"Unsupported type: {content_type}")
+    public FileUploadService(Object s3Client, Object db, String bucket, String cdnDomain) {
+        this.s3 = s3Client;
+        this.db = db;
+        this.bucket = bucket;
+        this.cdn = cdnDomain;
+    }
 
-        # Generate unique key
-        file_id = str(uuid.uuid4())
-        ext = filename.rsplit(".", 1)[-1]
-        s3_key = f"uploads/raw/{user_id}/{file_id}.{ext}"
+    public Map<String, Object> requestUpload(String userId, String filename, String contentType, int sizeBytes) {
+        // Validate
+        // if size_bytes > 50 * 1024 * 1024:  # 50 MB limit
+        // raise ValueError("File too large. Use multipart upload.")
+        // allowed_types = ["image/jpeg", "image/png", "image/webp"]
+        // if content_type not in allowed_types
+        // raise ValueError(f"Unsupported type: {content_type}")
+        // Generate unique key
+        // file_id = str(uuid.uuid4())
+        // ...
+        return null;
+    }
 
-        # Save metadata
-        self.db.execute(
-            "INSERT INTO files (id, user_id, s3_key, size, content_type, status) "
-            "VALUES (%s, %s, %s, %s, %s, 'pending')",
-            (file_id, user_id, s3_key, size_bytes, content_type)
-        )
+    public Object confirmUpload(String fileId, String userId) {
+        // Called after client completes upload
+        // file = db.get("SELECT * FROM files WHERE id = %s AND user_id = %s",
+        // (file_id, user_id))
+        // Verify file exists in S3
+        // s3.head_object(Bucket=bucket, Key=file["s3_key"])
+        // db.execute("UPDATE files SET status = 'uploaded' WHERE id = %s", (file_id,))
+        // Trigger async processing (resize, virus scan)
+        // return {"status": "uploaded", "url": f"https://{cdn}/{file['s3_key']}"}
+        return null;
+    }
 
-        # Generate pre-signed PUT URL
-        presigned_url = self.s3.generate_presigned_url(
-            "put_object",
-            Params={
-                "Bucket": self.bucket,
-                "Key": s3_key,
-                "ContentType": content_type,
-            },
-            ExpiresIn=900,  # 15 minutes
-        )
-
-        return {"file_id": file_id, "upload_url": presigned_url, "key": s3_key}
-
-    def confirm_upload(self, file_id: str, user_id: str):
-        """Called after client completes upload"""
-        file = self.db.get("SELECT * FROM files WHERE id = %s AND user_id = %s",
-                          (file_id, user_id))
-        # Verify file exists in S3
-        self.s3.head_object(Bucket=self.bucket, Key=file["s3_key"])
-        
-        self.db.execute("UPDATE files SET status = 'uploaded' WHERE id = %s", (file_id,))
-        # Trigger async processing (resize, virus scan)
-        return {"status": "uploaded", "url": f"https://{self.cdn}/{file['s3_key']}"}
-
-    def get_download_url(self, file_id: str) -> str:
-        file = self.db.get("SELECT s3_key FROM files WHERE id = %s", (file_id,))
-        return f"https://{self.cdn}/{file['s3_key']}"
+    public String getDownloadUrl(String fileId) {
+        // file = db.get("SELECT s3_key FROM files WHERE id = %s", (file_id,))
+        // return f"https://{cdn}/{file['s3_key']}"
+        return null;
+    }
+}
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Topic 06: Time-Series Database
+﻿# Topic 06: Time-Series Database
 
 > **Track**: Databases and Storage
 > **Difficulty**: Intermediate
@@ -160,29 +160,7 @@ RETENTION POLICIES:
 
 ### Prometheus + Thanos Architecture
 
-```
-Prometheus: Pull-based metrics collection
-
-  ┌──────────┐  scrape every 15s  ┌──────────┐
-  │Prometheus│◄───────────────────│ App      │
-  │          │  GET /metrics      │ (exporter)│
-  └────┬─────┘                    └──────────┘
-       │
-       │ remote_write
-  ┌────┴─────────────────────────────────────┐
-  │  Thanos (long-term storage + HA)         │
-  │                                           │
-  │  Thanos Sidecar → uploads blocks to S3   │
-  │  Thanos Query   → queries across Prometheus + S3 │
-  │  Thanos Compact → downsamples old data   │
-  │  Thanos Store   → serves data from S3    │
-  └───────────────────────────────────────────┘
-
-  Prometheus: Local storage (15 days, fast queries)
-  Thanos/S3: Long-term storage (years, cheap)
-  
-  Result: Fast recent queries + cheap long-term storage
-```
+![Prometheus + Thanos Architecture diagram](../assets/generated/02-databases-06-time-series-db-diagram-01.svg)
 
 ### TimescaleDB (PostgreSQL Extension)
 
@@ -231,34 +209,7 @@ ORDER BY hour;
 
 ## D. Example: Infrastructure Monitoring Pipeline
 
-```
-1000 servers, 50 metrics each, 15s scrape interval:
-
-  Write load: 1000 × 50 ÷ 15 = 3,333 samples/second
-  Storage: ~3.3K × 86400 × 2 bytes/sample = ~570 MB/day (compressed)
-
-  ┌────────────┐     ┌──────────────┐     ┌──────────────┐
-  │ Servers    │────►│ Prometheus   │────►│ Thanos       │
-  │ (exporters)│     │ (local 15d)  │     │ (S3, years)  │
-  └────────────┘     └──────┬───────┘     └──────────────┘
-                            │
-                     ┌──────┴───────┐
-                     │ Alertmanager │ → PagerDuty / Slack
-                     └──────────────┘
-
-  Alert rules (in Prometheus):
-    - alert: HighCPU
-      expr: avg(cpu_usage) by (host) > 90
-      for: 5m
-      
-    - alert: DiskFull
-      expr: disk_used_percent > 95
-      for: 1m
-
-  Dashboards: Grafana → queries Prometheus/Thanos
-  Downsampling: Thanos Compact (5m avg after 7d, 1h avg after 30d)
-  Retention: Raw 15d (Prometheus), 5m avg 90d, 1h avg 2 years (S3)
-```
+![D. Example: Infrastructure Monitoring Pipeline diagram](../assets/generated/02-databases-06-time-series-db-diagram-02.svg)
 
 ---
 
@@ -266,121 +217,96 @@ ORDER BY hour;
 
 ### E.1 HLD — Metrics Platform
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Data Sources                                              │
-│  ┌───────┐ ┌───────┐ ┌────────┐ ┌──────┐               │
-│  │Servers│ │K8s    │ │App     │ │IoT   │               │
-│  │(node) │ │(pods) │ │(custom)│ │(MQTT)│               │
-│  └───┬───┘ └───┬───┘ └───┬────┘ └──┬───┘               │
-│      └─────────┼─────────┼─────────┘                    │
-│                ▼                                         │
-│  ┌──────────────────────────────┐                       │
-│  │  Prometheus (×3 HA pairs)   │ Scrape + local store  │
-│  └──────────┬───────────────────┘                       │
-│             │ remote_write                               │
-│  ┌──────────┴───────────────────┐                       │
-│  │  Thanos / VictoriaMetrics    │ Long-term, query      │
-│  │  Backend: S3                 │ federation             │
-│  └──────────┬───────────────────┘                       │
-│             │                                            │
-│  ┌──────────┴─────┐  ┌──────────────┐                  │
-│  │  Grafana       │  │ Alertmanager │                  │
-│  │  Dashboards    │  │ → PagerDuty  │                  │
-│  └────────────────┘  │ → Slack      │                  │
-│                       └──────────────┘                  │
-└──────────────────────────────────────────────────────────┘
-```
+![E.1 HLD — Metrics Platform diagram](../assets/generated/02-databases-06-time-series-db-diagram-03.svg)
 
 ### E.2 LLD — Metrics Ingestion Service
 
-```python
-import time
-from collections import defaultdict
+```java
+// Dependencies in the original example:
+// import time
+// from collections import defaultdict
 
-class MetricsCollector:
-    """Collects and buffers metrics for batch writing to TSDB"""
-    
-    def __init__(self, tsdb_client, flush_interval_sec: int = 10,
-                 batch_size: int = 1000):
-        self.tsdb = tsdb_client
-        self.flush_interval = flush_interval_sec
-        self.batch_size = batch_size
-        self.buffer = []
-        self.last_flush = time.time()
+public class MetricsCollector {
+    private Object tsdb;
+    private int flushInterval;
+    private int batchSize;
+    private List<Object> buffer;
+    private Instant lastFlush;
 
-    def record(self, metric_name: str, value: float,
-               tags: dict = None, timestamp: float = None):
-        point = {
-            "metric": metric_name,
-            "value": value,
-            "tags": tags or {},
-            "timestamp": timestamp or time.time(),
-        }
-        self.buffer.append(point)
-        
-        if len(self.buffer) >= self.batch_size:
-            self.flush()
+    public MetricsCollector(Object tsdbClient, int flushIntervalSec, int batchSize) {
+        this.tsdb = tsdbClient;
+        this.flushInterval = flushIntervalSec;
+        this.batchSize = batchSize;
+        this.buffer = new ArrayList<>();
+        this.lastFlush = System.currentTimeMillis();
+    }
 
-    def flush(self):
-        if not self.buffer:
-            return
-        batch = self.buffer[:]
-        self.buffer = []
-        self.tsdb.write_batch(batch)
-        self.last_flush = time.time()
+    public Object record(String metricName, double value, Map<String, Object> tags, double timestamp) {
+        // point = {
+        // "metric": metric_name,
+        // "value": value,
+        // "tags": tags or {},
+        // "timestamp": timestamp or time.time(),
+        // }
+        // buffer.append(point)
+        // if len(buffer) >= batch_size
+        // ...
+        return null;
+    }
 
-    def record_histogram(self, metric_name: str, value: float,
-                        tags: dict = None):
-        """Record value and auto-compute percentile buckets"""
-        ts = time.time()
-        base_tags = tags or {}
-        self.record(metric_name, value, base_tags, ts)
-        
-        # Increment bucket counters
-        buckets = [0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
-        for b in buckets:
-            if value <= b:
-                self.record(
-                    f"{metric_name}_bucket",
-                    1,
-                    {**base_tags, "le": str(b)},
-                    ts
-                )
+    public Object flush() {
+        // if not buffer
+        // return
+        // batch = buffer[:]
+        // buffer = []
+        // tsdb.write_batch(batch)
+        // last_flush = time.time()
+        return null;
+    }
 
+    public Object recordHistogram(String metricName, double value, Map<String, Object> tags) {
+        // Record value and auto-compute percentile buckets
+        // ts = time.time()
+        // base_tags = tags or {}
+        // record(metric_name, value, base_tags, ts)
+        // Increment bucket counters
+        // buckets = [0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+        // for b in buckets
+        // if value <= b
+        // ...
+        return null;
+    }
+}
 
-class MetricsQueryService:
-    """Query layer for time-series data"""
-    
-    def __init__(self, tsdb_client, cache_client):
-        self.tsdb = tsdb_client
-        self.cache = cache_client
+public class MetricsQueryService {
+    private Object tsdb;
+    private Object cache;
 
-    def get_metric(self, metric_name: str, tags: dict,
-                   start: str, end: str, step: str = "1m") -> list:
-        cache_key = f"metric:{metric_name}:{hash(str(tags))}:{start}:{end}:{step}"
-        cached = self.cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
+    public MetricsQueryService(Object tsdbClient, Object cacheClient) {
+        this.tsdb = tsdbClient;
+        this.cache = cacheClient;
+    }
 
-        result = self.tsdb.query_range(
-            metric=metric_name,
-            tags=tags,
-            start=start,
-            end=end,
-            step=step,
-            aggregation="avg",
-        )
-        
-        # Cache for 60 seconds (metrics can be slightly stale)
-        self.cache.setex(cache_key, 60, json.dumps(result))
-        return result
+    public List<Object> getMetric(String metricName, Map<String, Object> tags, String start, String end, String step) {
+        // cache_key = f"metric:{metric_name}:{hash(str(tags))}:{start}:{end}:{step}"
+        // cached = cache.get(cache_key)
+        // if cached
+        // return json.loads(cached)
+        // result = tsdb.query_range(
+        // metric=metric_name,
+        // tags=tags,
+        // start=start,
+        // ...
+        return null;
+    }
 
-    def get_top_n(self, metric_name: str, group_by: str,
-                  period: str = "1h", n: int = 10) -> list:
-        return self.tsdb.query(
-            f"topk({n}, avg_over_time({metric_name}[{period}])) by ({group_by})"
-        )
+    public List<Object> getTopN(String metricName, String groupBy, String period, int n) {
+        // return tsdb.query(
+        // f"topk({n}, avg_over_time({metric_name}[{period}])) by ({group_by})"
+        // )
+        return null;
+    }
+}
 ```
 
 ---
