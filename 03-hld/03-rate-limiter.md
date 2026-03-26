@@ -100,34 +100,19 @@ Combine fixed window counts with weighted average.
 
 ## 4. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                                                            │
-│  ┌────────┐         ┌───────────────┐                    │
-│  │ Client │────────►│  API Gateway  │                    │
-│  └────────┘         │  / LB         │                    │
-│       ▲              └───────┬───────┘                    │
-│       │ 429                  │                             │
-│       │                ┌─────┴──────┐                     │
-│       │                │ Rate Limit │                     │
-│       │                │ Middleware │                     │
-│       │                └─────┬──────┘                     │
-│       │                      │ check + increment          │
-│       │                ┌─────┴──────┐                     │
-│       │                │   Redis    │                     │
-│       │                │  Cluster   │                     │
-│       │                └────────────┘                     │
-│       │                      │ ALLOW                      │
-│       │                ┌─────┴──────┐                     │
-│       │                │ API Server │                     │
-│       └────────────────│ (backend)  │                     │
-│                        └────────────┘                     │
-│                                                            │
-│  Rate Limit Rules (config):                               │
-│  • Free tier:  100 req/min per API key                   │
-│  • Pro tier:   1000 req/min per API key                  │
-│  • Global:     10K req/sec total (circuit breaker)       │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client -->|request| GW[API Gateway / LB]
+    GW --> RL[Rate Limit Middleware]
+    RL -->|check + increment| Redis[(Redis Cluster)]
+    Redis -->|ALLOW| API[API Server - backend]
+    Redis -->|REJECT| GW
+    GW -->|429 Too Many Requests| Client
+    API -->|response| Client
+    Rules[Rate Limit Rules] -.-> RL
+    Rules --- R1["Free: 100 req/min"]
+    Rules --- R2["Pro: 1000 req/min"]
+    Rules --- R3["Global: 10K req/sec"]
 ```
 
 ---

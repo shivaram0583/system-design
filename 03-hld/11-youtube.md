@@ -44,28 +44,17 @@ Storage total: Exabytes (multi-year retention)
 
 ## 3. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐  Upload   ┌──────────────┐  ┌───────────────┐   │
-│  │ Client │──────────►│ Upload Svc   │─►│ Transcoding   │   │
-│  │        │           │ (pre-signed  │  │ Pipeline      │   │
-│  │        │  Watch    │  S3 URL)     │  │ (480p-4K)     │   │
-│  │        │──────────►└──────────────┘  └───────┬───────┘   │
-│  └────────┘           │                         │            │
-│       ▲               │                  ┌──────┴───────┐   │
-│       │ stream        │                  │ S3 / Blob    │   │
-│       │               │                  │ (originals   │   │
-│  ┌────┴─────┐         │                  │  + encoded)  │   │
-│  │   CDN    │◄────────┘                  └──────────────┘   │
-│  │(edge POP)│                                                │
-│  └──────────┘                                                │
-│                                                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Video Meta   │  │ Search       │  │ Rec Engine   │      │
-│  │ (PostgreSQL) │  │ (Elastic)    │  │ (ML/Spark)   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client -->|upload| Upload[Upload Service<br/>pre-signed S3 URL]
+    Client -->|watch| CDN[CDN - edge POP]
+    Upload --> Trans[Transcoding Pipeline<br/>480p - 4K]
+    Trans --> S3[(S3 / Blob<br/>originals + encoded)]
+    S3 --> CDN
+    CDN -->|stream| Client
+    Upload --> PG[(PostgreSQL<br/>video metadata)]
+    Upload --> ES[(Elasticsearch<br/>search)]
+    Upload --> Rec[Recommendation Engine<br/>ML / Spark]
 ```
 
 ---

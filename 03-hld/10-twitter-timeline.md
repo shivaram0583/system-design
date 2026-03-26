@@ -75,33 +75,17 @@ SOLUTION: Hybrid approach (what Twitter actually does)
 
 ## 4. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐  POST /tweet   ┌──────────────┐                  │
-│  │ Client │───────────────►│ Tweet Service│                  │
-│  │        │                └──────┬───────┘                  │
-│  │        │  GET /timeline        │                           │
-│  │        │──────┐          ┌─────┴──────┐                   │
-│  └────────┘      │          │   Kafka    │                   │
-│       ▲          │          └─────┬──────┘                   │
-│       │   ┌──────┴──────┐        │                           │
-│       │   │Timeline Svc │  ┌─────┴──────┐                   │
-│       │   │• Read cache  │  │Fan-out Svc │                   │
-│       │   │• Merge celeb │  │(regular    │                   │
-│       │   │• Rank        │  │ users only)│                   │
-│       │   └──────┬──────┘  └─────┬──────┘                   │
-│       │          │               │                            │
-│       │   ┌──────┴──────┐  ┌─────┴──────┐                   │
-│       │   │ Redis Cache │  │ Redis      │                   │
-│       │   │ (timelines) │  │ (feed lists)│                  │
-│       │   └─────────────┘  └────────────┘                   │
-│       │                                                       │
-│       │   ┌─────────────┐  ┌────────────┐                   │
-│       └───│ Tweet Store │  │ Graph Store│                   │
-│           │ (Cassandra) │  │ (follows)  │                   │
-│           └─────────────┘  └────────────┘                   │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client -->|POST /tweet| Tweet[Tweet Service]
+    Client -->|GET /timeline| TL[Timeline Service<br/>read cache, merge celeb, rank]
+    Tweet --> Kafka[Kafka]
+    Kafka --> Fanout[Fan-out Service<br/>regular users only]
+    Fanout --> FeedRedis[(Redis<br/>feed lists)]
+    TL --> CacheRedis[(Redis Cache<br/>timelines)]
+    TL --> TweetStore[(Cassandra<br/>tweet store)]
+    TL --> Graph[(Graph Store<br/>follows)]
+    TL --> Client
 ```
 
 ---

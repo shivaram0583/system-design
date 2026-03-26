@@ -46,35 +46,19 @@ Geospatial queries:
 
 ## 3. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌──────────┐              ┌──────────────────┐              │
-│  │  Rider   │◄────────────►│  API Gateway /   │              │
-│  │  App     │  REST + WS   │  Load Balancer   │              │
-│  └──────────┘              └────────┬─────────┘              │
-│                                      │                         │
-│  ┌──────────┐              ┌────────┴─────────┐              │
-│  │  Driver  │◄────────────►│  Services        │              │
-│  │  App     │  REST + WS   │                  │              │
-│  └──────────┘              │  ┌─────────────┐ │              │
-│                             │  │ Ride Service│ │              │
-│                             │  │ Match Svc   │ │              │
-│                             │  │ Location Svc│ │              │
-│                             │  │ Pricing Svc │ │              │
-│                             │  │ Payment Svc │ │              │
-│                             │  └─────────────┘ │              │
-│                             └────────┬─────────┘              │
-│                                      │                         │
-│         ┌────────────────────────────┼──────────────────┐    │
-│         │                            │                   │    │
-│  ┌──────┴──────┐  ┌────────────┐  ┌─┴────────────┐     │    │
-│  │ Redis/Cell  │  │ PostgreSQL │  │ Kafka        │     │    │
-│  │ (driver     │  │ (rides,    │  │ (location    │     │    │
-│  │  locations) │  │  users,    │  │  events,     │     │    │
-│  │             │  │  payments) │  │  analytics)  │     │    │
-│  └─────────────┘  └────────────┘  └──────────────┘     │    │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Rider[Rider App] <-->|REST + WS| GW[API Gateway / LB]
+    Driver[Driver App] <-->|REST + WS| GW
+    GW --> Svcs[Services]
+    Svcs --> Ride[Ride Service]
+    Svcs --> Match[Match Service]
+    Svcs --> Loc[Location Service]
+    Svcs --> Price[Pricing Service]
+    Svcs --> Pay[Payment Service]
+    Ride --> Redis[(Redis<br/>driver locations)]
+    Ride --> PG[(PostgreSQL<br/>rides, users, payments)]
+    Ride --> Kafka[Kafka<br/>location events, analytics]
 ```
 
 ---

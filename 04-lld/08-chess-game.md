@@ -276,15 +276,17 @@ class Game:
         possible = piece.get_possible_moves(self.board)
         legal = []
         for move_pos in possible:
-            # Simulate move
+            # Save state before simulation
             original_pos = Position(piece.position.row, piece.position.col)
+            original_has_moved = piece.has_moved
             captured = self.board.move_piece(piece.position, move_pos)
             if not self.board.is_in_check(piece.color):
                 legal.append(move_pos)
             # Undo move
             self.board.move_piece(move_pos, original_pos)
-            piece.has_moved = piece.has_moved  # restore state approximately
+            piece.has_moved = original_has_moved  # restore original state
             if captured:
+                captured.position = move_pos
                 self.board.place(captured, move_pos)
         return legal
 

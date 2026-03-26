@@ -43,32 +43,17 @@ DNS lookups: 12K/sec (cache heavily)
 
 ## 3. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────────┐     ┌────────────────┐     ┌──────────────┐ │
-│  │ Seed URLs  │────►│  URL Frontier  │────►│  Crawler     │ │
-│  └────────────┘     │  (priority     │     │  Workers     │ │
-│                      │   queue)       │     │  (1000s)     │ │
-│                      └────────────────┘     └──────┬───────┘ │
-│                            ▲                       │          │
-│                            │ new URLs              │ fetch    │
-│                      ┌─────┴──────────┐            ▼          │
-│                      │  Link          │     ┌──────────────┐ │
-│                      │  Extractor     │◄────│  DNS Cache   │ │
-│                      └────────────────┘     └──────────────┘ │
-│                            ▲                       │          │
-│                            │ parsed HTML           │ HTML     │
-│                      ┌─────┴──────────┐            ▼          │
-│                      │  URL Dedup     │     ┌──────────────┐ │
-│                      │  (Bloom filter)│     │  Content     │ │
-│                      └────────────────┘     │  Store (S3)  │ │
-│                                              └──────────────┘ │
-│                      ┌────────────────┐                       │
-│                      │  Robots.txt    │                       │
-│                      │  Cache         │                       │
-│                      └────────────────┘                       │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Seed[Seed URLs] --> Frontier[URL Frontier<br/>priority queue]
+    Frontier --> Workers[Crawler Workers<br/>1000s]
+    Workers --> DNS[DNS Cache]
+    DNS --> Fetch[Fetch HTML]
+    Fetch --> S3[(Content Store - S3)]
+    Fetch --> Extract[Link Extractor]
+    Extract --> Dedup[URL Dedup<br/>Bloom filter]
+    Dedup --> Frontier
+    Workers --> Robots[Robots.txt Cache]
 ```
 
 ---

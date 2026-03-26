@@ -45,31 +45,21 @@ API requests: 100M users × 100 API calls/session = 10B API calls/day
 
 ## 3. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐   Browse/Search  ┌──────────────┐               │
-│  │ Client │─────────────────►│  API Gateway │               │
-│  │ (TV,   │                  │  (Zuul)      │               │
-│  │ Phone) │   Stream video   └──────┬───────┘               │
-│  │        │─────────┐               │                        │
-│  └────────┘         │        ┌──────┴───────┐               │
-│       ▲             │        │ Microservices│               │
-│       │ video       │        │ • Catalog    │               │
-│       │ segments    │        │ • User Svc   │               │
-│       │             │        │ • Search     │               │
-│  ┌────┴──────┐      │        │ • Rec Engine │               │
-│  │Open Connect│     │        │ • Playback   │               │
-│  │  CDN      │◄────┘        └──────┬───────┘               │
-│  │(ISP-local)│                     │                        │
-│  └───────────┘              ┌──────┴───────┐               │
-│                              │ Data Layer   │               │
-│                              │ • Cassandra  │               │
-│                              │ • EVCache    │               │
-│                              │ • S3         │               │
-│                              │ • Elasticsearch│             │
-│                              └──────────────┘               │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client[Client<br/>TV, Phone] -->|Browse / Search| GW[API Gateway - Zuul]
+    Client -->|Stream video| CDN[Open Connect CDN<br/>ISP-local]
+    GW --> Catalog[Catalog Service]
+    GW --> User[User Service]
+    GW --> Search[Search Service]
+    GW --> Rec[Recommendation Engine]
+    GW --> Play[Playback Service]
+    Catalog --> Cass[(Cassandra)]
+    User --> EV[(EVCache)]
+    Search --> ES[(Elasticsearch)]
+    Play --> S3[(S3 - video storage)]
+    S3 --> CDN
+    CDN -->|video segments| Client
 ```
 
 ---

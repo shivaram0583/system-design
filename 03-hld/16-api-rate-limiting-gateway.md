@@ -27,37 +27,16 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐         ┌────────────────────────┐               │
-│  │ Client │────────►│  API Gateway Cluster    │               │
-│  └────────┘         │  ┌──────────────────┐  │               │
-│       ▲              │  │ Rate Limit Check │  │               │
-│       │ 429/200      │  │ (per request)    │  │               │
-│       │              │  └────────┬─────────┘  │               │
-│       │              │           │             │               │
-│       │              │  ┌────────┴─────────┐  │               │
-│       │              │  │ Auth + Routing   │  │               │
-│       │              │  └────────┬─────────┘  │               │
-│       │              └───────────┼────────────┘               │
-│       │                          │ ALLOW                      │
-│       │                   ┌──────┴───────┐                    │
-│       │                   │ Backend APIs │                    │
-│       │                   └──────────────┘                    │
-│       │                                                       │
-│  ┌────┴──────────────────────────────────────────┐          │
-│  │  Redis Cluster (rate limit state)              │          │
-│  │  Key: rate:{api_key}:{endpoint}:{window}      │          │
-│  │  Value: counter                                │          │
-│  └────────────────────────────────────────────────┘          │
-│                                                                │
-│  ┌────────────────────────────────────────────────┐          │
-│  │  Config Store (PostgreSQL)                     │          │
-│  │  Rate limit rules per tier, per endpoint       │          │
-│  │  Cached in gateway memory (refresh every 30s)  │          │
-│  └────────────────────────────────────────────────┘          │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client --> GW[API Gateway Cluster]
+    GW --> RL[Rate Limit Check<br/>per request]
+    RL --> Auth[Auth + Routing]
+    Auth -->|ALLOW| Backend[Backend APIs]
+    RL -->|429 REJECT| Client
+    Backend -->|200 response| Client
+    RL <--> Redis[(Redis Cluster<br/>rate limit state<br/>rate:api_key:endpoint:window)]
+    GW <-.-> Config[(Config Store - PostgreSQL<br/>rules per tier, per endpoint)]
 ```
 
 ---

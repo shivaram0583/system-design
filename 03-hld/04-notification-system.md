@@ -69,33 +69,15 @@ PUT /api/v1/users/{id}/preferences
 
 ## 4. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌─────────────┐     ┌──────────────┐                        │
-│  │  Services   │────►│ Notification │  Validates, templates, │
-│  │ (Order Svc, │     │  Service     │  checks preferences    │
-│  │  Auth Svc)  │     └──────┬───────┘                        │
-│  └─────────────┘            │                                 │
-│                        ┌────┴────┐                            │
-│                        │  Kafka  │  Priority queues           │
-│                        │ Topics  │  (critical, high, normal)  │
-│                        └────┬────┘                            │
-│                             │                                  │
-│              ┌──────────────┼──────────────┐                  │
-│              │              │              │                   │
-│        ┌─────┴─────┐ ┌─────┴─────┐ ┌─────┴─────┐           │
-│        │Push Worker│ │Email Worker│ │SMS Worker │           │
-│        │ (FCM/APNS)│ │ (SES)     │ │ (Twilio)  │           │
-│        └───────────┘ └───────────┘ └───────────┘           │
-│                                                                │
-│  ┌─────────────┐     ┌──────────────┐                        │
-│  │ PostgreSQL  │     │    Redis     │                        │
-│  │ (history,   │     │ (unread cnt, │                        │
-│  │  templates, │     │  rate limit, │                        │
-│  │  prefs)     │     │  dedup)      │                        │
-│  └─────────────┘     └──────────────┘                        │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Svc[Services<br/>Order Svc, Auth Svc] --> NS[Notification Service<br/>validates, templates, prefs]
+    NS --> Kafka[Kafka Topics<br/>critical / high / normal]
+    Kafka --> Push[Push Worker<br/>FCM / APNS]
+    Kafka --> Email[Email Worker<br/>SES]
+    Kafka --> SMS[SMS Worker<br/>Twilio]
+    NS --> PG[(PostgreSQL<br/>history, templates, prefs)]
+    NS --> Redis[(Redis<br/>unread count, rate limit, dedup)]
 ```
 
 ---

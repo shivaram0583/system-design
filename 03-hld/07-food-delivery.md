@@ -42,37 +42,20 @@ Storage:
 
 ## 3. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐  ┌──────────┐  ┌──────────┐                     │
-│  │Customer│  │Restaurant│  │ Driver   │                     │
-│  │  App   │  │  App     │  │  App     │                     │
-│  └───┬────┘  └────┬─────┘  └────┬─────┘                     │
-│      └────────────┼──────────────┘                            │
-│                    ▼                                           │
-│           ┌────────────────┐                                  │
-│           │  API Gateway   │                                  │
-│           └───────┬────────┘                                  │
-│                   │                                            │
-│    ┌──────────────┼──────────────────────────┐               │
-│    │              │                           │               │
-│  ┌─┴──────────┐ ┌┴────────────┐ ┌───────────┴──┐           │
-│  │Search/Menu │ │Order Service│ │Dispatch Svc  │           │
-│  │Service     │ │             │ │(driver assign)│           │
-│  └─────┬──────┘ └──────┬──────┘ └───────┬──────┘           │
-│        │               │                │                    │
-│  ┌─────┴──┐     ┌──────┴──────┐  ┌─────┴──────┐           │
-│  │Elastic │     │ PostgreSQL  │  │ Redis GEO  │           │
-│  │Search  │     │ (orders,    │  │ (driver    │           │
-│  │(menus) │     │  payments)  │  │  locations)│           │
-│  └────────┘     └─────────────┘  └────────────┘           │
-│                                                              │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐           │
-│  │ Kafka      │  │ Location   │  │ Pricing/   │           │
-│  │ (events)   │  │ Service    │  │ ETA Service│           │
-│  └────────────┘  └────────────┘  └────────────┘           │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Cust[Customer App] --> GW[API Gateway]
+    Rest[Restaurant App] --> GW
+    Drv[Driver App] --> GW
+    GW --> Search[Search / Menu Service]
+    GW --> Order[Order Service]
+    GW --> Dispatch[Dispatch Service<br/>driver assignment]
+    Search --> ES[(Elasticsearch<br/>menus)]
+    Order --> PG[(PostgreSQL<br/>orders, payments)]
+    Dispatch --> Redis[(Redis GEO<br/>driver locations)]
+    GW --> Kafka[Kafka - events]
+    GW --> LocSvc[Location Service]
+    GW --> Pricing[Pricing / ETA Service]
 ```
 
 ---
