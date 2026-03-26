@@ -19,203 +19,222 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from abc import ABC, abstractmethod
-from datetime import datetime
-import uuid
+```java
+public enum TransactionType { BALANCE_INQUIRY, WITHDRAWAL, DEPOSIT, TRANSFER }
 
-class TransactionType(Enum):
-    BALANCE_INQUIRY = 1
-    WITHDRAWAL = 2
-    DEPOSIT = 3
-    TRANSFER = 4
+public enum ATMState { IDLE, CARD_INSERTED, AUTHENTICATED, TRANSACTION_IN_PROGRESS, OUT_OF_SERVICE }
 
-class ATMState(Enum):
-    IDLE = 1
-    CARD_INSERTED = 2
-    AUTHENTICATED = 3
-    TRANSACTION_IN_PROGRESS = 4
-    OUT_OF_SERVICE = 5
+public class Card {
+    private final String cardNumber;
+    private final String bankCode;
 
-class Card:
-    def __init__(self, card_number: str, bank_code: str):
-        self.card_number = card_number
-        self.bank_code = bank_code
+    public Card(String cardNumber, String bankCode) {
+        this.cardNumber = cardNumber; this.bankCode = bankCode;
+    }
+    public String getCardNumber() { return cardNumber; }
+}
 
-class Account:
-    def __init__(self, account_id: str, balance: float, daily_limit: float = 1000):
-        self.account_id = account_id
-        self.balance = balance
-        self.daily_limit = daily_limit
-        self.daily_withdrawn = 0.0
+public class Account {
+    private final String accountId;
+    private double balance;
+    private final double dailyLimit;
+    private double dailyWithdrawn = 0.0;
 
-    def can_withdraw(self, amount: float) -> bool:
-        return (self.balance >= amount and
-                self.daily_withdrawn + amount <= self.daily_limit)
+    public Account(String accountId, double balance, double dailyLimit) {
+        this.accountId = accountId; this.balance = balance; this.dailyLimit = dailyLimit;
+    }
+    public Account(String accountId, double balance) { this(accountId, balance, 1000); }
 
-    def withdraw(self, amount: float):
-        if not self.can_withdraw(amount):
-            raise Exception("Insufficient funds or daily limit exceeded")
-        self.balance -= amount
-        self.daily_withdrawn += amount
+    public boolean canWithdraw(double amount) {
+        return balance >= amount && dailyWithdrawn + amount <= dailyLimit;
+    }
 
-    def deposit(self, amount: float):
-        self.balance += amount
+    public void withdraw(double amount) {
+        if (!canWithdraw(amount)) throw new RuntimeException("Insufficient funds or daily limit exceeded");
+        balance -= amount;
+        dailyWithdrawn += amount;
+    }
 
-class Transaction:
-    def __init__(self, txn_type: TransactionType, account: Account, amount: float = 0):
-        self.txn_id = str(uuid.uuid4())
-        self.txn_type = txn_type
-        self.account = account
-        self.amount = amount
-        self.timestamp = datetime.now()
-        self.success = False
+    public void deposit(double amount) { balance += amount; }
+    public double getBalance() { return balance; }
+    public double getDailyWithdrawn() { return dailyWithdrawn; }
+    public void setDailyWithdrawn(double val) { dailyWithdrawn = val; }
+}
+
+public class Transaction {
+    private final String txnId;
+    private final TransactionType txnType;
+    private final Account account;
+    private final double amount;
+    private final LocalDateTime timestamp;
+    private boolean success = false;
+
+    public Transaction(TransactionType txnType, Account account, double amount) {
+        this.txnId = UUID.randomUUID().toString();
+        this.txnType = txnType; this.account = account;
+        this.amount = amount; this.timestamp = LocalDateTime.now();
+    }
+    public void setSuccess(boolean success) { this.success = success; }
+}
 ```
 
 ---
 
 ## 3. Cash Dispenser (Chain of Responsibility)
 
-```python
-class CashDispenser:
-    """Dispenses cash using optimal denomination mix."""
+```java
+public class CashDispenser {
+    private final TreeMap<Integer, Integer> denominations = new TreeMap<>(Comparator.reverseOrder());
 
-    def __init__(self):
-        self.denominations = {
-            100: 500,  # 500 notes of $100
-            50: 500,
-            20: 1000,
-            10: 1000,
+    public CashDispenser() {
+        denominations.put(100, 500);
+        denominations.put(50, 500);
+        denominations.put(20, 1000);
+        denominations.put(10, 1000);
+    }
+
+    public boolean canDispense(double amount) {
+        return amount <= totalCash() && amount % 10 == 0;
+    }
+
+    public double totalCash() {
+        return denominations.entrySet().stream()
+            .mapToDouble(e -> (double) e.getKey() * e.getValue()).sum();
+    }
+
+    public Map<Integer, Integer> dispense(double amount) {
+        if (!canDispense(amount)) throw new RuntimeException("Cannot dispense this amount");
+        int remaining = (int) amount;
+        Map<Integer, Integer> dispensed = new LinkedHashMap<>();
+
+        for (Map.Entry<Integer, Integer> entry : denominations.entrySet()) {
+            if (remaining <= 0) break;
+            int denom = entry.getKey();
+            int count = Math.min(remaining / denom, entry.getValue());
+            if (count > 0) {
+                dispensed.put(denom, count);
+                entry.setValue(entry.getValue() - count);
+                remaining -= denom * count;
+            }
         }
 
-    def can_dispense(self, amount: float) -> bool:
-        return amount <= self.total_cash() and amount % 10 == 0
-
-    def total_cash(self) -> float:
-        return sum(denom * count for denom, count in self.denominations.items())
-
-    def dispense(self, amount: float) -> dict[int, int]:
-        """Return denomination breakdown using greedy approach."""
-        if not self.can_dispense(amount):
-            raise Exception("Cannot dispense this amount")
-
-        remaining = int(amount)
-        dispensed = {}
-
-        for denom in sorted(self.denominations.keys(), reverse=True):
-            if remaining <= 0:
-                break
-            count = min(remaining // denom, self.denominations[denom])
-            if count > 0:
-                dispensed[denom] = count
-                self.denominations[denom] -= count
-                remaining -= denom * count
-
-        if remaining > 0:
-            # Rollback
-            for d, c in dispensed.items():
-                self.denominations[d] += c
-            raise Exception("Cannot make exact amount with available denominations")
-
-        return dispensed
+        if (remaining > 0) {
+            dispensed.forEach((d, c) -> denominations.merge(d, c, Integer::sum));
+            throw new RuntimeException("Cannot make exact amount with available denominations");
+        }
+        return dispensed;
+    }
+}
 ```
 
 ---
 
 ## 4. ATM Controller (State Machine)
 
-```python
-class ATM:
-    def __init__(self, atm_id: str, dispenser: CashDispenser):
-        self.atm_id = atm_id
-        self.state = ATMState.IDLE
-        self.dispenser = dispenser
-        self.current_card = None
-        self.current_account = None
-        self.transactions: list[Transaction] = []
+```java
+public class ATM {
+    private final String atmId;
+    private ATMState state = ATMState.IDLE;
+    private final CashDispenser dispenser;
+    private Card currentCard;
+    private Account currentAccount;
+    private final List<Transaction> transactions = new ArrayList<>();
 
-    def insert_card(self, card: Card):
-        if self.state != ATMState.IDLE:
-            raise Exception("ATM is busy")
-        self.current_card = card
-        self.state = ATMState.CARD_INSERTED
+    public ATM(String atmId, CashDispenser dispenser) {
+        this.atmId = atmId; this.dispenser = dispenser;
+    }
 
-    def authenticate(self, pin: str, bank_service: "BankService") -> bool:
-        if self.state != ATMState.CARD_INSERTED:
-            raise Exception("Insert card first")
-        account = bank_service.validate_pin(self.current_card, pin)
-        if account:
-            self.current_account = account
-            self.state = ATMState.AUTHENTICATED
-            return True
-        return False
+    public void insertCard(Card card) {
+        if (state != ATMState.IDLE) throw new RuntimeException("ATM is busy");
+        currentCard = card;
+        state = ATMState.CARD_INSERTED;
+    }
 
-    def check_balance(self) -> float:
-        self._require_authenticated()
-        txn = Transaction(TransactionType.BALANCE_INQUIRY, self.current_account)
-        txn.success = True
-        self.transactions.append(txn)
-        return self.current_account.balance
+    public boolean authenticate(String pin, BankService bankService) {
+        if (state != ATMState.CARD_INSERTED) throw new RuntimeException("Insert card first");
+        Account account = bankService.validatePin(currentCard, pin);
+        if (account != null) {
+            currentAccount = account;
+            state = ATMState.AUTHENTICATED;
+            return true;
+        }
+        return false;
+    }
 
-    def withdraw(self, amount: float) -> dict[int, int]:
-        self._require_authenticated()
-        self.state = ATMState.TRANSACTION_IN_PROGRESS
+    public double checkBalance() {
+        requireAuthenticated();
+        Transaction txn = new Transaction(TransactionType.BALANCE_INQUIRY, currentAccount, 0);
+        txn.setSuccess(true);
+        transactions.add(txn);
+        return currentAccount.getBalance();
+    }
 
-        if not self.current_account.can_withdraw(amount):
-            self.state = ATMState.AUTHENTICATED
-            raise Exception("Insufficient funds or daily limit exceeded")
+    public Map<Integer, Integer> withdraw(double amount) {
+        requireAuthenticated();
+        state = ATMState.TRANSACTION_IN_PROGRESS;
 
-        if not self.dispenser.can_dispense(amount):
-            self.state = ATMState.AUTHENTICATED
-            raise Exception("ATM cannot dispense this amount")
+        if (!currentAccount.canWithdraw(amount)) {
+            state = ATMState.AUTHENTICATED;
+            throw new RuntimeException("Insufficient funds or daily limit exceeded");
+        }
+        if (!dispenser.canDispense(amount)) {
+            state = ATMState.AUTHENTICATED;
+            throw new RuntimeException("ATM cannot dispense this amount");
+        }
 
-        # Debit account first, then dispense
-        self.current_account.withdraw(amount)
-        try:
-            notes = self.dispenser.dispense(amount)
-        except Exception:
-            # Rollback account debit
-            self.current_account.deposit(amount)
-            self.current_account.daily_withdrawn -= amount
-            self.state = ATMState.AUTHENTICATED
-            raise
+        currentAccount.withdraw(amount);
+        Map<Integer, Integer> notes;
+        try {
+            notes = dispenser.dispense(amount);
+        } catch (Exception e) {
+            currentAccount.deposit(amount);
+            currentAccount.setDailyWithdrawn(currentAccount.getDailyWithdrawn() - amount);
+            state = ATMState.AUTHENTICATED;
+            throw e;
+        }
 
-        txn = Transaction(TransactionType.WITHDRAWAL, self.current_account, amount)
-        txn.success = True
-        self.transactions.append(txn)
-        self.state = ATMState.AUTHENTICATED
-        return notes
+        Transaction txn = new Transaction(TransactionType.WITHDRAWAL, currentAccount, amount);
+        txn.setSuccess(true);
+        transactions.add(txn);
+        state = ATMState.AUTHENTICATED;
+        return notes;
+    }
 
-    def deposit(self, amount: float):
-        self._require_authenticated()
-        self.state = ATMState.TRANSACTION_IN_PROGRESS
-        self.current_account.deposit(amount)
-        txn = Transaction(TransactionType.DEPOSIT, self.current_account, amount)
-        txn.success = True
-        self.transactions.append(txn)
-        self.state = ATMState.AUTHENTICATED
+    public void deposit(double amount) {
+        requireAuthenticated();
+        state = ATMState.TRANSACTION_IN_PROGRESS;
+        currentAccount.deposit(amount);
+        Transaction txn = new Transaction(TransactionType.DEPOSIT, currentAccount, amount);
+        txn.setSuccess(true);
+        transactions.add(txn);
+        state = ATMState.AUTHENTICATED;
+    }
 
-    def eject_card(self):
-        self.current_card = None
-        self.current_account = None
-        self.state = ATMState.IDLE
+    public void ejectCard() {
+        currentCard = null; currentAccount = null;
+        state = ATMState.IDLE;
+    }
 
-    def _require_authenticated(self):
-        if self.state != ATMState.AUTHENTICATED:
-            raise Exception("Not authenticated")
+    private void requireAuthenticated() {
+        if (state != ATMState.AUTHENTICATED) throw new RuntimeException("Not authenticated");
+    }
+}
 
+public class BankService {
+    private final Map<String, Account> accounts = new HashMap<>();
+    private final Map<String, String> pins = new HashMap<>(); // cardNumber -> pin
 
-class BankService:
-    """Simulates bank backend for PIN validation."""
-    def __init__(self):
-        self.accounts: dict[str, Account] = {}
-        self.pins: dict[str, str] = {}  # card_number -> pin
+    public Account validatePin(Card card, String pin) {
+        if (pin.equals(pins.get(card.getCardNumber())))
+            return accounts.get(card.getCardNumber());
+        return null;
+    }
 
-    def validate_pin(self, card: Card, pin: str) -> Account | None:
-        if self.pins.get(card.card_number) == pin:
-            return self.accounts.get(card.card_number)
-        return None
+    public void addAccount(String cardNumber, Account account, String pin) {
+        accounts.put(cardNumber, account);
+        pins.put(cardNumber, pin);
+    }
+}
 ```
 
 ---

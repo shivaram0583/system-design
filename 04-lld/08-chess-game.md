@@ -18,300 +18,326 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from abc import ABC, abstractmethod
-from copy import deepcopy
+```java
+public enum Color { WHITE, BLACK }
 
-class Color(Enum):
-    WHITE = 1
-    BLACK = 2
+public class Position {
+    private final int row; // 0-7
+    private final int col; // 0-7
 
-class Position:
-    def __init__(self, row: int, col: int):
-        self.row = row  # 0-7
-        self.col = col  # 0-7
+    public Position(int row, int col) { this.row = row; this.col = col; }
+    public int getRow() { return row; }
+    public int getCol() { return col; }
+    public boolean isValid() { return row >= 0 && row < 8 && col >= 0 && col < 8; }
 
-    def is_valid(self) -> bool:
-        return 0 <= self.row < 8 and 0 <= self.col < 8
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Position)) return false;
+        Position p = (Position) o;
+        return row == p.row && col == p.col;
+    }
 
-    def __eq__(self, other):
-        return self.row == other.row and self.col == other.col
+    @Override
+    public int hashCode() { return Objects.hash(row, col); }
 
-    def __hash__(self):
-        return hash((self.row, self.col))
-
-    def __repr__(self):
-        col_letter = chr(ord('a') + self.col)
-        return f"{col_letter}{self.row + 1}"
+    @Override
+    public String toString() { return "" + (char)('a' + col) + (row + 1); }
+}
 ```
 
 ---
 
 ## 3. Pieces (Polymorphism)
 
-```python
-class Piece(ABC):
-    def __init__(self, color: Color, position: Position):
-        self.color = color
-        self.position = position
-        self.has_moved = False
+```java
+public abstract class Piece {
+    protected Color color;
+    protected Position position;
+    protected boolean hasMoved = false;
 
-    @abstractmethod
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        pass
+    public Piece(Color color, Position position) {
+        this.color = color; this.position = position;
+    }
 
-    def move_to(self, position: Position):
-        self.position = position
-        self.has_moved = True
+    public abstract List<Position> getPossibleMoves(Board board);
 
+    public void moveTo(Position position) { this.position = position; hasMoved = true; }
+    public Color getColor() { return color; }
+    public Position getPosition() { return position; }
+    public void setPosition(Position p) { this.position = p; }
+    public boolean hasMoved() { return hasMoved; }
+    public void setHasMoved(boolean v) { hasMoved = v; }
+}
 
-class Pawn(Piece):
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        moves = []
-        direction = 1 if self.color == Color.WHITE else -1
-        r, c = self.position.row, self.position.col
+public class Pawn extends Piece {
+    public Pawn(Color color, Position position) { super(color, position); }
 
-        # Forward one
-        fwd = Position(r + direction, c)
-        if fwd.is_valid() and board.get_piece(fwd) is None:
-            moves.append(fwd)
-            # Forward two (first move)
-            fwd2 = Position(r + 2 * direction, c)
-            if not self.has_moved and fwd2.is_valid() and board.get_piece(fwd2) is None:
-                moves.append(fwd2)
+    @Override
+    public List<Position> getPossibleMoves(Board board) {
+        List<Position> moves = new ArrayList<>();
+        int dir = (color == Color.WHITE) ? 1 : -1;
+        int r = position.getRow(), c = position.getCol();
 
-        # Diagonal captures
-        for dc in [-1, 1]:
-            diag = Position(r + direction, c + dc)
-            if diag.is_valid():
-                target = board.get_piece(diag)
-                if target and target.color != self.color:
-                    moves.append(diag)
+        Position fwd = new Position(r + dir, c);
+        if (fwd.isValid() && board.getPiece(fwd) == null) {
+            moves.add(fwd);
+            Position fwd2 = new Position(r + 2 * dir, c);
+            if (!hasMoved && fwd2.isValid() && board.getPiece(fwd2) == null)
+                moves.add(fwd2);
+        }
+        for (int dc : new int[]{-1, 1}) {
+            Position diag = new Position(r + dir, c + dc);
+            if (diag.isValid()) {
+                Piece target = board.getPiece(diag);
+                if (target != null && target.getColor() != color) moves.add(diag);
+            }
+        }
+        return moves;
+    }
+}
 
-        return moves
+public class Rook extends Piece {
+    public Rook(Color color, Position position) { super(color, position); }
+    @Override
+    public List<Position> getPossibleMoves(Board board) {
+        return board.getLineMoves(this, new int[][]{{0,1},{0,-1},{1,0},{-1,0}});
+    }
+}
 
+public class Bishop extends Piece {
+    public Bishop(Color color, Position position) { super(color, position); }
+    @Override
+    public List<Position> getPossibleMoves(Board board) {
+        return board.getLineMoves(this, new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}});
+    }
+}
 
-class Rook(Piece):
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        return board.get_line_moves(self, [(0, 1), (0, -1), (1, 0), (-1, 0)])
+public class Queen extends Piece {
+    public Queen(Color color, Position position) { super(color, position); }
+    @Override
+    public List<Position> getPossibleMoves(Board board) {
+        return board.getLineMoves(this, new int[][]{
+            {0,1},{0,-1},{1,0},{-1,0},{1,1},{1,-1},{-1,1},{-1,-1}});
+    }
+}
 
+public class Knight extends Piece {
+    public Knight(Color color, Position position) { super(color, position); }
+    @Override
+    public List<Position> getPossibleMoves(Board board) {
+        List<Position> moves = new ArrayList<>();
+        int[][] offsets = {{-2,-1},{-2,1},{-1,-2},{-1,2},{1,-2},{1,2},{2,-1},{2,1}};
+        for (int[] o : offsets) {
+            Position pos = new Position(position.getRow() + o[0], position.getCol() + o[1]);
+            if (pos.isValid()) {
+                Piece target = board.getPiece(pos);
+                if (target == null || target.getColor() != color) moves.add(pos);
+            }
+        }
+        return moves;
+    }
+}
 
-class Bishop(Piece):
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        return board.get_line_moves(self, [(1, 1), (1, -1), (-1, 1), (-1, -1)])
-
-
-class Queen(Piece):
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        return board.get_line_moves(self, [
-            (0, 1), (0, -1), (1, 0), (-1, 0),
-            (1, 1), (1, -1), (-1, 1), (-1, -1)
-        ])
-
-
-class Knight(Piece):
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        moves = []
-        offsets = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
-                   (1, -2), (1, 2), (2, -1), (2, 1)]
-        for dr, dc in offsets:
-            pos = Position(self.position.row + dr, self.position.col + dc)
-            if pos.is_valid():
-                target = board.get_piece(pos)
-                if target is None or target.color != self.color:
-                    moves.append(pos)
-        return moves
-
-
-class King(Piece):
-    def get_possible_moves(self, board: "Board") -> list[Position]:
-        moves = []
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                if dr == 0 and dc == 0:
-                    continue
-                pos = Position(self.position.row + dr, self.position.col + dc)
-                if pos.is_valid():
-                    target = board.get_piece(pos)
-                    if target is None or target.color != self.color:
-                        moves.append(pos)
-        return moves
+public class King extends Piece {
+    public King(Color color, Position position) { super(color, position); }
+    @Override
+    public List<Position> getPossibleMoves(Board board) {
+        List<Position> moves = new ArrayList<>();
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                if (dr == 0 && dc == 0) continue;
+                Position pos = new Position(position.getRow() + dr, position.getCol() + dc);
+                if (pos.isValid()) {
+                    Piece target = board.getPiece(pos);
+                    if (target == null || target.getColor() != color) moves.add(pos);
+                }
+            }
+        }
+        return moves;
+    }
+}
 ```
 
 ---
 
 ## 4. Board
 
-```python
-class Board:
-    def __init__(self):
-        self.grid: list[list[Piece | None]] = [[None] * 8 for _ in range(8)]
-        self._setup_pieces()
+```java
+public class Board {
+    private final Piece[][] grid = new Piece[8][8];
 
-    def _setup_pieces(self):
-        # Pawns
-        for c in range(8):
-            self.place(Pawn(Color.WHITE, Position(1, c)), Position(1, c))
-            self.place(Pawn(Color.BLACK, Position(6, c)), Position(6, c))
+    public Board() { setupPieces(); }
 
-        # Rooks, Knights, Bishops, Queen, King
-        back_rank = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
-        for c, piece_cls in enumerate(back_rank):
-            self.place(piece_cls(Color.WHITE, Position(0, c)), Position(0, c))
-            self.place(piece_cls(Color.BLACK, Position(7, c)), Position(7, c))
+    private void setupPieces() {
+        for (int c = 0; c < 8; c++) {
+            place(new Pawn(Color.WHITE, new Position(1, c)), new Position(1, c));
+            place(new Pawn(Color.BLACK, new Position(6, c)), new Position(6, c));
+        }
+        Piece[] whiteBack = {new Rook(Color.WHITE, new Position(0,0)),
+            new Knight(Color.WHITE, new Position(0,1)), new Bishop(Color.WHITE, new Position(0,2)),
+            new Queen(Color.WHITE, new Position(0,3)), new King(Color.WHITE, new Position(0,4)),
+            new Bishop(Color.WHITE, new Position(0,5)), new Knight(Color.WHITE, new Position(0,6)),
+            new Rook(Color.WHITE, new Position(0,7))};
+        Piece[] blackBack = {new Rook(Color.BLACK, new Position(7,0)),
+            new Knight(Color.BLACK, new Position(7,1)), new Bishop(Color.BLACK, new Position(7,2)),
+            new Queen(Color.BLACK, new Position(7,3)), new King(Color.BLACK, new Position(7,4)),
+            new Bishop(Color.BLACK, new Position(7,5)), new Knight(Color.BLACK, new Position(7,6)),
+            new Rook(Color.BLACK, new Position(7,7))};
+        for (int c = 0; c < 8; c++) {
+            place(whiteBack[c], new Position(0, c));
+            place(blackBack[c], new Position(7, c));
+        }
+    }
 
-    def get_piece(self, pos: Position) -> Piece | None:
-        if pos.is_valid():
-            return self.grid[pos.row][pos.col]
-        return None
+    public Piece getPiece(Position pos) {
+        return pos.isValid() ? grid[pos.getRow()][pos.getCol()] : null;
+    }
 
-    def place(self, piece: Piece, pos: Position):
-        self.grid[pos.row][pos.col] = piece
+    public void place(Piece piece, Position pos) { grid[pos.getRow()][pos.getCol()] = piece; }
 
-    def remove(self, pos: Position) -> Piece | None:
-        piece = self.grid[pos.row][pos.col]
-        self.grid[pos.row][pos.col] = None
-        return piece
+    public Piece remove(Position pos) {
+        Piece p = grid[pos.getRow()][pos.getCol()];
+        grid[pos.getRow()][pos.getCol()] = null;
+        return p;
+    }
 
-    def move_piece(self, from_pos: Position, to_pos: Position) -> Piece | None:
-        piece = self.remove(from_pos)
-        captured = self.remove(to_pos)
-        piece.move_to(to_pos)
-        self.place(piece, to_pos)
-        return captured
+    public Piece movePiece(Position from, Position to) {
+        Piece piece = remove(from);
+        Piece captured = remove(to);
+        piece.moveTo(to);
+        place(piece, to);
+        return captured;
+    }
 
-    def get_line_moves(self, piece: Piece, directions: list[tuple]) -> list[Position]:
-        """Sliding moves for Rook, Bishop, Queen."""
-        moves = []
-        for dr, dc in directions:
-            r, c = piece.position.row + dr, piece.position.col + dc
-            while 0 <= r < 8 and 0 <= c < 8:
-                pos = Position(r, c)
-                target = self.get_piece(pos)
-                if target is None:
-                    moves.append(pos)
-                elif target.color != piece.color:
-                    moves.append(pos)
-                    break
-                else:
-                    break
-                r += dr
-                c += dc
-        return moves
+    public List<Position> getLineMoves(Piece piece, int[][] directions) {
+        List<Position> moves = new ArrayList<>();
+        for (int[] d : directions) {
+            int r = piece.getPosition().getRow() + d[0];
+            int c = piece.getPosition().getCol() + d[1];
+            while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                Position pos = new Position(r, c);
+                Piece target = getPiece(pos);
+                if (target == null) { moves.add(pos); }
+                else if (target.getColor() != piece.getColor()) { moves.add(pos); break; }
+                else break;
+                r += d[0]; c += d[1];
+            }
+        }
+        return moves;
+    }
 
-    def find_king(self, color: Color) -> Position:
-        for r in range(8):
-            for c in range(8):
-                piece = self.grid[r][c]
-                if isinstance(piece, King) and piece.color == color:
-                    return piece.position
-        raise Exception("King not found")
+    public Position findKing(Color color) {
+        for (int r = 0; r < 8; r++)
+            for (int c = 0; c < 8; c++)
+                if (grid[r][c] instanceof King && grid[r][c].getColor() == color)
+                    return grid[r][c].getPosition();
+        throw new RuntimeException("King not found");
+    }
 
-    def is_in_check(self, color: Color) -> bool:
-        king_pos = self.find_king(color)
-        opponent = Color.BLACK if color == Color.WHITE else Color.WHITE
-        for r in range(8):
-            for c in range(8):
-                piece = self.grid[r][c]
-                if piece and piece.color == opponent:
-                    if king_pos in piece.get_possible_moves(self):
-                        return True
-        return False
+    public boolean isInCheck(Color color) {
+        Position kingPos = findKing(color);
+        Color opponent = (color == Color.WHITE) ? Color.BLACK : Color.WHITE;
+        for (int r = 0; r < 8; r++)
+            for (int c = 0; c < 8; c++)
+                if (grid[r][c] != null && grid[r][c].getColor() == opponent)
+                    if (grid[r][c].getPossibleMoves(this).contains(kingPos))
+                        return true;
+        return false;
+    }
+
+    public Piece[][] getGrid() { return grid; }
+}
 ```
 
 ---
 
 ## 5. Game Controller
 
-```python
-class GameStatus(Enum):
-    ACTIVE = 1
-    CHECK = 2
-    CHECKMATE = 3
-    STALEMATE = 4
-    RESIGNED = 5
+```java
+public enum GameStatus { ACTIVE, CHECK, CHECKMATE, STALEMATE, RESIGNED }
 
-class Move:
-    def __init__(self, piece: Piece, from_pos: Position, to_pos: Position,
-                 captured: Piece = None):
-        self.piece = piece
-        self.from_pos = from_pos
-        self.to_pos = to_pos
-        self.captured = captured
+public class Move {
+    private final Piece piece;
+    private final Position fromPos;
+    private final Position toPos;
+    private final Piece captured;
 
-class Game:
-    def __init__(self, white_player: str, black_player: str):
-        self.board = Board()
-        self.current_turn = Color.WHITE
-        self.status = GameStatus.ACTIVE
-        self.move_history: list[Move] = []
-        self.players = {Color.WHITE: white_player, Color.BLACK: black_player}
+    public Move(Piece piece, Position fromPos, Position toPos, Piece captured) {
+        this.piece = piece; this.fromPos = fromPos;
+        this.toPos = toPos; this.captured = captured;
+    }
+    public Piece getCaptured() { return captured; }
+}
 
-    def make_move(self, from_pos: Position, to_pos: Position) -> Move:
-        if self.status in (GameStatus.CHECKMATE, GameStatus.STALEMATE, GameStatus.RESIGNED):
-            raise Exception("Game is over")
+public class Game {
+    private final Board board = new Board();
+    private Color currentTurn = Color.WHITE;
+    private GameStatus status = GameStatus.ACTIVE;
+    private final List<Move> moveHistory = new ArrayList<>();
+    private final Map<Color, String> players;
 
-        piece = self.board.get_piece(from_pos)
-        if not piece or piece.color != self.current_turn:
-            raise Exception("Invalid piece selection")
+    public Game(String whitePlayer, String blackPlayer) {
+        players = Map.of(Color.WHITE, whitePlayer, Color.BLACK, blackPlayer);
+    }
 
-        legal_moves = self._get_legal_moves(piece)
-        if to_pos not in legal_moves:
-            raise Exception("Illegal move")
+    public Move makeMove(Position from, Position to) {
+        if (status == GameStatus.CHECKMATE || status == GameStatus.STALEMATE
+                || status == GameStatus.RESIGNED)
+            throw new RuntimeException("Game is over");
 
-        captured = self.board.move_piece(from_pos, to_pos)
-        move = Move(piece, from_pos, to_pos, captured)
-        self.move_history.append(move)
+        Piece piece = board.getPiece(from);
+        if (piece == null || piece.getColor() != currentTurn)
+            throw new RuntimeException("Invalid piece selection");
 
-        # Switch turn
-        self.current_turn = Color.BLACK if self.current_turn == Color.WHITE else Color.WHITE
+        List<Position> legal = getLegalMoves(piece);
+        if (!legal.contains(to)) throw new RuntimeException("Illegal move");
 
-        # Update game status
-        self._update_status()
-        return move
+        Piece captured = board.movePiece(from, to);
+        Move move = new Move(piece, from, to, captured);
+        moveHistory.add(move);
 
-    def _get_legal_moves(self, piece: Piece) -> list[Position]:
-        """Filter moves that would leave own king in check."""
-        possible = piece.get_possible_moves(self.board)
-        legal = []
-        for move_pos in possible:
-            # Save state before simulation
-            original_pos = Position(piece.position.row, piece.position.col)
-            original_has_moved = piece.has_moved
-            captured = self.board.move_piece(piece.position, move_pos)
-            if not self.board.is_in_check(piece.color):
-                legal.append(move_pos)
-            # Undo move
-            self.board.move_piece(move_pos, original_pos)
-            piece.has_moved = original_has_moved  # restore original state
-            if captured:
-                captured.position = move_pos
-                self.board.place(captured, move_pos)
-        return legal
+        currentTurn = (currentTurn == Color.WHITE) ? Color.BLACK : Color.WHITE;
+        updateStatus();
+        return move;
+    }
 
-    def _update_status(self):
-        if self.board.is_in_check(self.current_turn):
-            if self._has_no_legal_moves():
-                self.status = GameStatus.CHECKMATE
-            else:
-                self.status = GameStatus.CHECK
-        elif self._has_no_legal_moves():
-            self.status = GameStatus.STALEMATE
-        else:
-            self.status = GameStatus.ACTIVE
+    private List<Position> getLegalMoves(Piece piece) {
+        List<Position> legal = new ArrayList<>();
+        for (Position movePos : piece.getPossibleMoves(board)) {
+            Position origPos = new Position(piece.getPosition().getRow(), piece.getPosition().getCol());
+            boolean origMoved = piece.hasMoved();
+            Piece captured = board.movePiece(piece.getPosition(), movePos);
+            if (!board.isInCheck(piece.getColor())) legal.add(movePos);
+            board.movePiece(movePos, origPos);
+            piece.setHasMoved(origMoved);
+            if (captured != null) {
+                captured.setPosition(movePos);
+                board.place(captured, movePos);
+            }
+        }
+        return legal;
+    }
 
-    def _has_no_legal_moves(self) -> bool:
-        for r in range(8):
-            for c in range(8):
-                piece = self.board.grid[r][c]
-                if piece and piece.color == self.current_turn:
-                    if self._get_legal_moves(piece):
-                        return False
-        return True
+    private void updateStatus() {
+        if (board.isInCheck(currentTurn)) {
+            status = hasNoLegalMoves() ? GameStatus.CHECKMATE : GameStatus.CHECK;
+        } else {
+            status = hasNoLegalMoves() ? GameStatus.STALEMATE : GameStatus.ACTIVE;
+        }
+    }
 
-    def resign(self):
-        self.status = GameStatus.RESIGNED
+    private boolean hasNoLegalMoves() {
+        Piece[][] grid = board.getGrid();
+        for (int r = 0; r < 8; r++)
+            for (int c = 0; c < 8; c++)
+                if (grid[r][c] != null && grid[r][c].getColor() == currentTurn)
+                    if (!getLegalMoves(grid[r][c]).isEmpty()) return false;
+        return true;
+    }
+
+    public void resign() { status = GameStatus.RESIGNED; }
+    public GameStatus getStatus() { return status; }
+}
 ```
 
 ---

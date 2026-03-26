@@ -67,129 +67,136 @@ classDiagram
 
 ## 3. Core Classes
 
-```python
-import uuid
-import threading
-from datetime import datetime
-from abc import ABC, abstractmethod
-from collections import defaultdict
-from queue import Queue
+```java
+public class Message {
+    private final String id;
+    private final String body;
+    private final Map<String, String> headers;
+    private final LocalDateTime createdAt;
 
-class Message:
-    def __init__(self, body: str, headers: dict = None):
-        self.id = str(uuid.uuid4())
-        self.body = body
-        self.headers = headers or {}
-        self.created_at = datetime.now()
+    public Message(String body, Map<String, String> headers) {
+        this.id = UUID.randomUUID().toString();
+        this.body = body;
+        this.headers = (headers != null) ? headers : Map.of();
+        this.createdAt = LocalDateTime.now();
+    }
+    public Message(String body) { this(body, null); }
+    public String getBody() { return body; }
+}
 
+public interface Subscriber {
+    void onMessage(Message message);
+    String getId();
+}
 
-class Subscriber(ABC):
-    @abstractmethod
-    def on_message(self, message: Message) -> None:
-        pass
+public class PrintSubscriber implements Subscriber {
+    private final String name;
+    public PrintSubscriber(String name) { this.name = name; }
 
-    @abstractmethod
-    def get_id(self) -> str:
-        pass
+    @Override
+    public void onMessage(Message message) {
+        System.out.println("[" + name + "] Received: " + message.getBody());
+    }
 
+    @Override
+    public String getId() { return name; }
+}
 
-class PrintSubscriber(Subscriber):
-    def __init__(self, name: str):
-        self.name = name
+public class Topic {
+    private final String name;
+    private final List<Subscriber> subscribers = new ArrayList<>();
+    private final Object lock = new Object();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    def on_message(self, message: Message) -> None:
-        print(f"[{self.name}] Received: {message.body}")
+    public Topic(String name) { this.name = name; }
 
-    def get_id(self) -> str:
-        return self.name
+    public void addSubscriber(Subscriber subscriber) {
+        synchronized (lock) {
+            if (subscribers.stream().noneMatch(s -> s.getId().equals(subscriber.getId())))
+                subscribers.add(subscriber);
+        }
+    }
 
+    public void removeSubscriber(Subscriber subscriber) {
+        synchronized (lock) {
+            subscribers.removeIf(s -> s.getId().equals(subscriber.getId()));
+        }
+    }
 
-class Topic:
-    def __init__(self, name: str):
-        self.name = name
-        self.subscribers: list[Subscriber] = []
-        self.lock = threading.Lock()
+    public void publish(Message message) {
+        List<Subscriber> snapshot;
+        synchronized (lock) { snapshot = new ArrayList<>(subscribers); }
+        for (Subscriber sub : snapshot) {
+            executor.submit(() -> deliver(sub, message));
+        }
+    }
 
-    def add_subscriber(self, subscriber: Subscriber):
-        with self.lock:
-            if subscriber not in self.subscribers:
-                self.subscribers.append(subscriber)
-
-    def remove_subscriber(self, subscriber: Subscriber):
-        with self.lock:
-            self.subscribers = [s for s in self.subscribers
-                                if s.get_id() != subscriber.get_id()]
-
-    def publish(self, message: Message):
-        with self.lock:
-            subscribers_snapshot = list(self.subscribers)
-        for subscriber in subscribers_snapshot:
-            # Each subscriber gets message in its own thread (async)
-            thread = threading.Thread(
-                target=self._deliver,
-                args=(subscriber, message),
-                daemon=True
-            )
-            thread.start()
-
-    def _deliver(self, subscriber: Subscriber, message: Message):
-        try:
-            subscriber.on_message(message)
-        except Exception as e:
-            print(f"Delivery failed to {subscriber.get_id()}: {e}")
-            # Retry logic could go here
+    private void deliver(Subscriber subscriber, Message message) {
+        try {
+            subscriber.onMessage(message);
+        } catch (Exception e) {
+            System.err.println("Delivery failed to " + subscriber.getId() + ": " + e.getMessage());
+            // Retry logic could go here
+        }
+    }
+}
 ```
 
 ---
 
 ## 4. PubSub System
 
-```python
-class PubSubSystem:
-    _instance = None
+```java
+public class PubSubSystem {
+    private static PubSubSystem instance;
+    private final Map<String, Topic> topics = new HashMap<>();
+    private final Object lock = new Object();
 
-    def __init__(self):
-        self.topics: dict[str, Topic] = {}
-        self.lock = threading.Lock()
+    private PubSubSystem() {}
 
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    public static synchronized PubSubSystem getInstance() {
+        if (instance == null) instance = new PubSubSystem();
+        return instance;
+    }
 
-    def create_topic(self, name: str) -> Topic:
-        with self.lock:
-            if name in self.topics:
-                raise ValueError(f"Topic '{name}' already exists")
-            topic = Topic(name)
-            self.topics[name] = topic
-            return topic
+    public Topic createTopic(String name) {
+        synchronized (lock) {
+            if (topics.containsKey(name))
+                throw new IllegalArgumentException("Topic '" + name + "' already exists");
+            Topic topic = new Topic(name);
+            topics.put(name, topic);
+            return topic;
+        }
+    }
 
-    def delete_topic(self, name: str):
-        with self.lock:
-            if name not in self.topics:
-                raise ValueError(f"Topic '{name}' not found")
-            del self.topics[name]
+    public void deleteTopic(String name) {
+        synchronized (lock) {
+            if (!topics.containsKey(name))
+                throw new IllegalArgumentException("Topic '" + name + "' not found");
+            topics.remove(name);
+        }
+    }
 
-    def publish(self, topic_name: str, message: Message):
-        topic = self._get_topic(topic_name)
-        topic.publish(message)
+    public void publish(String topicName, Message message) {
+        getTopic(topicName).publish(message);
+    }
 
-    def subscribe(self, topic_name: str, subscriber: Subscriber):
-        topic = self._get_topic(topic_name)
-        topic.add_subscriber(subscriber)
+    public void subscribe(String topicName, Subscriber subscriber) {
+        getTopic(topicName).addSubscriber(subscriber);
+    }
 
-    def unsubscribe(self, topic_name: str, subscriber: Subscriber):
-        topic = self._get_topic(topic_name)
-        topic.remove_subscriber(subscriber)
+    public void unsubscribe(String topicName, Subscriber subscriber) {
+        getTopic(topicName).removeSubscriber(subscriber);
+    }
 
-    def _get_topic(self, name: str) -> Topic:
-        with self.lock:
-            topic = self.topics.get(name)
-        if not topic:
-            raise ValueError(f"Topic '{name}' not found")
-        return topic
+    private Topic getTopic(String name) {
+        synchronized (lock) {
+            Topic topic = topics.get(name);
+            if (topic == null) throw new IllegalArgumentException("Topic '" + name + "' not found");
+            return topic;
+        }
+    }
+}
 ```
 
 ---

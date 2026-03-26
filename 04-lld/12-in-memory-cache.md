@@ -53,114 +53,107 @@ classDiagram
 
 ## 3. Core Implementation
 
-```python
-import threading
-from datetime import datetime, timedelta
+```java
+public class Node<V> {
+    final String key;
+    V value;
+    Node<V> prev, next;
+    final LocalDateTime expiresAt;
 
-class Node:
-    def __init__(self, key: str, value: any, ttl_seconds: float = None):
-        self.key = key
-        self.value = value
-        self.prev: Node | None = None
-        self.next: Node | None = None
-        self.expires_at = (datetime.now() + timedelta(seconds=ttl_seconds)
-                           if ttl_seconds else None)
+    public Node(String key, V value, Long ttlSeconds) {
+        this.key = key; this.value = value;
+        this.expiresAt = (ttlSeconds != null)
+            ? LocalDateTime.now().plusSeconds(ttlSeconds) : null;
+    }
+    public Node(String key, V value) { this(key, value, null); }
+    public boolean isExpired() {
+        return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
+    }
+}
 
-    def is_expired(self) -> bool:
-        if self.expires_at is None:
-            return False
-        return datetime.now() > self.expires_at
+public class DoublyLinkedList<V> {
+    private final Node<V> head = new Node<>("", null);
+    private final Node<V> tail = new Node<>("", null);
+    private int size = 0;
 
+    public DoublyLinkedList() { head.next = tail; tail.prev = head; }
 
-class DoublyLinkedList:
-    def __init__(self):
-        self.head = Node("", "")  # sentinel head
-        self.tail = Node("", "")  # sentinel tail
-        self.head.next = self.tail
-        self.tail.prev = self.head
-        self._size = 0
+    public void addToHead(Node<V> node) {
+        node.prev = head; node.next = head.next;
+        head.next.prev = node; head.next = node;
+        size++;
+    }
 
-    def add_to_head(self, node: Node):
-        node.prev = self.head
-        node.next = self.head.next
-        self.head.next.prev = node
-        self.head.next = node
-        self._size += 1
+    public void removeNode(Node<V> node) {
+        node.prev.next = node.next; node.next.prev = node.prev;
+        node.prev = null; node.next = null;
+        size--;
+    }
 
-    def remove_node(self, node: Node):
-        node.prev.next = node.next
-        node.next.prev = node.prev
-        node.prev = None
-        node.next = None
-        self._size -= 1
+    public Node<V> removeTail() {
+        if (size == 0) return null;
+        Node<V> tailNode = tail.prev;
+        removeNode(tailNode);
+        return tailNode;
+    }
 
-    def remove_tail(self) -> Node | None:
-        if self._size == 0:
-            return None
-        tail_node = self.tail.prev
-        self.remove_node(tail_node)
-        return tail_node
+    public int size() { return size; }
+}
 
-    def size(self) -> int:
-        return self._size
+public class LRUCache<V> {
+    private final int capacity;
+    private final Map<String, Node<V>> map = new HashMap<>();
+    private final DoublyLinkedList<V> dll = new DoublyLinkedList<>();
+    private final Object lock = new Object();
 
+    public LRUCache(int capacity) {
+        if (capacity <= 0) throw new IllegalArgumentException("Capacity must be positive");
+        this.capacity = capacity;
+    }
 
-class LRUCache:
-    def __init__(self, capacity: int):
-        if capacity <= 0:
-            raise ValueError("Capacity must be positive")
-        self.capacity = capacity
-        self.map: dict[str, Node] = {}
-        self.dll = DoublyLinkedList()
-        self.lock = threading.Lock()
+    public V get(String key) {
+        synchronized (lock) {
+            Node<V> node = map.get(key);
+            if (node == null) return null;
+            if (node.isExpired()) { remove(node); return null; }
+            dll.removeNode(node);
+            dll.addToHead(node);
+            return node.value;
+        }
+    }
 
-    def get(self, key: str) -> any:
-        with self.lock:
-            node = self.map.get(key)
-            if not node:
-                return None
-            if node.is_expired():
-                self._remove(node)
-                return None
-            # Move to head (most recently used)
-            self.dll.remove_node(node)
-            self.dll.add_to_head(node)
-            return node.value
+    public void put(String key, V value, Long ttlSeconds) {
+        synchronized (lock) {
+            if (map.containsKey(key)) {
+                dll.removeNode(map.remove(key));
+            }
+            if (dll.size() >= capacity) evict();
+            Node<V> newNode = new Node<>(key, value, ttlSeconds);
+            dll.addToHead(newNode);
+            map.put(key, newNode);
+        }
+    }
+    public void put(String key, V value) { put(key, value, null); }
 
-    def put(self, key: str, value: any, ttl_seconds: float = None):
-        with self.lock:
-            if key in self.map:
-                # Update existing
-                old_node = self.map[key]
-                self.dll.remove_node(old_node)
-                del self.map[key]
+    public boolean delete(String key) {
+        synchronized (lock) {
+            Node<V> node = map.get(key);
+            if (node == null) return false;
+            remove(node); return true;
+        }
+    }
 
-            if self.dll.size() >= self.capacity:
-                self._evict()
+    private void evict() {
+        Node<V> tail = dll.removeTail();
+        if (tail != null) map.remove(tail.key);
+    }
 
-            new_node = Node(key, value, ttl_seconds)
-            self.dll.add_to_head(new_node)
-            self.map[key] = new_node
+    private void remove(Node<V> node) {
+        dll.removeNode(node); map.remove(node.key);
+    }
 
-    def delete(self, key: str) -> bool:
-        with self.lock:
-            node = self.map.get(key)
-            if not node:
-                return False
-            self._remove(node)
-            return True
-
-    def _evict(self):
-        tail = self.dll.remove_tail()
-        if tail:
-            del self.map[tail.key]
-
-    def _remove(self, node: Node):
-        self.dll.remove_node(node)
-        del self.map[node.key]
-
-    def size(self) -> int:
-        return self.dll.size()
+    public int size() { return dll.size(); }
+}
 ```
 
 ---

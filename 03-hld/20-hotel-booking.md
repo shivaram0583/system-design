@@ -27,32 +27,16 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐         ┌────────────────┐                       │
-│  │ Client │────────►│  API Gateway   │                       │
-│  └────────┘         └───────┬────────┘                       │
-│                              │                                │
-│       ┌──────────────────────┼──────────────────┐           │
-│       │                      │                   │           │
-│  ┌────┴──────┐  ┌───────────┴──┐  ┌────────────┴──┐       │
-│  │Search Svc │  │Booking Svc   │  │Listing Svc    │       │
-│  │(Elastic)  │  │(reservation) │  │(hotel/room    │       │
-│  └───────────┘  └──────┬───────┘  │ management)   │       │
-│                         │          └───────────────┘       │
-│                  ┌──────┴───────┐                           │
-│                  │Availability  │                           │
-│                  │Service       │                           │
-│                  │(date ranges) │                           │
-│                  └──────┬───────┘                           │
-│                         │                                    │
-│  ┌────────────┐  ┌──────┴──────┐  ┌──────────────┐        │
-│  │PostgreSQL  │  │ Redis       │  │ Kafka        │        │
-│  │(bookings,  │  │ (search     │  │ (events)     │        │
-│  │ listings)  │  │  cache)     │  └──────────────┘        │
-│  └────────────┘  └─────────────┘                           │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client --> GW[API Gateway]
+    GW --> Search[Search Service<br/>Elasticsearch]
+    GW --> Booking[Booking Service<br/>reservation]
+    GW --> Listing[Listing Service<br/>hotel/room mgmt]
+    Booking --> Avail[Availability Service<br/>date ranges]
+    Avail --> PG[(PostgreSQL<br/>bookings, listings)]
+    Avail --> Redis[(Redis<br/>search cache)]
+    Booking --> Kafka[Kafka<br/>events]
 ```
 
 ---

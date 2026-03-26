@@ -28,29 +28,15 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────────┐         ┌────────────────┐                   │
-│  │ App Server │────────►│  Cache Client  │                   │
-│  │            │         │  (smart routing)│                  │
-│  └────────────┘         └───────┬────────┘                   │
-│                                  │ hash(key) → node          │
-│                                  │                            │
-│       ┌──────────────────────────┼──────────────────┐       │
-│       │                          │                   │       │
-│  ┌────┴──────┐  ┌───────────────┴──┐  ┌────────────┴──┐   │
-│  │ Node A    │  │ Node B           │  │ Node C        │   │
-│  │ Keys: 0-X │  │ Keys: X-Y        │  │ Keys: Y-Z     │   │
-│  │ ┌───────┐ │  │ ┌───────┐        │  │ ┌───────┐     │   │
-│  │ │Replica│ │  │ │Replica│        │  │ │Replica│     │   │
-│  │ └───────┘ │  │ └───────┘        │  │ └───────┘     │   │
-│  └───────────┘  └──────────────────┘  └───────────────┘   │
-│                                                              │
-│  ┌──────────────────────────────────────────────────┐       │
-│  │  Cluster Manager (gossip protocol, failover)      │       │
-│  └──────────────────────────────────────────────────┘       │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    App[App Server] --> CC[Cache Client<br/>smart routing]
+    CC -->|"hash(key) → node"| A[Node A<br/>Keys: 0-X + Replica]
+    CC --> B[Node B<br/>Keys: X-Y + Replica]
+    CC --> C[Node C<br/>Keys: Y-Z + Replica]
+    CM[Cluster Manager<br/>gossip protocol, failover] -.-> A
+    CM -.-> B
+    CM -.-> C
 ```
 
 ---

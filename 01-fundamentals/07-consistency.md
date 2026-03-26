@@ -397,64 +397,68 @@ LOCAL read: Read from nearest replica
 
 #### Pseudocode
 
-```python
-class ConsistencyManager:
-    def __init__(self, replicas: list, quorum_size: int):
-        self.replicas = replicas
-        self.quorum = quorum_size  # Typically ceil(N/2) + 1
+```java
+public class ConsistencyManager {
+    private final List<Replica> replicas;
+    private final int quorum; // Typically ceil(N/2) + 1
 
-    def read(self, key: str, level: str) -> tuple:
-        if level == "STRONG":
-            return self._quorum_read(key)
-        elif level == "EVENTUAL":
-            return self._single_read(key)
-        elif level == "LOCAL":
-            return self._local_read(key)
+    public ConsistencyManager(List<Replica> replicas, int quorumSize) {
+        this.replicas = replicas; this.quorum = quorumSize;
+    }
 
-    def write(self, key: str, value: any, level: str) -> bool:
-        versioned = {"value": value, "timestamp": time.now(), "version": uuid()}
-        if level == "STRONG":
-            return self._quorum_write(key, versioned)
-        else:
-            return self._async_write(key, versioned)
+    public Object read(String key, String level) {
+        switch (level) {
+            case "STRONG":   return quorumRead(key);
+            case "EVENTUAL": return singleRead(key);
+            case "LOCAL":    return localRead(key);
+            default: throw new IllegalArgumentException("Unknown level: " + level);
+        }
+    }
 
-    def _quorum_read(self, key):
-        """Read from quorum replicas, return latest version"""
-        responses = parallel_call(
-            [r.get(key) for r in self.replicas],
-            required=self.quorum,
-            timeout_ms=100
-        )
-        # Return the value with the highest timestamp
-        latest = max(responses, key=lambda r: r["timestamp"])
-        # Read-repair: update stale replicas
-        for r in responses:
-            if r["version"] != latest["version"]:
-                async_repair(r.replica, key, latest)
-        return latest["value"]
+    public boolean write(String key, Object value, String level) {
+        Map<String, Object> versioned = Map.of(
+            "value", value, "timestamp", System.currentTimeMillis(),
+            "version", UUID.randomUUID().toString());
+        return "STRONG".equals(level) ? quorumWrite(key, versioned)
+                                      : asyncWrite(key, versioned);
+    }
 
-    def _quorum_write(self, key, versioned):
-        """Write to quorum replicas, wait for confirmation"""
-        acks = parallel_call(
-            [r.put(key, versioned) for r in self.replicas],
-            required=self.quorum,
-            timeout_ms=200
-        )
-        return len(acks) >= self.quorum
+    /** Read from quorum replicas, return latest version */
+    private Object quorumRead(String key) {
+        List<Map<String, Object>> responses = parallelCall(
+            replicas, r -> r.get(key), quorum, 100);
+        Map<String, Object> latest = responses.stream()
+            .max(Comparator.comparingLong(r -> (long) r.get("timestamp")))
+            .orElseThrow();
+        // Read-repair: update stale replicas
+        for (Map<String, Object> r : responses)
+            if (!r.get("version").equals(latest.get("version")))
+                asyncRepair(r, key, latest);
+        return latest.get("value");
+    }
 
-    def _single_read(self, key):
-        """Read from any one replica (fastest)"""
-        replica = self._pick_fastest_replica()
-        return replica.get(key)["value"]
+    /** Write to quorum replicas, wait for confirmation */
+    private boolean quorumWrite(String key, Map<String, Object> versioned) {
+        List<Boolean> acks = parallelCall(
+            replicas, r -> r.put(key, versioned), quorum, 200);
+        return acks.size() >= quorum;
+    }
 
-    def _async_write(self, key, versioned):
-        """Write to one replica, async replicate to others"""
-        primary = self._pick_primary(key)
-        primary.put(key, versioned)
-        for r in self.replicas:
-            if r != primary:
-                async_replicate(r, key, versioned)
-        return True
+    /** Read from any one replica (fastest) */
+    private Object singleRead(String key) {
+        Replica replica = pickFastestReplica();
+        return replica.get(key).get("value");
+    }
+
+    /** Write to one replica, async replicate to others */
+    private boolean asyncWrite(String key, Map<String, Object> versioned) {
+        Replica primary = pickPrimary(key);
+        primary.put(key, versioned);
+        for (Replica r : replicas)
+            if (r != primary) asyncReplicate(r, key, versioned);
+        return true;
+    }
+}
 ```
 
 #### Edge Cases

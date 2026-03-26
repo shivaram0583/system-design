@@ -76,172 +76,174 @@ classDiagram
 
 ## 3. Core Implementation
 
-```python
-import uuid
-import threading
-from enum import Enum
-from datetime import datetime
-from abc import ABC, abstractmethod
+```java
+public enum ChannelType { EMAIL, SMS, PUSH }
 
-class ChannelType(Enum):
-    EMAIL = "email"
-    SMS = "sms"
-    PUSH = "push"
+public enum Priority { CRITICAL, HIGH, NORMAL, LOW }
 
-class Priority(Enum):
-    CRITICAL = 1
-    HIGH = 2
-    NORMAL = 3
-    LOW = 4
+public class RenderedMessage {
+    private final String subject;
+    private final String body;
+    public RenderedMessage(String subject, String body) {
+        this.subject = subject; this.body = body;
+    }
+    public String getSubject() { return subject; }
+    public String getBody() { return body; }
+}
 
-class RenderedMessage:
-    def __init__(self, subject: str, body: str):
-        self.subject = subject
-        self.body = body
+public class Template {
+    private final String templateId;
+    private final String subject;
+    private final String body;
 
-class Template:
-    def __init__(self, template_id: str, subject: str, body: str):
-        self.template_id = template_id
-        self.subject = subject
-        self.body = body
+    public Template(String templateId, String subject, String body) {
+        this.templateId = templateId; this.subject = subject; this.body = body;
+    }
 
-    def render(self, params: dict) -> RenderedMessage:
-        subject = self.subject
-        body = self.body
-        for key, value in params.items():
-            subject = subject.replace(f"{{{{{key}}}}}", str(value))
-            body = body.replace(f"{{{{{key}}}}}", str(value))
-        return RenderedMessage(subject, body)
-
-
-class Notification:
-    def __init__(self, user_id: str, template_id: str, params: dict,
-                 channels: list[ChannelType] = None, priority: Priority = Priority.NORMAL):
-        self.id = str(uuid.uuid4())
-        self.user_id = user_id
-        self.template_id = template_id
-        self.params = params
-        self.channels = channels or [ChannelType.EMAIL]
-        self.priority = priority
-        self.created_at = datetime.now()
-
-
-class UserPreference:
-    def __init__(self, user_id: str):
-        self.user_id = user_id
-        self.channel_enabled: dict[ChannelType, bool] = {
-            ChannelType.EMAIL: True,
-            ChannelType.SMS: True,
-            ChannelType.PUSH: True,
+    public RenderedMessage render(Map<String, String> params) {
+        String s = subject, b = body;
+        for (Map.Entry<String, String> e : params.entrySet()) {
+            String placeholder = "{{" + e.getKey() + "}}";
+            s = s.replace(placeholder, e.getValue());
+            b = b.replace(placeholder, e.getValue());
         }
-        self.do_not_disturb = False
+        return new RenderedMessage(s, b);
+    }
+    public String getTemplateId() { return templateId; }
+}
 
-    def is_channel_enabled(self, channel_type: ChannelType) -> bool:
-        if self.do_not_disturb:
-            return False
-        return self.channel_enabled.get(channel_type, False)
+public class Notification {
+    private final String id;
+    private final String userId;
+    private final String templateId;
+    private final Map<String, String> params;
+    private final List<ChannelType> channels;
+    private final Priority priority;
+
+    public Notification(String userId, String templateId, Map<String, String> params,
+                        List<ChannelType> channels, Priority priority) {
+        this.id = UUID.randomUUID().toString();
+        this.userId = userId; this.templateId = templateId;
+        this.params = params;
+        this.channels = (channels != null) ? channels : List.of(ChannelType.EMAIL);
+        this.priority = (priority != null) ? priority : Priority.NORMAL;
+    }
+    public String getId() { return id; }
+    public String getUserId() { return userId; }
+    public String getTemplateId() { return templateId; }
+    public Map<String, String> getParams() { return params; }
+    public List<ChannelType> getChannels() { return channels; }
+}
+
+public class UserPreference {
+    private final String userId;
+    private final Map<ChannelType, Boolean> channelEnabled = new EnumMap<>(ChannelType.class);
+    private boolean doNotDisturb = false;
+
+    public UserPreference(String userId) {
+        this.userId = userId;
+        for (ChannelType t : ChannelType.values()) channelEnabled.put(t, true);
+    }
+
+    public boolean isChannelEnabled(ChannelType type) {
+        if (doNotDisturb) return false;
+        return channelEnabled.getOrDefault(type, false);
+    }
+    public String getUserId() { return userId; }
+    public void setDoNotDisturb(boolean v) { doNotDisturb = v; }
+    public void setChannelEnabled(ChannelType t, boolean v) { channelEnabled.put(t, v); }
+}
 ```
 
 ---
 
 ## 4. Channels & Service
 
-```python
-class NotificationChannel(ABC):
-    @abstractmethod
-    def send(self, user_id: str, message: RenderedMessage) -> bool:
-        pass
+```java
+public interface NotificationChannel {
+    boolean send(String userId, RenderedMessage message);
+    ChannelType getType();
+}
 
-    @abstractmethod
-    def get_type(self) -> ChannelType:
-        pass
+public class EmailChannel implements NotificationChannel {
+    @Override
+    public boolean send(String userId, RenderedMessage msg) {
+        System.out.println("[EMAIL] To: " + userId + " | Subject: " + msg.getSubject()
+            + " | Body: " + msg.getBody());
+        return true;
+    }
+    @Override public ChannelType getType() { return ChannelType.EMAIL; }
+}
 
-class EmailChannel(NotificationChannel):
-    def send(self, user_id: str, message: RenderedMessage) -> bool:
-        print(f"[EMAIL] To: {user_id} | Subject: {message.subject} | Body: {message.body}")
-        return True
+public class SMSChannel implements NotificationChannel {
+    @Override
+    public boolean send(String userId, RenderedMessage msg) {
+        System.out.println("[SMS] To: " + userId + " | " + msg.getBody());
+        return true;
+    }
+    @Override public ChannelType getType() { return ChannelType.SMS; }
+}
 
-    def get_type(self) -> ChannelType:
-        return ChannelType.EMAIL
+public class PushChannel implements NotificationChannel {
+    @Override
+    public boolean send(String userId, RenderedMessage msg) {
+        System.out.println("[PUSH] To: " + userId + " | " + msg.getSubject() + ": " + msg.getBody());
+        return true;
+    }
+    @Override public ChannelType getType() { return ChannelType.PUSH; }
+}
 
-class SMSChannel(NotificationChannel):
-    def send(self, user_id: str, message: RenderedMessage) -> bool:
-        print(f"[SMS] To: {user_id} | {message.body}")
-        return True
+public class NotificationService {
+    private static final int MAX_RETRIES = 3;
+    private final Map<ChannelType, NotificationChannel> channels = new EnumMap<>(ChannelType.class);
+    private final Map<String, Template> templates = new HashMap<>();
+    private final Map<String, UserPreference> preferences = new HashMap<>();
+    private final Set<String> sentIds = new HashSet<>();
+    private final Object lock = new Object();
 
-    def get_type(self) -> ChannelType:
-        return ChannelType.SMS
+    public void registerChannel(NotificationChannel channel) {
+        channels.put(channel.getType(), channel);
+    }
+    public void registerTemplate(Template template) {
+        templates.put(template.getTemplateId(), template);
+    }
+    public void setPreference(UserPreference pref) {
+        preferences.put(pref.getUserId(), pref);
+    }
 
-class PushChannel(NotificationChannel):
-    def send(self, user_id: str, message: RenderedMessage) -> bool:
-        print(f"[PUSH] To: {user_id} | {message.subject}: {message.body}")
-        return True
+    public Map<ChannelType, Boolean> send(Notification notification) {
+        synchronized (lock) {
+            if (sentIds.contains(notification.getId())) return Map.of();
+            sentIds.add(notification.getId());
+        }
 
-    def get_type(self) -> ChannelType:
-        return ChannelType.PUSH
+        Template template = templates.get(notification.getTemplateId());
+        if (template == null)
+            throw new IllegalArgumentException("Template '" + notification.getTemplateId() + "' not found");
+        RenderedMessage message = template.render(notification.getParams());
 
+        UserPreference prefs = preferences.getOrDefault(
+            notification.getUserId(), new UserPreference(notification.getUserId()));
 
-class NotificationService:
-    MAX_RETRIES = 3
+        Map<ChannelType, Boolean> results = new EnumMap<>(ChannelType.class);
+        for (ChannelType type : notification.getChannels()) {
+            if (!prefs.isChannelEnabled(type)) { results.put(type, false); continue; }
+            NotificationChannel channel = channels.get(type);
+            if (channel == null) { results.put(type, false); continue; }
+            results.put(type, sendWithRetry(channel, notification.getUserId(), message));
+        }
+        return results;
+    }
 
-    def __init__(self):
-        self.channels: dict[ChannelType, NotificationChannel] = {}
-        self.templates: dict[str, Template] = {}
-        self.preferences: dict[str, UserPreference] = {}
-        self.sent_ids: set[str] = set()  # deduplication
-        self.lock = threading.Lock()
-
-    def register_channel(self, channel: NotificationChannel):
-        self.channels[channel.get_type()] = channel
-
-    def register_template(self, template: Template):
-        self.templates[template.template_id] = template
-
-    def set_preference(self, preference: UserPreference):
-        self.preferences[preference.user_id] = preference
-
-    def send(self, notification: Notification) -> dict[ChannelType, bool]:
-        # Deduplication check
-        with self.lock:
-            if notification.id in self.sent_ids:
-                return {}
-            self.sent_ids.add(notification.id)
-
-        # Get template and render
-        template = self.templates.get(notification.template_id)
-        if not template:
-            raise ValueError(f"Template '{notification.template_id}' not found")
-        message = template.render(notification.params)
-
-        # Get user preferences
-        prefs = self.preferences.get(notification.user_id, UserPreference(notification.user_id))
-
-        # Send to each requested channel
-        results = {}
-        for channel_type in notification.channels:
-            if not prefs.is_channel_enabled(channel_type):
-                results[channel_type] = False
-                continue
-
-            channel = self.channels.get(channel_type)
-            if not channel:
-                results[channel_type] = False
-                continue
-
-            success = self._send_with_retry(channel, notification.user_id, message)
-            results[channel_type] = success
-
-        return results
-
-    def _send_with_retry(self, channel: NotificationChannel, user_id: str,
-                          message: RenderedMessage) -> bool:
-        for attempt in range(self.MAX_RETRIES):
-            try:
-                if channel.send(user_id, message):
-                    return True
-            except Exception:
-                pass
-        return False
+    private boolean sendWithRetry(NotificationChannel channel, String userId,
+                                  RenderedMessage message) {
+        for (int i = 0; i < MAX_RETRIES; i++) {
+            try { if (channel.send(userId, message)) return true; }
+            catch (Exception ignored) {}
+        }
+        return false;
+    }
+}
 ```
 
 ---

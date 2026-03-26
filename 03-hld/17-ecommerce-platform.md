@@ -30,33 +30,18 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐         ┌────────────────┐                       │
-│  │ Client │────────►│  API Gateway   │                       │
-│  │(Web/App)│        │  + CDN         │                       │
-│  └────────┘         └───────┬────────┘                       │
-│                              │                                │
-│    ┌─────────────────────────┼─────────────────────┐        │
-│    │                         │                      │        │
-│  ┌─┴──────────┐  ┌──────────┴──┐  ┌───────────────┴──┐    │
-│  │Product Svc │  │ Cart Svc    │  │ Order Svc        │    │
-│  │(catalog,   │  │ (Redis +    │  │ (checkout, track) │    │
-│  │ search)    │  │  session)   │  └─────────┬────────┘    │
-│  └──────┬─────┘  └─────────────┘            │              │
-│         │                            ┌──────┴───────┐      │
-│  ┌──────┴─────┐  ┌─────────────┐   │ Payment Svc  │      │
-│  │Elasticsearch│  │Inventory Svc│   │ (Stripe/     │      │
-│  │(search)    │  │(stock mgmt) │   │  internal)   │      │
-│  └────────────┘  └─────────────┘   └──────────────┘      │
-│                                                              │
-│  ┌────────────┐  ┌─────────────┐  ┌──────────────┐        │
-│  │PostgreSQL  │  │ Redis       │  │ Kafka        │        │
-│  │(orders,    │  │ (cart, cache│  │ (events,     │        │
-│  │ users)     │  │  sessions)  │  │  async)      │        │
-│  └────────────┘  └─────────────┘  └──────────────┘        │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client[Client - Web/App] --> GW[API Gateway + CDN]
+    GW --> Product[Product Service<br/>catalog, search]
+    GW --> Cart[Cart Service<br/>Redis + session]
+    GW --> Order[Order Service<br/>checkout, track]
+    Product --> ES[(Elasticsearch<br/>search)]
+    Order --> Pay[Payment Service<br/>Stripe / internal]
+    Order --> Inv[Inventory Service<br/>stock mgmt]
+    Order --> PG[(PostgreSQL<br/>orders, users)]
+    Cart --> Redis[(Redis<br/>cart, cache, sessions)]
+    Order --> Kafka[Kafka<br/>events, async]
 ```
 
 ---

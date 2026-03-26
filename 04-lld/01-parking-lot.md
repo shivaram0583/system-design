@@ -18,162 +18,211 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from datetime import datetime
-from abc import ABC, abstractmethod
+```java
+public enum VehicleType {
+    MOTORCYCLE(1), CAR(2), TRUCK(3);
+    private final int value;
+    VehicleType(int value) { this.value = value; }
+    public int getValue() { return value; }
+}
 
-class VehicleType(Enum):
-    MOTORCYCLE = 1
-    CAR = 2
-    TRUCK = 3
+public enum SpotSize {
+    SMALL(1),    // motorcycle
+    MEDIUM(2),   // car
+    LARGE(3);    // truck
+    private final int value;
+    SpotSize(int value) { this.value = value; }
+    public int getValue() { return value; }
+}
 
-class SpotSize(Enum):
-    SMALL = 1      # motorcycle
-    MEDIUM = 2     # car
-    LARGE = 3      # truck
+public class Vehicle {
+    private final String licensePlate;
+    private final VehicleType vehicleType;
 
-class Vehicle:
-    def __init__(self, license_plate: str, vehicle_type: VehicleType):
-        self.license_plate = license_plate
-        self.vehicle_type = vehicle_type
+    public Vehicle(String licensePlate, VehicleType vehicleType) {
+        this.licensePlate = licensePlate;
+        this.vehicleType = vehicleType;
+    }
+    public String getLicensePlate() { return licensePlate; }
+    public VehicleType getVehicleType() { return vehicleType; }
+}
 
-class ParkingSpot:
-    def __init__(self, spot_id: str, floor: int, size: SpotSize):
-        self.spot_id = spot_id
-        self.floor = floor
-        self.size = size
-        self.vehicle = None  # None = available
+public class ParkingSpot {
+    private final String spotId;
+    private final int floor;
+    private final SpotSize size;
+    private Vehicle vehicle; // null = available
 
-    def is_available(self) -> bool:
-        return self.vehicle is None
+    private static final Map<VehicleType, SpotSize> SIZE_MAP = Map.of(
+        VehicleType.MOTORCYCLE, SpotSize.SMALL,
+        VehicleType.CAR, SpotSize.MEDIUM,
+        VehicleType.TRUCK, SpotSize.LARGE
+    );
 
-    def can_fit(self, vehicle: Vehicle) -> bool:
-        size_map = {
-            VehicleType.MOTORCYCLE: SpotSize.SMALL,
-            VehicleType.CAR: SpotSize.MEDIUM,
-            VehicleType.TRUCK: SpotSize.LARGE,
-        }
-        return self.is_available() and self.size.value >= size_map[vehicle.vehicle_type].value
+    public ParkingSpot(String spotId, int floor, SpotSize size) {
+        this.spotId = spotId;
+        this.floor = floor;
+        this.size = size;
+    }
 
-    def park(self, vehicle: Vehicle):
-        if not self.can_fit(vehicle):
-            raise Exception("Cannot park here")
-        self.vehicle = vehicle
+    public boolean isAvailable() { return vehicle == null; }
 
-    def remove_vehicle(self) -> Vehicle:
-        vehicle = self.vehicle
-        self.vehicle = None
-        return vehicle
+    public boolean canFit(Vehicle vehicle) {
+        SpotSize required = SIZE_MAP.get(vehicle.getVehicleType());
+        return isAvailable() && this.size.getValue() >= required.getValue();
+    }
+
+    public void park(Vehicle vehicle) {
+        if (!canFit(vehicle)) throw new RuntimeException("Cannot park here");
+        this.vehicle = vehicle;
+    }
+
+    public Vehicle removeVehicle() {
+        Vehicle v = this.vehicle;
+        this.vehicle = null;
+        return v;
+    }
+
+    public String getSpotId() { return spotId; }
+    public int getFloor() { return floor; }
+    public SpotSize getSize() { return size; }
+    public Vehicle getVehicle() { return vehicle; }
+}
 ```
 
 ---
 
 ## 3. Parking Lot & Floor
 
-```python
-class ParkingFloor:
-    def __init__(self, floor_number: int, spots: list[ParkingSpot]):
-        self.floor_number = floor_number
-        self.spots = spots
+```java
+public class ParkingFloor {
+    private final int floorNumber;
+    private final List<ParkingSpot> spots;
 
-    def find_available_spot(self, vehicle: Vehicle) -> ParkingSpot | None:
-        for spot in self.spots:
-            if spot.can_fit(vehicle):
-                return spot
-        return None
+    public ParkingFloor(int floorNumber, List<ParkingSpot> spots) {
+        this.floorNumber = floorNumber;
+        this.spots = spots;
+    }
 
-    def available_count(self) -> dict:
-        counts = {size: 0 for size in SpotSize}
-        for spot in self.spots:
-            if spot.is_available():
-                counts[spot.size] += 1
-        return counts
+    public ParkingSpot findAvailableSpot(Vehicle vehicle) {
+        for (ParkingSpot spot : spots) {
+            if (spot.canFit(vehicle)) return spot;
+        }
+        return null;
+    }
 
+    public Map<SpotSize, Integer> availableCount() {
+        Map<SpotSize, Integer> counts = new EnumMap<>(SpotSize.class);
+        for (SpotSize size : SpotSize.values()) counts.put(size, 0);
+        for (ParkingSpot spot : spots) {
+            if (spot.isAvailable()) counts.merge(spot.getSize(), 1, Integer::sum);
+        }
+        return counts;
+    }
+}
 
-class ParkingLot:
-    _instance = None  # Singleton
+public class ParkingLot {
+    private static ParkingLot instance; // Singleton
+    private final String name;
+    private final List<ParkingFloor> floors;
+    private final Map<String, ParkingTicket> activeTickets = new HashMap<>();
 
-    def __init__(self, name: str, floors: list[ParkingFloor]):
-        self.name = name
-        self.floors = floors
-        self.active_tickets = {}  # ticket_id -> ParkingTicket
+    private ParkingLot(String name, List<ParkingFloor> floors) {
+        this.name = name;
+        this.floors = floors;
+    }
 
-    @classmethod
-    def get_instance(cls, name="Main Lot", floors=None):
-        if cls._instance is None:
-            cls._instance = cls(name, floors or [])
-        return cls._instance
+    public static synchronized ParkingLot getInstance(String name, List<ParkingFloor> floors) {
+        if (instance == null) instance = new ParkingLot(name, floors);
+        return instance;
+    }
 
-    def find_spot(self, vehicle: Vehicle) -> ParkingSpot | None:
-        for floor in self.floors:
-            spot = floor.find_available_spot(vehicle)
-            if spot:
-                return spot
-        return None
+    public ParkingSpot findSpot(Vehicle vehicle) {
+        for (ParkingFloor floor : floors) {
+            ParkingSpot spot = floor.findAvailableSpot(vehicle);
+            if (spot != null) return spot;
+        }
+        return null;
+    }
 
-    def park_vehicle(self, vehicle: Vehicle) -> "ParkingTicket":
-        spot = self.find_spot(vehicle)
-        if not spot:
-            raise Exception("Parking lot is full")
-        spot.park(vehicle)
-        ticket = ParkingTicket(vehicle, spot)
-        self.active_tickets[ticket.ticket_id] = ticket
-        return ticket
+    public ParkingTicket parkVehicle(Vehicle vehicle) {
+        ParkingSpot spot = findSpot(vehicle);
+        if (spot == null) throw new RuntimeException("Parking lot is full");
+        spot.park(vehicle);
+        ParkingTicket ticket = new ParkingTicket(vehicle, spot);
+        activeTickets.put(ticket.getTicketId(), ticket);
+        return ticket;
+    }
 
-    def unpark_vehicle(self, ticket_id: str, payment_strategy: "PaymentStrategy") -> float:
-        ticket = self.active_tickets.pop(ticket_id)
-        ticket.set_exit_time()
-        fee = payment_strategy.calculate_fee(ticket)
-        ticket.spot.remove_vehicle()
-        return fee
+    public double unparkVehicle(String ticketId, PaymentStrategy paymentStrategy) {
+        ParkingTicket ticket = activeTickets.remove(ticketId);
+        ticket.setExitTime();
+        double fee = paymentStrategy.calculateFee(ticket);
+        ticket.getSpot().removeVehicle();
+        return fee;
+    }
+}
 ```
 
 ---
 
 ## 4. Ticket & Payment (Strategy Pattern)
 
-```python
-import uuid
+```java
+public class ParkingTicket {
+    private final String ticketId;
+    private final Vehicle vehicle;
+    private final ParkingSpot spot;
+    private final LocalDateTime entryTime;
+    private LocalDateTime exitTime;
 
-class ParkingTicket:
-    def __init__(self, vehicle: Vehicle, spot: ParkingSpot):
-        self.ticket_id = str(uuid.uuid4())
-        self.vehicle = vehicle
-        self.spot = spot
-        self.entry_time = datetime.now()
-        self.exit_time = None
-
-    def set_exit_time(self):
-        self.exit_time = datetime.now()
-
-    def parked_hours(self) -> float:
-        delta = (self.exit_time or datetime.now()) - self.entry_time
-        return max(1, delta.total_seconds() / 3600)  # minimum 1 hour
-
-
-class PaymentStrategy(ABC):
-    @abstractmethod
-    def calculate_fee(self, ticket: ParkingTicket) -> float:
-        pass
-
-class HourlyPayment(PaymentStrategy):
-    RATES = {
-        SpotSize.SMALL: 2.0,
-        SpotSize.MEDIUM: 5.0,
-        SpotSize.LARGE: 10.0,
+    public ParkingTicket(Vehicle vehicle, ParkingSpot spot) {
+        this.ticketId = UUID.randomUUID().toString();
+        this.vehicle = vehicle;
+        this.spot = spot;
+        this.entryTime = LocalDateTime.now();
     }
 
-    def calculate_fee(self, ticket: ParkingTicket) -> float:
-        rate = self.RATES[ticket.spot.size]
-        return round(rate * ticket.parked_hours(), 2)
+    public void setExitTime() { this.exitTime = LocalDateTime.now(); }
 
-class FlatRatePayment(PaymentStrategy):
-    def __init__(self, flat_rate: float = 20.0):
-        self.flat_rate = flat_rate
+    public double parkedHours() {
+        LocalDateTime end = (exitTime != null) ? exitTime : LocalDateTime.now();
+        long seconds = java.time.Duration.between(entryTime, end).getSeconds();
+        return Math.max(1, seconds / 3600.0); // minimum 1 hour
+    }
 
-    def calculate_fee(self, ticket: ParkingTicket) -> float:
-        return self.flat_rate
+    public String getTicketId() { return ticketId; }
+    public Vehicle getVehicle() { return vehicle; }
+    public ParkingSpot getSpot() { return spot; }
+}
+
+public interface PaymentStrategy {
+    double calculateFee(ParkingTicket ticket);
+}
+
+public class HourlyPayment implements PaymentStrategy {
+    private static final Map<SpotSize, Double> RATES = Map.of(
+        SpotSize.SMALL, 2.0,
+        SpotSize.MEDIUM, 5.0,
+        SpotSize.LARGE, 10.0
+    );
+
+    @Override
+    public double calculateFee(ParkingTicket ticket) {
+        double rate = RATES.get(ticket.getSpot().getSize());
+        return Math.round(rate * ticket.parkedHours() * 100.0) / 100.0;
+    }
+}
+
+public class FlatRatePayment implements PaymentStrategy {
+    private final double flatRate;
+
+    public FlatRatePayment() { this(20.0); }
+    public FlatRatePayment(double flatRate) { this.flatRate = flatRate; }
+
+    @Override
+    public double calculateFee(ParkingTicket ticket) { return flatRate; }
+}
 ```
 
 ---

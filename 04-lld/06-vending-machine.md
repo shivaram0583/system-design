@@ -18,140 +18,128 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from abc import ABC, abstractmethod
+```java
+public enum MachineState { IDLE, HAS_MONEY, DISPENSING, OUT_OF_SERVICE }
 
-class MachineState(Enum):
-    IDLE = 1
-    HAS_MONEY = 2
-    DISPENSING = 3
-    OUT_OF_SERVICE = 4
+public enum Coin {
+    PENNY(1), NICKEL(5), DIME(10), QUARTER(25), DOLLAR(100);
+    private final int cents;
+    Coin(int cents) { this.cents = cents; }
+    public int getCents() { return cents; }
+}
 
-class Coin(Enum):
-    PENNY = 0.01
-    NICKEL = 0.05
-    DIME = 0.10
-    QUARTER = 0.25
-    DOLLAR = 1.00
+public class Product {
+    private final String name;
+    private final double price;
+    private int quantity;
 
-class Product:
-    def __init__(self, name: str, price: float, quantity: int):
-        self.name = name
-        self.price = price
-        self.quantity = quantity
+    public Product(String name, double price, int quantity) {
+        this.name = name; this.price = price; this.quantity = quantity;
+    }
 
-    def is_available(self) -> bool:
-        return self.quantity > 0
+    public boolean isAvailable() { return quantity > 0; }
 
-    def dispense(self):
-        if not self.is_available():
-            raise Exception(f"{self.name} is sold out")
-        self.quantity -= 1
+    public void dispense() {
+        if (!isAvailable()) throw new RuntimeException(name + " is sold out");
+        quantity--;
+    }
 
+    public String getName() { return name; }
+    public double getPrice() { return price; }
+    public int getQuantity() { return quantity; }
+    public void addQuantity(int qty) { quantity += qty; }
+}
 
-class Inventory:
-    def __init__(self):
-        self.products: dict[str, Product] = {}  # slot_code -> Product
+public class Inventory {
+    private final Map<String, Product> products = new HashMap<>(); // slot -> Product
 
-    def add_product(self, slot: str, product: Product):
-        self.products[slot] = product
-
-    def get_product(self, slot: str) -> Product | None:
-        return self.products.get(slot)
-
-    def restock(self, slot: str, quantity: int):
-        product = self.products.get(slot)
-        if product:
-            product.quantity += quantity
+    public void addProduct(String slot, Product product) { products.put(slot, product); }
+    public Product getProduct(String slot) { return products.get(slot); }
+    public void restock(String slot, int quantity) {
+        Product p = products.get(slot);
+        if (p != null) p.addQuantity(quantity);
+    }
+    public Map<String, Product> getProducts() { return products; }
+}
 ```
 
 ---
 
 ## 3. Vending Machine (State Machine)
 
-```python
-class VendingMachine:
-    def __init__(self):
-        self.inventory = Inventory()
-        self.state = MachineState.IDLE
-        self.current_amount = 0.0
-        self.coin_storage: dict[Coin, int] = {c: 100 for c in Coin}  # change reservoir
+```java
+public class VendingMachine {
+    private final Inventory inventory = new Inventory();
+    private MachineState state = MachineState.IDLE;
+    private double currentAmount = 0.0;
+    private final Map<Coin, Integer> coinStorage = new EnumMap<>(Coin.class);
 
-    def insert_coin(self, coin: Coin):
-        if self.state == MachineState.OUT_OF_SERVICE:
-            raise Exception("Machine is out of service")
-        self.current_amount += coin.value
-        self.coin_storage[coin] = self.coin_storage.get(coin, 0) + 1
-        self.state = MachineState.HAS_MONEY
+    public VendingMachine() {
+        for (Coin c : Coin.values()) coinStorage.put(c, 100); // change reservoir
+    }
 
-    def insert_money(self, amount: float):
-        """For bill acceptor."""
-        if self.state == MachineState.OUT_OF_SERVICE:
-            raise Exception("Machine is out of service")
-        self.current_amount += amount
-        self.state = MachineState.HAS_MONEY
+    public void insertCoin(Coin coin) {
+        if (state == MachineState.OUT_OF_SERVICE)
+            throw new RuntimeException("Machine is out of service");
+        currentAmount += coin.getCents() / 100.0;
+        coinStorage.merge(coin, 1, Integer::sum);
+        state = MachineState.HAS_MONEY;
+    }
 
-    def select_product(self, slot: str) -> dict:
-        if self.state not in (MachineState.HAS_MONEY, MachineState.IDLE):
-            raise Exception("Cannot select product now")
+    public void insertMoney(double amount) {
+        if (state == MachineState.OUT_OF_SERVICE)
+            throw new RuntimeException("Machine is out of service");
+        currentAmount += amount;
+        state = MachineState.HAS_MONEY;
+    }
 
-        product = self.inventory.get_product(slot)
-        if not product:
-            raise Exception("Invalid slot")
-        if not product.is_available():
-            raise Exception(f"{product.name} is sold out")
-        if self.current_amount < product.price:
-            raise Exception(
-                f"Insert ${product.price - self.current_amount:.2f} more"
-            )
+    public Map<String, Object> selectProduct(String slot) {
+        if (state != MachineState.HAS_MONEY && state != MachineState.IDLE)
+            throw new RuntimeException("Cannot select product now");
 
-        # Dispense
-        self.state = MachineState.DISPENSING
-        product.dispense()
-        change = self.current_amount - product.price
-        change_coins = self._make_change(change) if change > 0 else {}
+        Product product = inventory.getProduct(slot);
+        if (product == null) throw new RuntimeException("Invalid slot");
+        if (!product.isAvailable()) throw new RuntimeException(product.getName() + " is sold out");
+        if (currentAmount < product.getPrice())
+            throw new RuntimeException(String.format("Insert $%.2f more",
+                product.getPrice() - currentAmount));
 
-        self.current_amount = 0
-        self.state = MachineState.IDLE
+        state = MachineState.DISPENSING;
+        product.dispense();
+        double change = currentAmount - product.getPrice();
+        Map<String, Integer> changeCoins = (change > 0) ? makeChange(change) : Map.of();
 
-        return {
-            "product": product.name,
-            "change": change,
-            "change_breakdown": change_coins,
+        currentAmount = 0;
+        state = MachineState.IDLE;
+
+        return Map.of("product", product.getName(), "change", change,
+                      "change_breakdown", changeCoins);
+    }
+
+    public double cancel() {
+        double refund = currentAmount;
+        currentAmount = 0;
+        state = MachineState.IDLE;
+        return refund;
+    }
+
+    private Map<String, Integer> makeChange(double amount) {
+        int remaining = (int) Math.round(amount * 100);
+        Map<String, Integer> change = new LinkedHashMap<>();
+        Coin[] sorted = Coin.values();
+        Arrays.sort(sorted, Comparator.comparingInt(Coin::getCents).reversed());
+        for (Coin coin : sorted) {
+            int count = Math.min(remaining / coin.getCents(), coinStorage.getOrDefault(coin, 0));
+            if (count > 0) {
+                change.put(coin.name(), count);
+                coinStorage.merge(coin, -count, Integer::sum);
+                remaining -= coin.getCents() * count;
+            }
         }
-
-    def cancel(self) -> float:
-        """Refund all inserted money."""
-        refund = self.current_amount
-        self.current_amount = 0
-        self.state = MachineState.IDLE
-        return refund
-
-    def _make_change(self, amount: float) -> dict[str, int]:
-        remaining = round(amount * 100)  # work in cents to avoid float issues
-        change = {}
-        for coin in sorted(Coin, key=lambda c: c.value, reverse=True):
-            coin_cents = int(coin.value * 100)
-            count = min(remaining // coin_cents, self.coin_storage.get(coin, 0))
-            if count > 0:
-                change[coin.name] = count
-                self.coin_storage[coin] -= count
-                remaining -= coin_cents * count
-        if remaining > 0:
-            raise Exception("Cannot make exact change")
-        return change
-
-    def display(self) -> list[dict]:
-        items = []
-        for slot, product in self.inventory.products.items():
-            items.append({
-                "slot": slot,
-                "name": product.name,
-                "price": product.price,
-                "available": product.is_available(),
-            })
-        return items
+        if (remaining > 0) throw new RuntimeException("Cannot make exact change");
+        return change;
+    }
+}
 ```
 
 ---

@@ -372,43 +372,58 @@ Cross-service coordination is BASE (eventual consistency via events)
 
 ### E.2 LLD — Saga Orchestrator
 
-```python
-class SagaOrchestrator:
-    def __init__(self, saga_db, event_bus):
-        self.db = saga_db
-        self.bus = event_bus
+```java
+public class SagaOrchestrator {
+    private final SagaDb db;
+    private final EventBus bus;
 
-    def start_saga(self, saga_type: str, data: dict) -> str:
-        saga_id = generate_id()
-        self.db.create_saga(saga_id, saga_type, data, status="STARTED")
-        steps = self._get_steps(saga_type)
-        self._execute_step(saga_id, steps[0], data)
-        return saga_id
+    public SagaOrchestrator(SagaDb db, EventBus bus) {
+        this.db = db; this.bus = bus;
+    }
 
-    def handle_step_result(self, saga_id: str, step: str, success: bool, result: dict):
-        saga = self.db.get_saga(saga_id)
-        if success:
-            self.db.mark_step_complete(saga_id, step, result)
-            next_step = self._get_next_step(saga.type, step)
-            if next_step:
-                self._execute_step(saga_id, next_step, {**saga.data, **result})
-            else:
-                self.db.update_saga_status(saga_id, "COMPLETED")
-        else:
-            self.db.update_saga_status(saga_id, "COMPENSATING")
-            self._start_compensation(saga_id, step)
+    public String startSaga(String sagaType, Map<String, Object> data) {
+        String sagaId = UUID.randomUUID().toString();
+        db.createSaga(sagaId, sagaType, data, "STARTED");
+        List<SagaStep> steps = getSteps(sagaType);
+        executeStep(sagaId, steps.get(0), data);
+        return sagaId;
+    }
 
-    def _start_compensation(self, saga_id: str, failed_step: str):
-        completed_steps = self.db.get_completed_steps(saga_id)
-        for step in reversed(completed_steps):
-            compensation = self._get_compensation(step)
-            self.bus.publish(compensation.command, saga_id=saga_id)
-            self.db.mark_step_compensated(saga_id, step)
-        self.db.update_saga_status(saga_id, "COMPENSATED")
+    public void handleStepResult(String sagaId, String step, boolean success,
+                                 Map<String, Object> result) {
+        Saga saga = db.getSaga(sagaId);
+        if (success) {
+            db.markStepComplete(sagaId, step, result);
+            SagaStep nextStep = getNextStep(saga.getType(), step);
+            if (nextStep != null) {
+                Map<String, Object> merged = new HashMap<>(saga.getData());
+                merged.putAll(result);
+                executeStep(sagaId, nextStep, merged);
+            } else {
+                db.updateSagaStatus(sagaId, "COMPLETED");
+            }
+        } else {
+            db.updateSagaStatus(sagaId, "COMPENSATING");
+            startCompensation(sagaId, step);
+        }
+    }
 
-    def _execute_step(self, saga_id, step, data):
-        self.bus.publish(step.command, saga_id=saga_id, **data)
-        self.db.mark_step_started(saga_id, step.name)
+    private void startCompensation(String sagaId, String failedStep) {
+        List<String> completedSteps = db.getCompletedSteps(sagaId);
+        Collections.reverse(completedSteps);
+        for (String step : completedSteps) {
+            SagaStep compensation = getCompensation(step);
+            bus.publish(compensation.getCommand(), sagaId);
+            db.markStepCompensated(sagaId, step);
+        }
+        db.updateSagaStatus(sagaId, "COMPENSATED");
+    }
+
+    private void executeStep(String sagaId, SagaStep step, Map<String, Object> data) {
+        bus.publish(step.getCommand(), sagaId, data);
+        db.markStepStarted(sagaId, step.getName());
+    }
+}
 ```
 
 #### Edge Cases

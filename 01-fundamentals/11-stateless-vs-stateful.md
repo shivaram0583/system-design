@@ -239,30 +239,36 @@ STATELESS (externalized cart):
 
 ### E.2 LLD — Session Manager
 
-```python
-class SessionManager:
-    def __init__(self, redis_client, ttl_seconds=3600):
-        self.redis = redis_client
-        self.ttl = ttl_seconds
+```java
+public class SessionManager {
+    private final RedisClient redis;
+    private final int ttlSeconds;
 
-    def create_session(self, user_id: str, data: dict) -> str:
-        session_id = generate_secure_token()
-        self.redis.setex(
-            f"session:{session_id}",
-            self.ttl,
-            json.dumps({"user_id": user_id, **data})
-        )
-        return session_id
+    public SessionManager(RedisClient redis, int ttlSeconds) {
+        this.redis = redis; this.ttlSeconds = ttlSeconds;
+    }
 
-    def get_session(self, session_id: str) -> dict | None:
-        data = self.redis.get(f"session:{session_id}")
-        if data:
-            self.redis.expire(f"session:{session_id}", self.ttl)  # Extend TTL
-            return json.loads(data)
-        return None
+    public String createSession(String userId, Map<String, Object> data) {
+        String sessionId = generateSecureToken();
+        Map<String, Object> sessionData = new HashMap<>(data);
+        sessionData.put("user_id", userId);
+        redis.setex("session:" + sessionId, ttlSeconds, toJson(sessionData));
+        return sessionId;
+    }
 
-    def destroy_session(self, session_id: str):
-        self.redis.delete(f"session:{session_id}")
+    public Map<String, Object> getSession(String sessionId) {
+        String data = redis.get("session:" + sessionId);
+        if (data != null) {
+            redis.expire("session:" + sessionId, ttlSeconds); // Extend TTL
+            return fromJson(data);
+        }
+        return null;
+    }
+
+    public void destroySession(String sessionId) {
+        redis.delete("session:" + sessionId);
+    }
+}
 ```
 
 ---

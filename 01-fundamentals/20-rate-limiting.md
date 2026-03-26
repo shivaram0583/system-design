@@ -284,63 +284,62 @@ Architecture:
 
 ### E.2 LLD — Token Bucket Rate Limiter
 
-```python
-import time
-import threading
+```java
+public class TokenBucketRateLimiter {
+    private final int capacity;
+    private double tokens;
+    private final double refillRate; // tokens per second
+    private long lastRefill;
+    private final Object lock = new Object();
 
-class TokenBucketRateLimiter:
-    def __init__(self, capacity: int, refill_rate: float):
-        self.capacity = capacity
-        self.tokens = capacity
-        self.refill_rate = refill_rate  # tokens per second
-        self.last_refill = time.time()
-        self.lock = threading.Lock()
+    public TokenBucketRateLimiter(int capacity, double refillRate) {
+        this.capacity = capacity; this.tokens = capacity;
+        this.refillRate = refillRate; this.lastRefill = System.nanoTime();
+    }
 
-    def allow(self) -> bool:
-        with self.lock:
-            self._refill()
-            if self.tokens >= 1:
-                self.tokens -= 1
-                return True
-            return False
-
-    def _refill(self):
-        now = time.time()
-        elapsed = now - self.last_refill
-        new_tokens = elapsed * self.refill_rate
-        self.tokens = min(self.capacity, self.tokens + new_tokens)
-        self.last_refill = now
-
-
-class DistributedRateLimiter:
-    """Redis-based sliding window counter"""
-    
-    def __init__(self, redis_client, default_limit=100, window_sec=60):
-        self.redis = redis_client
-        self.default_limit = default_limit
-        self.window = window_sec
-
-    def allow(self, client_id: str, limit: int = None) -> tuple:
-        limit = limit or self.default_limit
-        now = time.time()
-        window_start = int(now // self.window) * self.window
-        key = f"rl:{client_id}:{window_start}"
-
-        pipe = self.redis.pipeline()
-        pipe.incr(key)
-        pipe.expire(key, self.window + 1)
-        result = pipe.execute()
-
-        current_count = result[0]
-        allowed = current_count <= limit
-        remaining = max(0, limit - current_count)
-        reset_at = window_start + self.window
-
-        return allowed, {
-            "limit": limit,
-            "remaining": remaining,
-            "reset": int(reset_at),
+    public boolean allow() {
+        synchronized (lock) {
+            refill();
+            if (tokens >= 1) { tokens--; return true; }
+            return false;
         }
+    }
+
+    private void refill() {
+        long now = System.nanoTime();
+        double elapsed = (now - lastRefill) / 1_000_000_000.0;
+        tokens = Math.min(capacity, tokens + elapsed * refillRate);
+        lastRefill = now;
+    }
+}
+
+/** Redis-based sliding window counter */
+public class DistributedRateLimiter {
+    private final RedisClient redis;
+    private final int defaultLimit;
+    private final int windowSec;
+
+    public DistributedRateLimiter(RedisClient redis, int defaultLimit, int windowSec) {
+        this.redis = redis; this.defaultLimit = defaultLimit; this.windowSec = windowSec;
+    }
+
+    public RateLimitResult allow(String clientId, Integer limit) {
+        int effectiveLimit = (limit != null) ? limit : defaultLimit;
+        long now = System.currentTimeMillis() / 1000;
+        long windowStart = (now / windowSec) * windowSec;
+        String key = "rl:" + clientId + ":" + windowStart;
+
+        // Atomic increment + expire via pipeline
+        long currentCount = redis.incr(key);
+        redis.expire(key, windowSec + 1);
+
+        boolean allowed = currentCount <= effectiveLimit;
+        int remaining = Math.max(0, effectiveLimit - (int) currentCount);
+        long resetAt = windowStart + windowSec;
+
+        return new RateLimitResult(allowed, effectiveLimit, remaining, resetAt);
+    }
+}
 ```
 
 ---

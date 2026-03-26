@@ -30,34 +30,16 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐         ┌────────────────┐                       │
-│  │ Client │────────►│  API Gateway   │                       │
-│  └────────┘         └───────┬────────┘                       │
-│                              │                                │
-│              ┌───────────────┼───────────────────┐           │
-│              │               │                    │           │
-│       ┌──────┴──────┐ ┌─────┴──────┐ ┌──────────┴───┐     │
-│       │Payment Svc  │ │Ledger Svc  │ │Payout Svc    │     │
-│       │(orchestrator│ │(double-entry│ │(seller       │     │
-│       │ state mach.)│ │ accounting)│ │ disbursement)│     │
-│       └──────┬──────┘ └────────────┘ └──────────────┘     │
-│              │                                               │
-│       ┌──────┴──────┐                                       │
-│       │PSP Adapter  │  (Payment Service Provider)           │
-│       │• Stripe     │                                       │
-│       │• PayPal     │                                       │
-│       │• Adyen      │                                       │
-│       └─────────────┘                                       │
-│                                                              │
-│  ┌────────────┐  ┌─────────────┐  ┌──────────────┐        │
-│  │PostgreSQL  │  │ Kafka       │  │ Redis        │        │
-│  │(txns,      │  │ (events,    │  │ (idempotency │        │
-│  │ ledger)    │  │  async)     │  │  keys)       │        │
-│  └────────────┘  └─────────────┘  └──────────────┘        │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client --> GW[API Gateway]
+    GW --> PaySvc[Payment Service<br/>orchestrator, state machine]
+    GW --> Ledger[Ledger Service<br/>double-entry accounting]
+    GW --> Payout[Payout Service<br/>seller disbursement]
+    PaySvc --> PSP[PSP Adapter<br/>Stripe / PayPal / Adyen]
+    PaySvc --> PG[(PostgreSQL<br/>txns, ledger)]
+    PaySvc --> Kafka[Kafka<br/>events, async]
+    PaySvc --> Redis[(Redis<br/>idempotency keys)]
 ```
 
 ---

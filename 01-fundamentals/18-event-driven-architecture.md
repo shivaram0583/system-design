@@ -285,49 +285,54 @@ DO use EDA for:
 
 ### E.2 LLD — Event Bus Abstraction
 
-```python
-class Event:
-    def __init__(self, event_type: str, data: dict, source: str):
-        self.id = str(uuid.uuid4())
-        self.type = event_type
-        self.data = data
-        self.source = source
-        self.timestamp = datetime.utcnow().isoformat()
-        self.version = "1.0"
+```java
+public class Event {
+    private final String id = UUID.randomUUID().toString();
+    private final String type;
+    private final Map<String, Object> data;
+    private final String source;
+    private final String timestamp = Instant.now().toString();
+    private final String version = "1.0";
 
-class EventBus:
-    def __init__(self, kafka_producer, kafka_consumer):
-        self.producer = kafka_producer
-        self.consumer = kafka_consumer
-        self.handlers = {}
+    public Event(String type, Map<String, Object> data, String source) {
+        this.type = type; this.data = data; this.source = source;
+    }
+    // getters
+}
 
-    def publish(self, event: Event, topic: str = None):
-        topic = topic or event.type.split(".")[0]  # e.g., "order" from "order.created"
-        key = event.data.get("id", event.id)  # Partition by entity ID for ordering
-        self.producer.send(
-            topic=topic,
-            key=key.encode(),
-            value=json.dumps(event.__dict__).encode(),
-            headers=[("correlation_id", event.id.encode())]
-        )
+public class EventBus {
+    private final KafkaProducer<String, String> producer;
+    private final KafkaConsumer<String, String> consumer;
+    private final Map<String, List<Consumer<Map<String, Object>>>> handlers = new HashMap<>();
 
-    def subscribe(self, event_type: str, handler_fn):
-        if event_type not in self.handlers:
-            self.handlers[event_type] = []
-        self.handlers[event_type].append(handler_fn)
+    public EventBus(KafkaProducer<String, String> producer, KafkaConsumer<String, String> consumer) {
+        this.producer = producer; this.consumer = consumer;
+    }
 
-    def start_consuming(self, topics: list):
-        self.consumer.subscribe(topics)
-        for message in self.consumer:
-            event_data = json.loads(message.value)
-            event_type = event_data["type"]
-            handlers = self.handlers.get(event_type, [])
-            for handler in handlers:
-                try:
-                    handler(event_data)
-                except Exception as e:
-                    log.error(f"Handler failed for {event_type}: {e}")
-                    # Send to DLQ
+    public void publish(Event event, String topic) {
+        if (topic == null) topic = event.getType().split("\\.")[0];
+        String key = (String) event.getData().getOrDefault("id", event.getId());
+        producer.send(new ProducerRecord<>(topic, key, toJson(event)));
+    }
+
+    public void subscribe(String eventType, Consumer<Map<String, Object>> handlerFn) {
+        handlers.computeIfAbsent(eventType, k -> new ArrayList<>()).add(handlerFn);
+    }
+
+    public void startConsuming(List<String> topics) {
+        consumer.subscribe(topics);
+        while (true) {
+            for (var record : consumer.poll(Duration.ofMillis(1000))) {
+                Map<String, Object> eventData = fromJson(record.value());
+                String eventType = (String) eventData.get("type");
+                for (var handler : handlers.getOrDefault(eventType, List.of())) {
+                    try { handler.accept(eventData); }
+                    catch (Exception e) { log.error("Handler failed for " + eventType + ": " + e); }
+                }
+            }
+        }
+    }
+}
 ```
 
 ---

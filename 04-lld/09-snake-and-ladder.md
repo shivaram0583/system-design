@@ -54,120 +54,121 @@ classDiagram
 
 ## 3. Core Classes
 
-```python
-import random
+```java
+public class Dice {
+    private final int faces;
+    private final Random random = new Random();
 
-class Dice:
-    def __init__(self, faces: int = 6):
-        self.faces = faces
+    public Dice() { this(6); }
+    public Dice(int faces) { this.faces = faces; }
+    public int roll() { return random.nextInt(faces) + 1; }
+}
 
-    def roll(self) -> int:
-        return random.randint(1, self.faces)
+public class Player {
+    private final String name;
+    private int position = 0; // start off the board
 
+    public Player(String name) { this.name = name; }
 
-class Player:
-    def __init__(self, name: str):
-        self.name = name
-        self.position = 0  # start off the board
+    public boolean move(int steps, int boardSize) {
+        int newPos = position + steps;
+        if (newPos > boardSize) return false;
+        position = newPos;
+        return true;
+    }
 
-    def move(self, steps: int, board_size: int) -> bool:
-        new_pos = self.position + steps
-        if new_pos > board_size:
-            return False  # can't move beyond board
-        self.position = new_pos
-        return True
+    public String getName() { return name; }
+    public int getPosition() { return position; }
+    public void setPosition(int pos) { position = pos; }
+}
 
+public class Board {
+    private final int size;
+    private final Map<Integer, Integer> snakes = new HashMap<>();  // head -> tail
+    private final Map<Integer, Integer> ladders = new HashMap<>(); // bottom -> top
 
-class Board:
-    def __init__(self, size: int = 100):
-        self.size = size
-        self.snakes: dict[int, int] = {}   # head -> tail
-        self.ladders: dict[int, int] = {}  # bottom -> top
+    public Board() { this(100); }
+    public Board(int size) { this.size = size; }
 
-    def add_snake(self, head: int, tail: int):
-        if head <= tail:
-            raise ValueError("Snake head must be above tail")
-        if head in self.ladders:
-            raise ValueError("Cannot place snake on ladder start")
-        self.snakes[head] = tail
+    public void addSnake(int head, int tail) {
+        if (head <= tail) throw new IllegalArgumentException("Snake head must be above tail");
+        if (ladders.containsKey(head)) throw new IllegalArgumentException("Cannot place snake on ladder start");
+        snakes.put(head, tail);
+    }
 
-    def add_ladder(self, bottom: int, top: int):
-        if bottom >= top:
-            raise ValueError("Ladder bottom must be below top")
-        if bottom in self.snakes:
-            raise ValueError("Cannot place ladder on snake head")
-        self.ladders[bottom] = top
+    public void addLadder(int bottom, int top) {
+        if (bottom >= top) throw new IllegalArgumentException("Ladder bottom must be below top");
+        if (snakes.containsKey(bottom)) throw new IllegalArgumentException("Cannot place ladder on snake head");
+        ladders.put(bottom, top);
+    }
 
-    def get_final_position(self, position: int) -> int:
-        if position in self.snakes:
-            return self.snakes[position]
-        if position in self.ladders:
-            return self.ladders[position]
-        return position
+    public int getFinalPosition(int position) {
+        if (snakes.containsKey(position)) return snakes.get(position);
+        if (ladders.containsKey(position)) return ladders.get(position);
+        return position;
+    }
+
+    public int getSize() { return size; }
+}
 ```
 
 ---
 
 ## 4. Game Controller
 
-```python
-from enum import Enum
+```java
+public enum GameStatus { NOT_STARTED, IN_PROGRESS, FINISHED }
 
-class GameStatus(Enum):
-    NOT_STARTED = 1
-    IN_PROGRESS = 2
-    FINISHED = 3
+public class Game {
+    private final Board board;
+    private final List<Player> players;
+    private final Dice dice;
+    private int currentPlayerIndex = 0;
+    private GameStatus status = GameStatus.NOT_STARTED;
+    private Player winner;
 
-class Game:
-    def __init__(self, board: Board, players: list[Player], dice: Dice = None):
-        if len(players) < 2:
-            raise ValueError("Need at least 2 players")
-        self.board = board
-        self.players = players
-        self.dice = dice or Dice()
-        self.current_player_index = 0
-        self.status = GameStatus.NOT_STARTED
-        self.winner: Player | None = None
+    public Game(Board board, List<Player> players, Dice dice) {
+        if (players.size() < 2) throw new IllegalArgumentException("Need at least 2 players");
+        this.board = board;
+        this.players = players;
+        this.dice = (dice != null) ? dice : new Dice();
+    }
 
-    def play_turn(self) -> str:
-        """Execute one turn for the current player. Returns description."""
-        if self.status == GameStatus.FINISHED:
-            raise Exception("Game is already over")
+    public String playTurn() {
+        if (status == GameStatus.FINISHED) throw new RuntimeException("Game is already over");
+        status = GameStatus.IN_PROGRESS;
+        Player player = players.get(currentPlayerIndex);
+        int roll = dice.roll();
+        int oldPos = player.getPosition();
+        String result;
 
-        self.status = GameStatus.IN_PROGRESS
-        player = self.players[self.current_player_index]
-        roll = self.dice.roll()
-        old_pos = player.position
+        if (!player.move(roll, board.getSize())) {
+            result = player.getName() + " rolled " + roll + " but can't move (would exceed board)";
+        } else {
+            int finalPos = board.getFinalPosition(player.getPosition());
+            if (finalPos != player.getPosition()) {
+                String type = (finalPos < player.getPosition()) ? "SNAKE down" : "LADDER up";
+                result = player.getName() + " rolled " + roll + ": " + oldPos
+                    + " -> " + player.getPosition() + " -> " + type + " to " + finalPos;
+                player.setPosition(finalPos);
+            } else {
+                result = player.getName() + " rolled " + roll + ": " + oldPos + " -> " + player.getPosition();
+            }
+            if (player.getPosition() == board.getSize()) {
+                winner = player;
+                status = GameStatus.FINISHED;
+                result += " - " + player.getName() + " WINS!";
+            }
+        }
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+        return result;
+    }
 
-        moved = player.move(roll, self.board.size)
-        if not moved:
-            result = f"{player.name} rolled {roll} but can't move (would exceed board)"
-        else:
-            final_pos = self.board.get_final_position(player.position)
-            if final_pos != player.position:
-                if final_pos < player.position:
-                    result = (f"{player.name} rolled {roll}: {old_pos} -> {player.position} "
-                              f"-> SNAKE down to {final_pos}")
-                else:
-                    result = (f"{player.name} rolled {roll}: {old_pos} -> {player.position} "
-                              f"-> LADDER up to {final_pos}")
-                player.position = final_pos
-            else:
-                result = f"{player.name} rolled {roll}: {old_pos} -> {player.position}"
-
-            if player.position == self.board.size:
-                self.winner = player
-                self.status = GameStatus.FINISHED
-                result += f" — {player.name} WINS!"
-
-        self.current_player_index = (self.current_player_index + 1) % len(self.players)
-        return result
-
-    def play(self) -> Player:
-        """Play full game until someone wins."""
-        while self.status != GameStatus.FINISHED:
-            print(self.play_turn())
-        return self.winner
+    public Player play() {
+        while (status != GameStatus.FINISHED) System.out.println(playTurn());
+        return winner;
+    }
+}
 ```
 
 ---

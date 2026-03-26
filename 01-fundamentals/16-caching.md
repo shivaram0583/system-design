@@ -328,58 +328,61 @@ Performance:
 
 ### E.2 LLD — Cache Service
 
-```python
-class CacheService:
-    def __init__(self, redis_client, local_cache=None):
-        self.redis = redis_client
-        self.local = local_cache  # Optional in-process cache
+```java
+public class CacheService {
+    private final RedisClient redis;
+    private final LocalCache local; // Optional in-process cache
 
-    def get(self, key: str):
-        # L1: Check local cache
-        if self.local:
-            value = self.local.get(key)
-            if value is not None:
-                return value
+    public CacheService(RedisClient redis, LocalCache local) {
+        this.redis = redis; this.local = local;
+    }
 
-        # L2: Check Redis
-        value = self.redis.get(key)
-        if value is not None:
-            value = json.loads(value)
-            if self.local:
-                self.local.set(key, value, ttl=30)  # Short local TTL
-            return value
+    public Object get(String key) {
+        // L1: Check local cache
+        if (local != null) {
+            Object value = local.get(key);
+            if (value != null) return value;
+        }
+        // L2: Check Redis
+        String raw = redis.get(key);
+        if (raw != null) {
+            Object value = fromJson(raw);
+            if (local != null) local.set(key, value, 30); // Short local TTL
+            return value;
+        }
+        return null; // Cache miss
+    }
 
-        return None  # Cache miss
+    public void set(String key, Object value, int ttlSeconds) {
+        redis.setex(key, ttlSeconds, toJson(value));
+        if (local != null) local.set(key, value, Math.min(30, ttlSeconds));
+    }
 
-    def set(self, key: str, value, ttl_seconds: int = 3600):
-        self.redis.setex(key, ttl_seconds, json.dumps(value))
-        if self.local:
-            self.local.set(key, value, ttl=min(30, ttl_seconds))
+    public void invalidate(String key) {
+        redis.delete(key);
+        if (local != null) local.delete(key);
+    }
 
-    def invalidate(self, key: str):
-        self.redis.delete(key)
-        if self.local:
-            self.local.delete(key)
+    /** Cache-aside with stampede protection */
+    public Object getOrLoad(String key, Supplier<Object> loaderFn, int ttlSeconds) {
+        Object value = get(key);
+        if (value != null) return value;
 
-    def get_or_load(self, key: str, loader_fn, ttl_seconds: int = 3600):
-        """Cache-aside with stampede protection"""
-        value = self.get(key)
-        if value is not None:
-            return value
-
-        # Acquire lock to prevent stampede
-        lock_key = f"lock:{key}"
-        if self.redis.set(lock_key, "1", nx=True, ex=10):
-            try:
-                value = loader_fn()
-                self.set(key, value, ttl_seconds)
-                return value
-            finally:
-                self.redis.delete(lock_key)
-        else:
-            # Another request is loading; wait and retry
-            time.sleep(0.1)
-            return self.get(key)  # Should be populated by now
+        // Acquire lock to prevent stampede
+        String lockKey = "lock:" + key;
+        if (redis.setnx(lockKey, "1", 10)) {
+            try {
+                value = loaderFn.get();
+                set(key, value, ttlSeconds);
+                return value;
+            } finally { redis.delete(lockKey); }
+        } else {
+            // Another request is loading; wait and retry
+            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            return get(key); // Should be populated by now
+        }
+    }
+}
 ```
 
 ---

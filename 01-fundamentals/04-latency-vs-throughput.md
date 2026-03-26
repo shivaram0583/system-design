@@ -769,49 +769,39 @@ Request arrives:
 
 #### Interfaces
 
-```python
-class LatencyTracker:
-    """Track latency percentiles using HDR Histogram"""
-    
-    def record(self, operation: str, latency_ms: float) -> None:
-        """Record a single latency measurement"""
-        pass
-    
-    def get_percentile(self, operation: str, percentile: float) -> float:
-        """Get latency at a given percentile (e.g., 0.99 for p99)"""
-        pass
-    
-    def get_throughput(self, operation: str) -> float:
-        """Get current throughput in req/sec"""
-        pass
-    
-    def snapshot(self, operation: str) -> LatencySnapshot:
-        """Get a point-in-time snapshot of all metrics"""
-        pass
-    
-    def check_slo(self, operation: str, config: SLOConfig) -> SLOResult:
-        """Check if current metrics meet SLO targets"""
-        pass
+```java
+public interface LatencyTracker {
+    /** Record a single latency measurement */
+    void record(String operation, double latencyMs);
 
+    /** Get latency at a given percentile (e.g., 0.99 for p99) */
+    double getPercentile(String operation, double percentile);
 
-class TimerMiddleware:
-    """Middleware that automatically records latency for every request"""
-    
-    def __init__(self, tracker: LatencyTracker):
-        self.tracker = tracker
-    
-    def process(self, request, response, next_handler) -> Response:
-        pass
+    /** Get current throughput in req/sec */
+    double getThroughput(String operation);
 
+    /** Get a point-in-time snapshot of all metrics */
+    LatencySnapshot snapshot(String operation);
 
-class MetricsExporter:
-    """Export metrics to monitoring systems"""
-    
-    def export_to_prometheus(self, snapshot: LatencySnapshot) -> None:
-        pass
-    
-    def export_to_datadog(self, snapshot: LatencySnapshot) -> None:
-        pass
+    /** Check if current metrics meet SLO targets */
+    SLOResult checkSlo(String operation, SLOConfig config);
+}
+
+public class TimerMiddleware {
+    private final LatencyTracker tracker;
+
+    public TimerMiddleware(LatencyTracker tracker) { this.tracker = tracker; }
+
+    public Response process(Request request, Response response, Handler nextHandler) {
+        // implementation
+        return null;
+    }
+}
+
+public class MetricsExporter {
+    public void exportToPrometheus(LatencySnapshot snapshot) { }
+    public void exportToDatadog(LatencySnapshot snapshot) { }
+}
 ```
 
 #### Data Models
@@ -858,104 +848,93 @@ CREATE INDEX idx_slo_violations_active
 
 #### Pseudocode — Latency Tracker with HDR Histogram
 
-```python
-import time
-from collections import defaultdict
+```java
+public class LatencyTrackerImpl implements LatencyTracker {
+    private final int windowSizeSec;
+    private final Map<String, List<Double>> buckets = new HashMap<>();
+    private final Map<String, Integer> counts = new HashMap<>();
+    private long windowStart = System.currentTimeMillis();
 
-class LatencyTracker:
-    def __init__(self, window_size_sec=60):
-        self.window_size = window_size_sec
-        self.buckets = defaultdict(list)  # operation → [latency values]
-        self.counts = defaultdict(int)     # operation → request count
-        self.window_start = time.time()
+    public LatencyTrackerImpl(int windowSizeSec) { this.windowSizeSec = windowSizeSec; }
 
-    def record(self, operation: str, latency_ms: float):
-        """Record a latency measurement"""
-        self._maybe_rotate_window()
-        self.buckets[operation].append(latency_ms)
-        self.counts[operation] += 1
+    @Override
+    public void record(String operation, double latencyMs) {
+        maybeRotateWindow();
+        buckets.computeIfAbsent(operation, k -> new ArrayList<>()).add(latencyMs);
+        counts.merge(operation, 1, Integer::sum);
+    }
 
-    def get_percentile(self, operation: str, percentile: float) -> float:
-        """Get latency at a percentile. percentile is 0-1 (e.g., 0.99)"""
-        values = sorted(self.buckets.get(operation, []))
-        if not values:
-            return 0.0
-        index = int(len(values) * percentile)
-        index = min(index, len(values) - 1)
-        return values[index]
+    @Override
+    public double getPercentile(String operation, double percentile) {
+        List<Double> values = new ArrayList<>(buckets.getOrDefault(operation, List.of()));
+        if (values.isEmpty()) return 0.0;
+        Collections.sort(values);
+        int index = Math.min((int)(values.size() * percentile), values.size() - 1);
+        return values.get(index);
+    }
 
-    def get_throughput(self, operation: str) -> float:
-        """Requests per second in current window"""
-        elapsed = time.time() - self.window_start
-        if elapsed <= 0:
-            return 0.0
-        return self.counts.get(operation, 0) / elapsed
+    @Override
+    public double getThroughput(String operation) {
+        double elapsed = (System.currentTimeMillis() - windowStart) / 1000.0;
+        if (elapsed <= 0) return 0.0;
+        return counts.getOrDefault(operation, 0) / elapsed;
+    }
 
-    def snapshot(self, operation: str) -> dict:
-        return {
-            "timestamp": time.time(),
-            "operation": operation,
-            "p50": self.get_percentile(operation, 0.50),
-            "p95": self.get_percentile(operation, 0.95),
-            "p99": self.get_percentile(operation, 0.99),
-            "p999": self.get_percentile(operation, 0.999),
-            "mean": self._mean(operation),
-            "max": max(self.buckets.get(operation, [0])),
-            "count": self.counts.get(operation, 0),
-            "throughput_rps": self.get_throughput(operation),
+    @Override
+    public LatencySnapshot snapshot(String operation) {
+        return new LatencySnapshot(
+            System.currentTimeMillis(), operation,
+            getPercentile(operation, 0.50), getPercentile(operation, 0.95),
+            getPercentile(operation, 0.99), getPercentile(operation, 0.999),
+            mean(operation),
+            buckets.getOrDefault(operation, List.of(0.0)).stream()
+                .mapToDouble(Double::doubleValue).max().orElse(0),
+            counts.getOrDefault(operation, 0),
+            getThroughput(operation)
+        );
+    }
+
+    @Override
+    public SLOResult checkSlo(String operation, SLOConfig config) {
+        LatencySnapshot snap = snapshot(operation);
+        List<String> violations = new ArrayList<>();
+        if (snap.getP99() > config.getP99TargetMs())
+            violations.add("p99_exceeded");
+        if (snap.getThroughputRps() < config.getMinThroughput())
+            violations.add("throughput_low");
+        return new SLOResult(violations.isEmpty(), violations, snap);
+    }
+
+    private double mean(String operation) {
+        List<Double> values = buckets.getOrDefault(operation, List.of());
+        return values.isEmpty() ? 0.0 :
+            values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+    }
+
+    private void maybeRotateWindow() {
+        if (System.currentTimeMillis() - windowStart > windowSizeSec * 1000L) {
+            buckets.clear(); counts.clear();
+            windowStart = System.currentTimeMillis();
         }
+    }
+}
 
-    def check_slo(self, operation: str, config: dict) -> dict:
-        snap = self.snapshot(operation)
-        violations = []
-        
-        if snap["p99"] > config.get("p99_target_ms", float("inf")):
-            violations.append({
-                "type": "p99_exceeded",
-                "target": config["p99_target_ms"],
-                "actual": snap["p99"],
-            })
-        
-        if snap["throughput_rps"] < config.get("min_throughput", 0):
-            violations.append({
-                "type": "throughput_low",
-                "target": config["min_throughput"],
-                "actual": snap["throughput_rps"],
-            })
-        
-        return {
-            "slo_met": len(violations) == 0,
-            "violations": violations,
-            "snapshot": snap,
+public class TimerMiddleware {
+    private final LatencyTracker tracker;
+
+    public TimerMiddleware(LatencyTracker tracker) { this.tracker = tracker; }
+
+    public Response process(Request request, Response response, Handler nextHandler) {
+        String operation = request.getMethod() + " " + request.getPath();
+        long start = System.nanoTime();
+        try {
+            return nextHandler.handle(request);
+        } finally {
+            double latencyMs = (System.nanoTime() - start) / 1_000_000.0;
+            tracker.record(operation, latencyMs);
         }
-
-    def _mean(self, operation: str) -> float:
-        values = self.buckets.get(operation, [])
-        return sum(values) / len(values) if values else 0.0
-
-    def _maybe_rotate_window(self):
-        if time.time() - self.window_start > self.window_size:
-            self.buckets.clear()
-            self.counts.clear()
-            self.window_start = time.time()
-
-
-class TimerMiddleware:
-    """Auto-record latency for every request"""
-    
-    def __init__(self, tracker: LatencyTracker):
-        self.tracker = tracker
-
-    def process(self, request, response, next_handler):
-        operation = f"{request.method} {request.path}"
-        start = time.time()
-        
-        try:
-            result = next_handler(request, response)
-            return result
-        finally:
-            latency_ms = (time.time() - start) * 1000
-            self.tracker.record(operation, latency_ms)
+    }
+}
 ```
 
 #### Sequence Flow — Request with Latency Tracking

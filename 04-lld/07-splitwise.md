@@ -18,181 +18,210 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from datetime import datetime
-import uuid
+```java
+public enum SplitType { EQUAL, EXACT, PERCENTAGE }
 
-class SplitType(Enum):
-    EQUAL = 1
-    EXACT = 2
-    PERCENTAGE = 3
+public class User {
+    private final String userId;
+    private final String name;
+    private final String email;
 
-class User:
-    def __init__(self, user_id: str, name: str, email: str):
-        self.user_id = user_id
-        self.name = name
-        self.email = email
+    public User(String userId, String name, String email) {
+        this.userId = userId; this.name = name; this.email = email;
+    }
+    public String getUserId() { return userId; }
+    public String getName() { return name; }
+}
 
-class Group:
-    def __init__(self, name: str, creator: User):
-        self.group_id = str(uuid.uuid4())
-        self.name = name
-        self.members: list[User] = [creator]
-        self.expenses: list["Expense"] = []
+public class Group {
+    private final String groupId;
+    private final String name;
+    private final List<User> members = new ArrayList<>();
+    private final List<Expense> expenses = new ArrayList<>();
 
-    def add_member(self, user: User):
-        if user not in self.members:
-            self.members.append(user)
+    public Group(String name, User creator) {
+        this.groupId = UUID.randomUUID().toString();
+        this.name = name;
+        members.add(creator);
+    }
 
-class Split:
-    """Represents one user's share of an expense."""
-    def __init__(self, user: User, amount: float):
-        self.user = user
-        self.amount = amount  # what this user owes
+    public void addMember(User user) {
+        if (!members.contains(user)) members.add(user);
+    }
 
-class Expense:
-    def __init__(self, description: str, total_amount: float,
-                 paid_by: User, splits: list[Split], group: Group):
-        self.expense_id = str(uuid.uuid4())
-        self.description = description
-        self.total_amount = total_amount
-        self.paid_by = paid_by
-        self.splits = splits
-        self.group = group
-        self.created_at = datetime.now()
+    public String getGroupId() { return groupId; }
+    public List<User> getMembers() { return members; }
+}
 
-        # Validate
-        split_total = sum(s.amount for s in splits)
-        if abs(split_total - total_amount) > 0.01:
-            raise Exception(f"Splits ({split_total}) don't add up to total ({total_amount})")
+public class Split {
+    private final User user;
+    private final double amount; // what this user owes
+
+    public Split(User user, double amount) { this.user = user; this.amount = amount; }
+    public User getUser() { return user; }
+    public double getAmount() { return amount; }
+}
+
+public class Expense {
+    private final String expenseId;
+    private final String description;
+    private final double totalAmount;
+    private final User paidBy;
+    private final List<Split> splits;
+    private final Group group;
+    private final LocalDateTime createdAt;
+
+    public Expense(String description, double totalAmount, User paidBy,
+                   List<Split> splits, Group group) {
+        this.expenseId = UUID.randomUUID().toString();
+        this.description = description;
+        this.totalAmount = totalAmount;
+        this.paidBy = paidBy;
+        this.splits = splits;
+        this.group = group;
+        this.createdAt = LocalDateTime.now();
+
+        double splitTotal = splits.stream().mapToDouble(Split::getAmount).sum();
+        if (Math.abs(splitTotal - totalAmount) > 0.01)
+            throw new RuntimeException("Splits (" + splitTotal + ") don't add up to total (" + totalAmount + ")");
+    }
+
+    public User getPaidBy() { return paidBy; }
+    public List<Split> getSplits() { return splits; }
+    public Group getGroup() { return group; }
+}
 ```
 
 ---
 
 ## 3. Split Strategies
 
-```python
-from abc import ABC, abstractmethod
+```java
+public interface SplitStrategy {
+    List<Split> calculateSplits(double total, List<User> users, Map<String, Double> params);
+}
 
-class SplitStrategy(ABC):
-    @abstractmethod
-    def calculate_splits(self, total: float, users: list[User],
-                         params: dict = None) -> list[Split]:
-        pass
+public class EqualSplit implements SplitStrategy {
+    @Override
+    public List<Split> calculateSplits(double total, List<User> users, Map<String, Double> params) {
+        double share = Math.round(total / users.size() * 100.0) / 100.0;
+        List<Split> splits = new ArrayList<>();
+        for (int i = 0; i < users.size() - 1; i++) splits.add(new Split(users.get(i), share));
+        double remainder = Math.round((total - share * (users.size() - 1)) * 100.0) / 100.0;
+        splits.add(new Split(users.get(users.size() - 1), remainder));
+        return splits;
+    }
+}
 
-class EqualSplit(SplitStrategy):
-    def calculate_splits(self, total: float, users: list[User],
-                         params: dict = None) -> list[Split]:
-        share = round(total / len(users), 2)
-        # Handle rounding: last person gets remainder
-        splits = [Split(u, share) for u in users[:-1]]
-        remainder = round(total - share * (len(users) - 1), 2)
-        splits.append(Split(users[-1], remainder))
-        return splits
+public class ExactSplit implements SplitStrategy {
+    @Override
+    public List<Split> calculateSplits(double total, List<User> users, Map<String, Double> params) {
+        // params: userId -> amount
+        List<Split> splits = new ArrayList<>();
+        for (User user : users)
+            splits.add(new Split(user, params.getOrDefault(user.getUserId(), 0.0)));
+        return splits;
+    }
+}
 
-class ExactSplit(SplitStrategy):
-    def calculate_splits(self, total: float, users: list[User],
-                         params: dict = None) -> list[Split]:
-        # params: {user_id: amount}
-        amounts = params or {}
-        splits = []
-        for user in users:
-            amount = amounts.get(user.user_id, 0)
-            splits.append(Split(user, amount))
-        return splits
-
-class PercentageSplit(SplitStrategy):
-    def calculate_splits(self, total: float, users: list[User],
-                         params: dict = None) -> list[Split]:
-        # params: {user_id: percentage}
-        percentages = params or {}
-        if abs(sum(percentages.values()) - 100) > 0.01:
-            raise Exception("Percentages must add up to 100")
-        splits = []
-        for user in users:
-            pct = percentages.get(user.user_id, 0)
-            splits.append(Split(user, round(total * pct / 100, 2)))
-        return splits
+public class PercentageSplit implements SplitStrategy {
+    @Override
+    public List<Split> calculateSplits(double total, List<User> users, Map<String, Double> params) {
+        // params: userId -> percentage
+        double pctSum = params.values().stream().mapToDouble(Double::doubleValue).sum();
+        if (Math.abs(pctSum - 100) > 0.01)
+            throw new RuntimeException("Percentages must add up to 100");
+        List<Split> splits = new ArrayList<>();
+        for (User user : users) {
+            double pct = params.getOrDefault(user.getUserId(), 0.0);
+            splits.add(new Split(user, Math.round(total * pct / 100 * 100.0) / 100.0));
+        }
+        return splits;
+    }
+}
 ```
 
 ---
 
 ## 4. Balance & Debt Simplification
 
-```python
-from collections import defaultdict
-import heapq
+```java
+public class BalanceService {
+    // balances[groupId][(fromUser, toUser)] = amount owed
+    private final Map<String, Map<String, Double>> balances = new HashMap<>();
 
-class BalanceService:
-    def __init__(self):
-        # balances[group_id][(from_user, to_user)] = amount owed
-        self.balances: dict[str, dict[tuple, float]] = defaultdict(lambda: defaultdict(float))
+    private String key(String from, String to) { return from + "->" + to; }
 
-    def add_expense(self, expense: Expense):
-        group_id = expense.group.group_id
-        for split in expense.splits:
-            if split.user.user_id != expense.paid_by.user_id:
-                # split.user owes expense.paid_by
-                key = (split.user.user_id, expense.paid_by.user_id)
-                reverse_key = (expense.paid_by.user_id, split.user.user_id)
-                self.balances[group_id][key] += split.amount
-                # Net out reverse debts
-                if self.balances[group_id][reverse_key] > 0:
-                    net = self.balances[group_id][key] - self.balances[group_id][reverse_key]
-                    if net > 0:
-                        self.balances[group_id][key] = net
-                        self.balances[group_id][reverse_key] = 0
-                    else:
-                        self.balances[group_id][reverse_key] = -net
-                        self.balances[group_id][key] = 0
+    private double getDebt(String groupId, String from, String to) {
+        return balances.getOrDefault(groupId, Map.of()).getOrDefault(key(from, to), 0.0);
+    }
 
-    def get_balances(self, group_id: str) -> dict[str, float]:
-        """Net balance per user: positive = owed money, negative = owes money."""
-        net = defaultdict(float)
-        for (from_u, to_u), amount in self.balances[group_id].items():
-            if amount > 0:
-                net[from_u] -= amount  # owes
-                net[to_u] += amount    # is owed
-        return dict(net)
+    private void setDebt(String groupId, String from, String to, double amount) {
+        balances.computeIfAbsent(groupId, k -> new HashMap<>()).put(key(from, to), amount);
+    }
 
-    def simplify_debts(self, group_id: str) -> list[tuple[str, str, float]]:
-        """Minimize number of transactions using greedy algorithm."""
-        net = self.get_balances(group_id)
+    public void addExpense(Expense expense) {
+        String groupId = expense.getGroup().getGroupId();
+        for (Split split : expense.getSplits()) {
+            if (!split.getUser().getUserId().equals(expense.getPaidBy().getUserId())) {
+                String from = split.getUser().getUserId();
+                String to = expense.getPaidBy().getUserId();
+                double current = getDebt(groupId, from, to) + split.getAmount();
+                double reverse = getDebt(groupId, to, from);
+                if (reverse > 0) {
+                    double net = current - reverse;
+                    if (net > 0) { setDebt(groupId, from, to, net); setDebt(groupId, to, from, 0); }
+                    else { setDebt(groupId, to, from, -net); setDebt(groupId, from, to, 0); }
+                } else {
+                    setDebt(groupId, from, to, current);
+                }
+            }
+        }
+    }
 
-        # Separate creditors (positive) and debtors (negative)
-        creditors = []  # max-heap (amount, user_id)
-        debtors = []    # max-heap (amount, user_id)
+    public Map<String, Double> getBalances(String groupId) {
+        Map<String, Double> net = new HashMap<>();
+        balances.getOrDefault(groupId, Map.of()).forEach((k, amount) -> {
+            if (amount > 0) {
+                String[] parts = k.split("->");
+                net.merge(parts[0], -amount, Double::sum); // owes
+                net.merge(parts[1], amount, Double::sum);  // is owed
+            }
+        });
+        return net;
+    }
 
-        for user_id, balance in net.items():
-            if balance > 0.01:
-                heapq.heappush(creditors, (-balance, user_id))
-            elif balance < -0.01:
-                heapq.heappush(debtors, (balance, user_id))  # negative = most debt first
+    public List<String[]> simplifyDebts(String groupId) {
+        Map<String, Double> net = getBalances(groupId);
+        PriorityQueue<double[]> creditors = new PriorityQueue<>((a, b) -> Double.compare(b[0], a[0]));
+        PriorityQueue<double[]> debtors = new PriorityQueue<>((a, b) -> Double.compare(b[0], a[0]));
+        Map<Integer, String> idxToUser = new HashMap<>();
+        int idx = 0;
+        for (Map.Entry<String, Double> e : net.entrySet()) {
+            idxToUser.put(idx, e.getKey());
+            if (e.getValue() > 0.01) creditors.add(new double[]{e.getValue(), idx});
+            else if (e.getValue() < -0.01) debtors.add(new double[]{-e.getValue(), idx});
+            idx++;
+        }
 
-        transactions = []
-        while creditors and debtors:
-            credit_amt, creditor = heapq.heappop(creditors)
-            debt_amt, debtor = heapq.heappop(debtors)
-            credit_amt = -credit_amt  # convert back to positive
-            debt_amt = -debt_amt
+        List<String[]> transactions = new ArrayList<>();
+        while (!creditors.isEmpty() && !debtors.isEmpty()) {
+            double[] cr = creditors.poll();
+            double[] db = debtors.poll();
+            double settle = Math.min(cr[0], db[0]);
+            transactions.add(new String[]{idxToUser.get((int) db[1]),
+                idxToUser.get((int) cr[1]), String.valueOf(Math.round(settle * 100.0) / 100.0)});
+            if (cr[0] - settle > 0.01) creditors.add(new double[]{cr[0] - settle, cr[1]});
+            if (db[0] - settle > 0.01) debtors.add(new double[]{db[0] - settle, db[1]});
+        }
+        return transactions;
+    }
 
-            settle = min(credit_amt, debt_amt)
-            transactions.append((debtor, creditor, round(settle, 2)))
-
-            remaining_credit = credit_amt - settle
-            remaining_debt = debt_amt - settle
-
-            if remaining_credit > 0.01:
-                heapq.heappush(creditors, (-remaining_credit, creditor))
-            if remaining_debt > 0.01:
-                heapq.heappush(debtors, (-remaining_debt, debtor))
-
-        return transactions
-
-    def settle_up(self, group_id: str, from_user: str, to_user: str, amount: float):
-        key = (from_user, to_user)
-        self.balances[group_id][key] = max(0, self.balances[group_id][key] - amount)
+    public void settleUp(String groupId, String fromUser, String toUser, double amount) {
+        double current = getDebt(groupId, fromUser, toUser);
+        setDebt(groupId, fromUser, toUser, Math.max(0, current - amount));
+    }
+}
 ```
 
 ---

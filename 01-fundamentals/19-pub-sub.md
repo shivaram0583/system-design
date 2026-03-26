@@ -222,38 +222,41 @@ Events:
 
 ### E.2 LLD — Pub-Sub Broker
 
-```python
-class PubSubBroker:
-    def __init__(self):
-        self.topics = {}  # topic_name -> list of subscriber callbacks
-        self.filters = {}  # (topic, subscriber_id) -> filter_fn
+```java
+public class PubSubBroker {
+    private final Map<String, Map<String, Consumer<Map<String, Object>>>> topics = new HashMap<>();
+    private final Map<String, Predicate<Map<String, Object>>> filters = new HashMap<>();
 
-    def create_topic(self, topic: str):
-        if topic not in self.topics:
-            self.topics[topic] = {}
+    public void createTopic(String topic) {
+        topics.putIfAbsent(topic, new LinkedHashMap<>());
+    }
 
-    def subscribe(self, topic: str, subscriber_id: str, callback, filter_fn=None):
-        if topic not in self.topics:
-            self.create_topic(topic)
-        self.topics[topic][subscriber_id] = callback
-        if filter_fn:
-            self.filters[(topic, subscriber_id)] = filter_fn
+    public void subscribe(String topic, String subscriberId,
+                          Consumer<Map<String, Object>> callback,
+                          Predicate<Map<String, Object>> filterFn) {
+        createTopic(topic);
+        topics.get(topic).put(subscriberId, callback);
+        if (filterFn != null) filters.put(topic + ":" + subscriberId, filterFn);
+    }
 
-    def unsubscribe(self, topic: str, subscriber_id: str):
-        self.topics.get(topic, {}).pop(subscriber_id, None)
-        self.filters.pop((topic, subscriber_id), None)
+    public void unsubscribe(String topic, String subscriberId) {
+        Map<String, Consumer<Map<String, Object>>> subs = topics.get(topic);
+        if (subs != null) subs.remove(subscriberId);
+        filters.remove(topic + ":" + subscriberId);
+    }
 
-    def publish(self, topic: str, message: dict):
-        subscribers = self.topics.get(topic, {})
-        for sub_id, callback in subscribers.items():
-            filter_fn = self.filters.get((topic, sub_id))
-            if filter_fn and not filter_fn(message):
-                continue  # Message filtered out
-            try:
-                callback(message)
-            except Exception as e:
-                log.error(f"Subscriber {sub_id} failed: {e}")
-                # In production: send to DLQ, retry, etc.
+    public void publish(String topic, Map<String, Object> message) {
+        Map<String, Consumer<Map<String, Object>>> subscribers =
+            topics.getOrDefault(topic, Map.of());
+        for (var entry : subscribers.entrySet()) {
+            Predicate<Map<String, Object>> filterFn =
+                filters.get(topic + ":" + entry.getKey());
+            if (filterFn != null && !filterFn.test(message)) continue;
+            try { entry.getValue().accept(message); }
+            catch (Exception e) { log.error("Subscriber " + entry.getKey() + " failed: " + e); }
+        }
+    }
+}
 ```
 
 ---

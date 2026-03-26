@@ -871,51 +871,55 @@ All requests include: Authorization: Bearer <JWT>
 
 #### Data Models
 
-```python
-# Event schema for inter-service communication
-class OrderCreatedEvent:
-    event_id: str          # UUID — for idempotency
-    event_type: str        # "order.created"
-    timestamp: datetime
-    version: int           # Schema version
-    payload: {
-        order_id: str
-        user_id: str
-        items: [
-            { product_id: str, quantity: int, price: float }
-        ]
-        total_amount: float
-        currency: str
-        shipping_address: Address
-    }
+```java
+public class OrderCreatedEvent {
+    private String eventId;        // UUID — for idempotency
+    private String eventType;      // "order.created"
+    private LocalDateTime timestamp;
+    private int version;           // Schema version
+    private String orderId;
+    private String userId;
+    private List<OrderItem> items;
+    private double totalAmount;
+    private String currency;
+    private Address shippingAddress;
+}
 
-class InventoryReservedEvent:
-    event_id: str
-    event_type: str        # "inventory.reserved"
-    timestamp: datetime
-    version: int
-    payload: {
-        order_id: str
-        reservation_id: str
-        items: [
-            { product_id: str, quantity: int, warehouse: str }
-        ]
-        expires_at: datetime   # Reservation TTL
-    }
+public class OrderItem {
+    private String productId;
+    private int quantity;
+    private double price;
+}
 
-class PaymentCompletedEvent:
-    event_id: str
-    event_type: str        # "payment.completed"
-    timestamp: datetime
-    version: int
-    payload: {
-        order_id: str
-        payment_id: str
-        amount: float
-        currency: str
-        method: str        # "credit_card", "paypal"
-        transaction_ref: str
-    }
+public class InventoryReservedEvent {
+    private String eventId;
+    private String eventType;      // "inventory.reserved"
+    private LocalDateTime timestamp;
+    private int version;
+    private String orderId;
+    private String reservationId;
+    private List<ReservationItem> items;
+    private LocalDateTime expiresAt; // Reservation TTL
+}
+
+public class ReservationItem {
+    private String productId;
+    private int quantity;
+    private String warehouse;
+}
+
+public class PaymentCompletedEvent {
+    private String eventId;
+    private String eventType;      // "payment.completed"
+    private LocalDateTime timestamp;
+    private int version;
+    private String orderId;
+    private String paymentId;
+    private double amount;
+    private String currency;
+    private String method;         // "credit_card", "paypal"
+    private String transactionRef;
+}
 ```
 
 #### Sequence Flow — Order Placement Saga
@@ -972,51 +976,60 @@ Client          API GW      OrderSvc     InventorySvc   PaymentSvc    NotifSvc
 
 #### Pseudocode — Circuit Breaker
 
-```python
-class CircuitBreaker:
-    def __init__(self, failure_threshold=5, reset_timeout_sec=30, success_threshold=3):
-        self.state = "CLOSED"              # CLOSED = normal operation
-        self.failure_count = 0
-        self.success_count = 0
-        self.failure_threshold = failure_threshold
-        self.reset_timeout = reset_timeout_sec
-        self.success_threshold = success_threshold
-        self.last_failure_time = None
+```java
+public class CircuitBreaker {
+    enum State { CLOSED, OPEN, HALF_OPEN }
 
-    def execute(self, fn):
-        if self.state == "OPEN":
-            if self._should_attempt_reset():
-                self.state = "HALF_OPEN"
-            else:
-                raise CircuitOpenError("Circuit is OPEN; request blocked")
+    private State state = State.CLOSED;
+    private int failureCount = 0;
+    private int successCount = 0;
+    private final int failureThreshold;
+    private final long resetTimeoutMs;
+    private final int successThreshold;
+    private long lastFailureTime = 0;
 
-        try:
-            result = fn()
-            self._on_success()
-            return result
-        except Exception as e:
-            self._on_failure()
-            raise e
+    public CircuitBreaker(int failureThreshold, long resetTimeoutMs, int successThreshold) {
+        this.failureThreshold = failureThreshold;
+        this.resetTimeoutMs = resetTimeoutMs;
+        this.successThreshold = successThreshold;
+    }
 
-    def _on_success(self):
-        if self.state == "HALF_OPEN":
-            self.success_count += 1
-            if self.success_count >= self.success_threshold:
-                self.state = "CLOSED"
-                self.failure_count = 0
-                self.success_count = 0
-        else:
-            self.failure_count = 0
+    public <T> T execute(Supplier<T> fn) {
+        if (state == State.OPEN) {
+            if (shouldAttemptReset()) state = State.HALF_OPEN;
+            else throw new RuntimeException("Circuit is OPEN; request blocked");
+        }
+        try {
+            T result = fn.get();
+            onSuccess();
+            return result;
+        } catch (Exception e) {
+            onFailure();
+            throw e;
+        }
+    }
 
-    def _on_failure(self):
-        self.failure_count += 1
-        self.last_failure_time = time.now()
-        self.success_count = 0
-        if self.failure_count >= self.failure_threshold:
-            self.state = "OPEN"
+    private void onSuccess() {
+        if (state == State.HALF_OPEN) {
+            successCount++;
+            if (successCount >= successThreshold) {
+                state = State.CLOSED;
+                failureCount = 0; successCount = 0;
+            }
+        } else { failureCount = 0; }
+    }
 
-    def _should_attempt_reset(self):
-        return (time.now() - self.last_failure_time) > self.reset_timeout
+    private void onFailure() {
+        failureCount++;
+        lastFailureTime = System.currentTimeMillis();
+        successCount = 0;
+        if (failureCount >= failureThreshold) state = State.OPEN;
+    }
+
+    private boolean shouldAttemptReset() {
+        return (System.currentTimeMillis() - lastFailureTime) > resetTimeoutMs;
+    }
+}
 ```
 
 #### Edge Cases

@@ -215,33 +215,38 @@ Performance:
 
 ### E.2 LLD — Cache Key and Invalidation Logic
 
-```python
-class CDNManager:
-    def __init__(self, cdn_client, origin_bucket):
-        self.cdn = cdn_client
-        self.origin = origin_bucket
+```java
+public class CDNManager {
+    private final CDNClient cdn;
+    private final ObjectStorageClient origin;
+    private final PrivateKey signingKey;
 
-    def upload_asset(self, key: str, content: bytes, content_type: str):
-        """Upload with cache-busting hash in filename"""
-        content_hash = hashlib.md5(content).hexdigest()[:8]
-        name, ext = os.path.splitext(key)
-        versioned_key = f"{name}.{content_hash}{ext}"
-        
-        self.origin.put(versioned_key, content, content_type=content_type,
-                       cache_control="public, max-age=31536000, immutable")
-        return versioned_key
+    public CDNManager(CDNClient cdn, ObjectStorageClient origin, PrivateKey signingKey) {
+        this.cdn = cdn; this.origin = origin; this.signingKey = signingKey;
+    }
 
-    def invalidate(self, paths: list):
-        """Purge specific paths from CDN cache"""
-        self.cdn.create_invalidation(paths=paths)
-        # CloudFront: 1-5 min, Fastly: <1s
+    /** Upload with cache-busting hash in filename */
+    public String uploadAsset(String key, byte[] content, String contentType) {
+        String contentHash = md5Hex(content).substring(0, 8);
+        int dotIdx = key.lastIndexOf('.');
+        String versionedKey = key.substring(0, dotIdx) + "." + contentHash + key.substring(dotIdx);
+        origin.put(versionedKey, content, contentType,
+                   "public, max-age=31536000, immutable");
+        return versionedKey;
+    }
 
-    def get_signed_url(self, key: str, expires_in_sec: int = 3600):
-        """Generate signed URL for private content"""
-        return self.cdn.generate_signed_url(
-            key=key, expires=time.time() + expires_in_sec,
-            private_key=self.signing_key
-        )
+    /** Purge specific paths from CDN cache */
+    public void invalidate(List<String> paths) {
+        cdn.createInvalidation(paths);
+        // CloudFront: 1-5 min, Fastly: <1s
+    }
+
+    /** Generate signed URL for private content */
+    public String getSignedUrl(String key, int expiresInSec) {
+        long expiry = System.currentTimeMillis() / 1000 + expiresInSec;
+        return cdn.generateSignedUrl(key, expiry, signingKey);
+    }
+}
 ```
 
 ---

@@ -241,44 +241,50 @@ Rules:
 
 ### E.2 LLD — API Composition
 
-```python
-import asyncio
+```java
+/** Composes multiple backend API calls into a single response */
+public class APIComposer {
+    private final ServiceRegistry registry;
+    private final int timeoutSec;
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
-class APIComposer:
-    """Composes multiple backend API calls into a single response"""
-    
-    def __init__(self, service_registry, timeout_sec=5):
-        self.registry = service_registry
-        self.timeout = timeout_sec
+    public APIComposer(ServiceRegistry registry, int timeoutSec) {
+        this.registry = registry; this.timeoutSec = timeoutSec;
+    }
 
-    async def compose(self, composition_config: list) -> dict:
-        """
-        composition_config = [
-            {"key": "products", "service": "product-svc", "path": "/featured"},
-            {"key": "orders", "service": "order-svc", "path": "/recent"},
-            {"key": "user", "service": "user-svc", "path": "/profile"},
-        ]
-        """
-        tasks = []
-        for config in composition_config:
-            task = self._call_service(config["service"], config["path"])
-            tasks.append((config["key"], task))
+    /**
+     * compositionConfig = [
+     *   {"key": "products", "service": "product-svc", "path": "/featured"},
+     *   {"key": "orders",   "service": "order-svc",   "path": "/recent"},
+     *   {"key": "user",     "service": "user-svc",    "path": "/profile"},
+     * ]
+     */
+    public Map<String, Object> compose(List<Map<String, String>> compositionConfig) {
+        Map<String, Future<Object>> futures = new LinkedHashMap<>();
+        for (Map<String, String> config : compositionConfig) {
+            futures.put(config.get("key"),
+                executor.submit(() -> callService(config.get("service"), config.get("path"))));
+        }
 
-        results = {}
-        for key, task in tasks:
-            try:
-                result = await asyncio.wait_for(task, timeout=self.timeout)
-                results[key] = result
-            except asyncio.TimeoutError:
-                results[key] = {"error": "timeout", "fallback": True}
-            except Exception as e:
-                results[key] = {"error": str(e), "fallback": True}
+        Map<String, Object> results = new LinkedHashMap<>();
+        for (var entry : futures.entrySet()) {
+            try {
+                results.put(entry.getKey(),
+                    entry.getValue().get(timeoutSec, TimeUnit.SECONDS));
+            } catch (TimeoutException e) {
+                results.put(entry.getKey(), Map.of("error", "timeout", "fallback", true));
+            } catch (Exception e) {
+                results.put(entry.getKey(), Map.of("error", e.getMessage(), "fallback", true));
+            }
+        }
+        return results;
+    }
 
-        return results
-
-    async def _call_service(self, service_name, path):
-        instance = self.registry.get_healthy_instance(service_name)
-        return await http_client.get(f"http://{instance.host}:{instance.port}{path}")
+    private Object callService(String serviceName, String path) {
+        ServiceInstance instance = registry.getHealthyInstance(serviceName);
+        return httpClient.get("http://" + instance.getHost() + ":" + instance.getPort() + path);
+    }
+}
 ```
 
 ---

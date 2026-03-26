@@ -28,40 +28,18 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
-│  │Service A │  │Service B │  │Service C │  (log emitters)   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘                   │
-│       │              │              │                          │
-│       └──────────────┼──────────────┘                          │
-│                      ▼                                         │
-│              ┌───────────────┐                                │
-│              │  Log Shipper  │  (Fluentd / Filebeat)         │
-│              │  (per host)   │                                │
-│              └───────┬───────┘                                │
-│                      ▼                                         │
-│              ┌───────────────┐                                │
-│              │    Kafka      │  (buffer + decouple)          │
-│              │  topics:      │                                │
-│              │  logs, metrics│                                │
-│              └───────┬───────┘                                │
-│                      │                                         │
-│         ┌────────────┼────────────────┐                      │
-│         ▼            ▼                ▼                        │
-│  ┌────────────┐ ┌──────────┐ ┌──────────────┐              │
-│  │Elasticsearch│ │Prometheus│ │ Jaeger/Tempo │              │
-│  │(logs)      │ │/Thanos   │ │ (traces)     │              │
-│  └─────┬──────┘ │(metrics) │ └──────────────┘              │
-│        │         └────┬─────┘                                │
-│        ▼              ▼                                       │
-│  ┌────────────┐ ┌──────────┐  ┌──────────────┐             │
-│  │ Kibana     │ │ Grafana  │  │ Alert Manager│             │
-│  │ (log UI)   │ │ (graphs) │  │ (PagerDuty,  │             │
-│  └────────────┘ └──────────┘  │  Slack)      │             │
-│                                └──────────────┘             │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Service A] --> Ship[Log Shipper<br/>Fluentd / Filebeat]
+    B[Service B] --> Ship
+    C[Service C] --> Ship
+    Ship --> Kafka[Kafka<br/>logs, metrics topics]
+    Kafka --> ES[(Elasticsearch<br/>logs)]
+    Kafka --> Prom[(Prometheus / Thanos<br/>metrics)]
+    Kafka --> Jaeger[(Jaeger / Tempo<br/>traces)]
+    ES --> Kibana[Kibana - log UI]
+    Prom --> Grafana[Grafana - graphs]
+    Prom --> Alert[Alert Manager<br/>PagerDuty, Slack]
 ```
 
 ---

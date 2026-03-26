@@ -28,34 +28,15 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐         ┌────────────────┐                       │
-│  │ Client │────────►│  API Gateway   │                       │
-│  │(Web/App)│        └───────┬────────┘                       │
-│  └────────┘                 │                                 │
-│       ▲              ┌──────┴───────┐                        │
-│       │ WebSocket    │ Order Service│                        │
-│       │ (market data)│ (validate,   │                        │
-│       │              │  route)      │                        │
-│       │              └──────┬───────┘                        │
-│       │                     │                                 │
-│       │              ┌──────┴───────┐                        │
-│       │              │  Matching    │  (core engine)         │
-│       │              │  Engine      │  single-threaded       │
-│       │              │  (per stock) │  per symbol            │
-│       │              └──────┬───────┘                        │
-│       │                     │                                 │
-│       │         ┌───────────┼────────────┐                  │
-│       │         │           │            │                  │
-│       │  ┌──────┴──────┐ ┌─┴─────────┐ ┌┴────────────┐   │
-│       │  │Trade Store  │ │Market Data│ │Settlement   │   │
-│       │  │(PostgreSQL) │ │Service    │ │Service      │   │
-│       │  └─────────────┘ └───────────┘ └─────────────┘   │
-│       │                       │                             │
-│       └───────────────────────┘ (price feed via WebSocket) │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client[Client - Web/App] --> GW[API Gateway]
+    GW --> Order[Order Service<br/>validate, route]
+    Order --> Match[Matching Engine<br/>single-threaded per symbol]
+    Match --> Trade[(Trade Store<br/>PostgreSQL)]
+    Match --> Market[Market Data Service]
+    Match --> Settle[Settlement Service]
+    Market -->|price feed via WebSocket| Client
 ```
 
 ---

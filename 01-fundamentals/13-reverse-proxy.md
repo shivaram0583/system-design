@@ -202,49 +202,47 @@ server {
 
 ### E.2 LLD — Request Router
 
-```python
-class ReverseProxy:
-    def __init__(self):
-        self.routes = {}
-        self.rate_limiter = RateLimiter()
-        self.cache = Cache()
+```java
+public class ReverseProxy {
+    private final Map<String, Route> routes = new LinkedHashMap<>();
+    private final RateLimiter rateLimiter = new RateLimiter();
+    private final Cache cache = new Cache();
 
-    def add_route(self, path_prefix: str, backends: list, lb_algo="round_robin"):
-        self.routes[path_prefix] = {
-            "backends": backends,
-            "lb": LoadBalancer(backends, algorithm=lb_algo),
+    public void addRoute(String pathPrefix, List<String> backends, String lbAlgo) {
+        routes.put(pathPrefix, new Route(backends, new LoadBalancer(lbAlgo)));
+    }
+
+    public Response handleRequest(Request request) {
+        // Rate limiting
+        if (!rateLimiter.allow(request.getClientIp()))
+            return new Response(429, "Too Many Requests");
+
+        // Check cache
+        if ("GET".equals(request.getMethod())) {
+            Response cached = cache.get(request.getUrl());
+            if (cached != null) return cached;
         }
 
-    def handle_request(self, request):
-        # Rate limiting
-        if not self.rate_limiter.allow(request.client_ip):
-            return Response(status=429, body="Too Many Requests")
+        // Route to backend
+        Route route = matchRoute(request.getPath());
+        if (route == null) return new Response(404, "Not Found");
 
-        # Check cache
-        if request.method == "GET":
-            cached = self.cache.get(request.url)
-            if cached:
-                return cached
+        Server backend = route.getLb().getServer(request.getClientIp());
 
-        # Route to backend
-        route = self._match_route(request.path)
-        if not route:
-            return Response(status=404, body="Not Found")
+        // Forward request with headers
+        Map<String, String> headers = Map.of(
+            "X-Real-IP", request.getClientIp(),
+            "X-Forwarded-For", request.getClientIp(),
+            "X-Request-ID", UUID.randomUUID().toString());
+        Response response = backend.forward(request, headers);
 
-        backend = route["lb"].get_server()
-        
-        # Forward request with headers
-        response = backend.forward(request, headers={
-            "X-Real-IP": request.client_ip,
-            "X-Forwarded-For": request.client_ip,
-            "X-Request-ID": generate_request_id(),
-        })
+        // Cache if cacheable
+        if ("GET".equals(request.getMethod()) && response.getStatus() == 200)
+            cache.set(request.getUrl(), response, 300);
 
-        # Cache if cacheable
-        if request.method == "GET" and response.status == 200:
-            self.cache.set(request.url, response, ttl=300)
-
-        return response
+        return response;
+    }
+}
 ```
 
 ---

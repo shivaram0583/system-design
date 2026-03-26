@@ -554,86 +554,90 @@ Availability Calculation:
 
 #### Pseudocode
 
-```python
-class HealthChecker:
-    def __init__(self, interval_sec=10, timeout_sec=5):
-        self.checks = []
-        self.interval = interval_sec
-        self.timeout = timeout_sec
-        self.last_report = None
+```java
+public class HealthChecker {
+    private final List<HealthCheck> checks = new ArrayList<>();
+    private final int intervalSec;
+    private final int timeoutSec;
+    private Map<String, Object> lastReport;
 
-    def register(self, name: str, check_fn):
-        self.checks.append({"name": name, "fn": check_fn})
+    public HealthChecker(int intervalSec, int timeoutSec) {
+        this.intervalSec = intervalSec; this.timeoutSec = timeoutSec;
+    }
 
-    def run_all(self) -> dict:
-        results = {}
-        overall_healthy = True
-        for check in self.checks:
-            try:
-                start = time.time()
-                check["fn"]()  # Raises on failure
-                latency = (time.time() - start) * 1000
-                results[check["name"]] = {"status": "up", "latency_ms": latency}
-            except Exception as e:
-                results[check["name"]] = {"status": "down", "error": str(e)}
-                overall_healthy = False
-        
-        self.last_report = {
-            "healthy": overall_healthy,
-            "checks": results,
-            "timestamp": time.time()
+    public void register(String name, Runnable checkFn) {
+        checks.add(new HealthCheck(name, checkFn));
+    }
+
+    public Map<String, Object> runAll() {
+        Map<String, Object> results = new LinkedHashMap<>();
+        boolean overallHealthy = true;
+        for (HealthCheck check : checks) {
+            try {
+                long start = System.nanoTime();
+                check.fn().run(); // Throws on failure
+                double latencyMs = (System.nanoTime() - start) / 1_000_000.0;
+                results.put(check.name(), Map.of("status", "up", "latency_ms", latencyMs));
+            } catch (Exception e) {
+                results.put(check.name(), Map.of("status", "down", "error", e.getMessage()));
+                overallHealthy = false;
+            }
         }
-        return self.last_report
+        lastReport = Map.of("healthy", overallHealthy, "checks", results,
+                            "timestamp", System.currentTimeMillis());
+        return lastReport;
+    }
+}
 
+public class FailoverManager {
+    private final String primary;
+    private final String secondary;
+    private final HealthChecker checker;
+    private String state = "PRIMARY";
+    private int consecutiveFailures = 0;
+    private int consecutiveSuccesses = 0;
+    private final int failureThreshold;
+    private final int recoveryThreshold;
 
-class FailoverManager:
-    def __init__(self, primary, secondary, health_checker, 
-                 failure_threshold=3, recovery_threshold=5):
-        self.primary = primary
-        self.secondary = secondary
-        self.checker = health_checker
-        self.state = "PRIMARY"
-        self.consecutive_failures = 0
-        self.consecutive_successes = 0
-        self.failure_threshold = failure_threshold
-        self.recovery_threshold = recovery_threshold
+    public FailoverManager(String primary, String secondary, HealthChecker checker,
+                           int failureThreshold, int recoveryThreshold) {
+        this.primary = primary; this.secondary = secondary;
+        this.checker = checker;
+        this.failureThreshold = failureThreshold;
+        this.recoveryThreshold = recoveryThreshold;
+    }
 
-    def get_current_endpoint(self):
-        return self.primary if self.state == "PRIMARY" else self.secondary
+    public String getCurrentEndpoint() {
+        return "PRIMARY".equals(state) ? primary : secondary;
+    }
 
-    def check_and_failover(self):
-        """Called periodically by scheduler"""
-        report = self.checker.run_all()
-        
-        if self.state == "PRIMARY":
-            if not report["healthy"]:
-                self.consecutive_failures += 1
-                self.consecutive_successes = 0
-                if self.consecutive_failures >= self.failure_threshold:
-                    self._failover_to_secondary()
-            else:
-                self.consecutive_failures = 0
-        
-        elif self.state == "SECONDARY":
-            # Check if primary has recovered
-            primary_healthy = self._check_primary_directly()
-            if primary_healthy:
-                self.consecutive_successes += 1
-                if self.consecutive_successes >= self.recovery_threshold:
-                    self._failback_to_primary()
-            else:
-                self.consecutive_successes = 0
+    /** Called periodically by scheduler */
+    public void checkAndFailover() {
+        Map<String, Object> report = checker.runAll();
+        if ("PRIMARY".equals(state)) {
+            if (!(boolean) report.get("healthy")) {
+                consecutiveFailures++; consecutiveSuccesses = 0;
+                if (consecutiveFailures >= failureThreshold) failoverToSecondary();
+            } else { consecutiveFailures = 0; }
+        } else {
+            boolean primaryHealthy = checkPrimaryDirectly();
+            if (primaryHealthy) {
+                consecutiveSuccesses++;
+                if (consecutiveSuccesses >= recoveryThreshold) failbackToPrimary();
+            } else { consecutiveSuccesses = 0; }
+        }
+    }
 
-    def _failover_to_secondary(self):
-        self.state = "SECONDARY"
-        self.consecutive_failures = 0
-        log.alert(f"FAILOVER: switched to secondary ({self.secondary})")
-        notify_oncall("Failover triggered")
+    private void failoverToSecondary() {
+        state = "SECONDARY"; consecutiveFailures = 0;
+        log.warn("FAILOVER: switched to secondary (" + secondary + ")");
+    }
 
-    def _failback_to_primary(self):
-        self.state = "PRIMARY"
-        self.consecutive_successes = 0
-        log.info(f"FAILBACK: returned to primary ({self.primary})")
+    private void failbackToPrimary() {
+        state = "PRIMARY"; consecutiveSuccesses = 0;
+        log.info("FAILBACK: returned to primary (" + primary + ")");
+    }
+}
 ```
 
 #### Edge Cases

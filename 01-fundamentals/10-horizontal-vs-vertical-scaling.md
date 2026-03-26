@@ -254,49 +254,39 @@ STAGE 4 — Full Horizontal (1M users):
 
 ### E.2 LLD — Scaling Strategy Selector
 
-```python
-class ScalingStrategy:
-    VERTICAL = "vertical"
-    HORIZONTAL = "horizontal"
-    HYBRID = "hybrid"
+```java
+public enum ScalingStrategy { VERTICAL, HORIZONTAL, HYBRID }
 
-class ScalingAdvisor:
-    def recommend(self, component: dict) -> dict:
-        if component["type"] == "stateless_service":
-            return {
-                "strategy": ScalingStrategy.HORIZONTAL,
-                "reason": "Stateless; easily parallelizable",
-                "action": f"Add {self._calc_instances_needed(component)} instances"
-            }
-        
-        elif component["type"] == "database":
-            if component["write_qps"] > component["max_single_node_writes"]:
-                return {
-                    "strategy": ScalingStrategy.HORIZONTAL,
-                    "reason": "Write throughput exceeds single node",
-                    "action": "Implement sharding"
-                }
-            elif component["ram_usage_pct"] > 85 or component["cpu_pct"] > 80:
-                return {
-                    "strategy": ScalingStrategy.VERTICAL,
-                    "reason": "Single node resource saturation",
-                    "action": f"Upgrade to {self._next_instance_size(component)}"
-                }
-            else:
-                return {
-                    "strategy": ScalingStrategy.HORIZONTAL,
-                    "reason": "Read scaling needed",
-                    "action": "Add read replica"
-                }
-        
-        elif component["type"] == "cache":
-            return {
-                "strategy": ScalingStrategy.HORIZONTAL,
-                "reason": "Distribute cache across nodes",
-                "action": "Add nodes to cluster"
-            }
-        
-        return {"strategy": ScalingStrategy.HYBRID, "reason": "Evaluate case by case"}
+public class ScalingAdvisor {
+    public ScalingRecommendation recommend(Component component) {
+        switch (component.getType()) {
+            case "stateless_service":
+                return new ScalingRecommendation(ScalingStrategy.HORIZONTAL,
+                    "Stateless; easily parallelizable",
+                    "Add " + calcInstancesNeeded(component) + " instances");
+
+            case "database":
+                if (component.getWriteQps() > component.getMaxSingleNodeWrites())
+                    return new ScalingRecommendation(ScalingStrategy.HORIZONTAL,
+                        "Write throughput exceeds single node", "Implement sharding");
+                else if (component.getRamUsagePct() > 85 || component.getCpuPct() > 80)
+                    return new ScalingRecommendation(ScalingStrategy.VERTICAL,
+                        "Single node resource saturation",
+                        "Upgrade to " + nextInstanceSize(component));
+                else
+                    return new ScalingRecommendation(ScalingStrategy.HORIZONTAL,
+                        "Read scaling needed", "Add read replica");
+
+            case "cache":
+                return new ScalingRecommendation(ScalingStrategy.HORIZONTAL,
+                    "Distribute cache across nodes", "Add nodes to cluster");
+
+            default:
+                return new ScalingRecommendation(ScalingStrategy.HYBRID,
+                    "Evaluate case by case", "");
+        }
+    }
+}
 ```
 
 ---

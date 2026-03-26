@@ -430,80 +430,85 @@ Payment (for premium features): CP
 
 #### Pseudocode
 
-```python
-class PartitionDetector:
-    def __init__(self, peers: list, check_interval_sec=5, 
-                 failure_threshold=3):
-        self.peers = peers
-        self.interval = check_interval_sec
-        self.threshold = failure_threshold
-        self.failure_counts = {p: 0 for p in peers}
-        self.partitioned_peers = set()
-        self.listeners = []
+```java
+public class PartitionDetector {
+    private final List<Peer> peers;
+    private final int checkIntervalSec;
+    private final int failureThreshold;
+    private final Map<Peer, Integer> failureCounts = new HashMap<>();
+    private final Set<Peer> partitionedPeers = new HashSet<>();
+    private final List<BiConsumer<String, Peer>> listeners = new ArrayList<>();
 
-    def on_partition(self, callback):
-        self.listeners.append(callback)
+    public PartitionDetector(List<Peer> peers, int checkIntervalSec, int failureThreshold) {
+        this.peers = peers; this.checkIntervalSec = checkIntervalSec;
+        this.failureThreshold = failureThreshold;
+        peers.forEach(p -> failureCounts.put(p, 0));
+    }
 
-    def check_peers(self):
-        """Called every check_interval_sec"""
-        for peer in self.peers:
-            try:
-                response = peer.ping(timeout_ms=2000)
-                self.failure_counts[peer] = 0
-                if peer in self.partitioned_peers:
-                    self.partitioned_peers.remove(peer)
-                    self._notify("HEALED", peer)
-            except TimeoutError:
-                self.failure_counts[peer] += 1
-                if (self.failure_counts[peer] >= self.threshold 
-                        and peer not in self.partitioned_peers):
-                    self.partitioned_peers.add(peer)
-                    self._notify("PARTITIONED", peer)
+    public void onPartition(BiConsumer<String, Peer> callback) {
+        listeners.add(callback);
+    }
 
-    def is_partitioned(self) -> bool:
-        return len(self.partitioned_peers) > 0
+    /** Called every checkIntervalSec */
+    public void checkPeers() {
+        for (Peer peer : peers) {
+            try {
+                peer.ping(2000);
+                failureCounts.put(peer, 0);
+                if (partitionedPeers.remove(peer)) notify("HEALED", peer);
+            } catch (TimeoutException e) {
+                failureCounts.merge(peer, 1, Integer::sum);
+                if (failureCounts.get(peer) >= failureThreshold
+                        && partitionedPeers.add(peer))
+                    notify("PARTITIONED", peer);
+            }
+        }
+    }
 
-    def get_reachable_peers(self) -> list:
-        return [p for p in self.peers if p not in self.partitioned_peers]
+    public boolean isPartitioned() { return !partitionedPeers.isEmpty(); }
 
-    def get_quorum_available(self, quorum_size: int) -> bool:
-        return len(self.get_reachable_peers()) >= quorum_size
+    public List<Peer> getReachablePeers() {
+        return peers.stream().filter(p -> !partitionedPeers.contains(p)).toList();
+    }
 
-    def _notify(self, event_type, peer):
-        for listener in self.listeners:
-            listener(event_type, peer)
+    public boolean isQuorumAvailable(int quorumSize) {
+        return getReachablePeers().size() >= quorumSize;
+    }
 
+    private void notify(String eventType, Peer peer) {
+        listeners.forEach(l -> l.accept(eventType, peer));
+    }
+}
 
-class CAPPolicyRouter:
-    """Routes requests based on partition status and CAP policy"""
-    
-    def __init__(self, detector: PartitionDetector, policy: str):
-        self.detector = detector
-        self.policy = policy  # "CP" or "AP"
+/** Routes requests based on partition status and CAP policy */
+public class CAPPolicyRouter {
+    private final PartitionDetector detector;
+    private final String policy; // "CP" or "AP"
 
-    def handle_read(self, key):
-        if self.detector.is_partitioned():
-            if self.policy == "CP":
-                if self.detector.get_quorum_available(quorum_size=2):
-                    return self._quorum_read(key)
-                else:
-                    raise UnavailableError("No quorum during partition")
-            else:  # AP
-                return self._local_read(key)  # May be stale
-        else:
-            return self._normal_read(key)
+    public CAPPolicyRouter(PartitionDetector detector, String policy) {
+        this.detector = detector; this.policy = policy;
+    }
 
-    def handle_write(self, key, value):
-        if self.detector.is_partitioned():
-            if self.policy == "CP":
-                if self.detector.get_quorum_available(quorum_size=2):
-                    return self._quorum_write(key, value)
-                else:
-                    raise UnavailableError("No quorum during partition")
-            else:  # AP
-                return self._local_write(key, value)  # Queue for replication
-        else:
-            return self._normal_write(key, value)
+    public Object handleRead(String key) {
+        if (detector.isPartitioned()) {
+            if ("CP".equals(policy)) {
+                if (detector.isQuorumAvailable(2)) return quorumRead(key);
+                else throw new UnavailableException("No quorum during partition");
+            } else { return localRead(key); } // AP — may be stale
+        }
+        return normalRead(key);
+    }
+
+    public Object handleWrite(String key, Object value) {
+        if (detector.isPartitioned()) {
+            if ("CP".equals(policy)) {
+                if (detector.isQuorumAvailable(2)) return quorumWrite(key, value);
+                else throw new UnavailableException("No quorum during partition");
+            } else { return localWrite(key, value); } // AP — queue for replication
+        }
+        return normalWrite(key, value);
+    }
+}
 ```
 
 #### Edge Cases

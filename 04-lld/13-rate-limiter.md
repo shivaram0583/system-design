@@ -57,84 +57,100 @@ classDiagram
 
 ## 3. Token Bucket Implementation
 
-```python
-import threading
-import time
-from collections import defaultdict
+```java
+public class Bucket {
+    private final int maxTokens;
+    private double tokens;
+    private final double refillRate; // tokens per second
+    private long lastRefillNanos;
+    private final Object lock = new Object();
 
-class Bucket:
-    def __init__(self, max_tokens: int, refill_rate: float):
-        self.max_tokens = max_tokens
-        self.tokens = max_tokens
-        self.refill_rate = refill_rate  # tokens per second
-        self.last_refill = time.monotonic()
-        self.lock = threading.Lock()
+    public Bucket(int maxTokens, double refillRate) {
+        this.maxTokens = maxTokens;
+        this.tokens = maxTokens;
+        this.refillRate = refillRate;
+        this.lastRefillNanos = System.nanoTime();
+    }
 
-    def try_consume(self) -> bool:
-        with self.lock:
-            self._refill()
-            if self.tokens >= 1:
-                self.tokens -= 1
-                return True
-            return False
+    public boolean tryConsume() {
+        synchronized (lock) {
+            refill();
+            if (tokens >= 1) { tokens -= 1; return true; }
+            return false;
+        }
+    }
 
-    def _refill(self):
-        now = time.monotonic()
-        elapsed = now - self.last_refill
-        new_tokens = elapsed * self.refill_rate
-        self.tokens = min(self.max_tokens, self.tokens + new_tokens)
-        self.last_refill = now
+    private void refill() {
+        long now = System.nanoTime();
+        double elapsed = (now - lastRefillNanos) / 1_000_000_000.0;
+        tokens = Math.min(maxTokens, tokens + elapsed * refillRate);
+        lastRefillNanos = now;
+    }
+}
 
+public class TokenBucketLimiter implements RateLimiter {
+    private final int maxTokens;
+    private final double refillRate;
+    private final Map<String, Bucket> buckets = new HashMap<>();
+    private final Object lock = new Object();
 
-class TokenBucketLimiter:
-    def __init__(self, max_tokens: int = 10, refill_rate: float = 1.0):
-        self.max_tokens = max_tokens
-        self.refill_rate = refill_rate
-        self.buckets: dict[str, Bucket] = {}
-        self.lock = threading.Lock()
+    public TokenBucketLimiter(int maxTokens, double refillRate) {
+        this.maxTokens = maxTokens; this.refillRate = refillRate;
+    }
+    public TokenBucketLimiter() { this(10, 1.0); }
 
-    def allow(self, client_id: str) -> bool:
-        bucket = self._get_bucket(client_id)
-        return bucket.try_consume()
+    @Override
+    public boolean allow(String clientId) {
+        return getBucket(clientId).tryConsume();
+    }
 
-    def _get_bucket(self, client_id: str) -> Bucket:
-        with self.lock:
-            if client_id not in self.buckets:
-                self.buckets[client_id] = Bucket(self.max_tokens, self.refill_rate)
-            return self.buckets[client_id]
+    private Bucket getBucket(String clientId) {
+        synchronized (lock) {
+            return buckets.computeIfAbsent(clientId, k -> new Bucket(maxTokens, refillRate));
+        }
+    }
+}
+
+public interface RateLimiter {
+    boolean allow(String clientId);
+}
 ```
 
 ---
 
 ## 4. Sliding Window Implementation
 
-```python
-from collections import deque
+```java
+public class SlidingWindowLimiter implements RateLimiter {
+    private final int maxRequests;
+    private final long windowNanos;
+    private final Map<String, Deque<Long>> windows = new HashMap<>();
+    private final Object lock = new Object();
 
-class SlidingWindowLimiter:
-    def __init__(self, max_requests: int = 100, window_seconds: int = 60):
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self.windows: dict[str, deque] = {}
-        self.lock = threading.Lock()
+    public SlidingWindowLimiter(int maxRequests, int windowSeconds) {
+        this.maxRequests = maxRequests;
+        this.windowNanos = windowSeconds * 1_000_000_000L;
+    }
+    public SlidingWindowLimiter() { this(100, 60); }
 
-    def allow(self, client_id: str) -> bool:
-        now = time.monotonic()
-        with self.lock:
-            if client_id not in self.windows:
-                self.windows[client_id] = deque()
+    @Override
+    public boolean allow(String clientId) {
+        long now = System.nanoTime();
+        synchronized (lock) {
+            Deque<Long> window = windows.computeIfAbsent(clientId, k -> new ArrayDeque<>());
+            long cutoff = now - windowNanos;
 
-            window = self.windows[client_id]
-            cutoff = now - self.window_seconds
+            while (!window.isEmpty() && window.peekFirst() <= cutoff)
+                window.pollFirst();
 
-            # Remove expired timestamps
-            while window and window[0] <= cutoff:
-                window.popleft()
-
-            if len(window) < self.max_requests:
-                window.append(now)
-                return True
-            return False
+            if (window.size() < maxRequests) {
+                window.addLast(now);
+                return true;
+            }
+            return false;
+        }
+    }
+}
 ```
 
 ---

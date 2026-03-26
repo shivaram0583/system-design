@@ -18,188 +18,234 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from datetime import datetime, timedelta
-import uuid
-import threading
+```java
+public enum SeatStatus { AVAILABLE, LOCKED, BOOKED }
+public enum SeatType { REGULAR, PREMIUM, VIP }
+public enum BookingStatus { PENDING, CONFIRMED, CANCELLED, EXPIRED }
 
-class SeatStatus(Enum):
-    AVAILABLE = 1
-    LOCKED = 2
-    BOOKED = 3
+public class Movie {
+    private final String movieId;
+    private final String title;
+    private final int durationMin;
+    private final String genre;
 
-class SeatType(Enum):
-    REGULAR = 1
-    PREMIUM = 2
-    VIP = 3
+    public Movie(String movieId, String title, int durationMin, String genre) {
+        this.movieId = movieId; this.title = title;
+        this.durationMin = durationMin; this.genre = genre;
+    }
+    public String getMovieId() { return movieId; }
+    public String getTitle() { return title; }
+}
 
-class BookingStatus(Enum):
-    PENDING = 1
-    CONFIRMED = 2
-    CANCELLED = 3
-    EXPIRED = 4
+public class Cinema {
+    private final String cinemaId;
+    private final String name;
+    private final String city;
+    private final List<Screen> screens = new ArrayList<>();
 
-class Movie:
-    def __init__(self, movie_id: str, title: str, duration_min: int, genre: str):
-        self.movie_id = movie_id
-        self.title = title
-        self.duration_min = duration_min
-        self.genre = genre
+    public Cinema(String cinemaId, String name, String city) {
+        this.cinemaId = cinemaId; this.name = name; this.city = city;
+    }
+    public String getCinemaId() { return cinemaId; }
+    public String getCity() { return city; }
+    public List<Screen> getScreens() { return screens; }
+}
 
-class Cinema:
-    def __init__(self, cinema_id: str, name: str, city: str):
-        self.cinema_id = cinema_id
-        self.name = name
-        self.city = city
-        self.screens: list["Screen"] = []
+public class Screen {
+    private final String screenId;
+    private final Cinema cinema;
+    private final String name;
+    private final List<Seat> seats = new ArrayList<>();
 
-class Screen:
-    def __init__(self, screen_id: str, cinema: Cinema, name: str):
-        self.screen_id = screen_id
-        self.cinema = cinema
-        self.name = name
-        self.seats: list["Seat"] = []
+    public Screen(String screenId, Cinema cinema, String name) {
+        this.screenId = screenId; this.cinema = cinema; this.name = name;
+    }
+    public Cinema getCinema() { return cinema; }
+    public List<Seat> getSeats() { return seats; }
+}
 
-class Seat:
-    def __init__(self, seat_id: str, row: str, number: int, seat_type: SeatType):
-        self.seat_id = seat_id
-        self.row = row
-        self.number = number
-        self.seat_type = seat_type
+public class Seat {
+    private final String seatId;
+    private final String row;
+    private final int number;
+    private final SeatType seatType;
 
-class Show:
-    def __init__(self, show_id: str, movie: Movie, screen: Screen, start_time: datetime):
-        self.show_id = show_id
-        self.movie = movie
-        self.screen = screen
-        self.start_time = start_time
-        self.seat_statuses: dict[str, SeatStatus] = {}  # seat_id -> status
-        self.prices: dict[SeatType, float] = {}
-        self.lock = threading.Lock()
+    public Seat(String seatId, String row, int number, SeatType seatType) {
+        this.seatId = seatId; this.row = row;
+        this.number = number; this.seatType = seatType;
+    }
+    public String getSeatId() { return seatId; }
+    public SeatType getSeatType() { return seatType; }
+}
 
-        # Initialize all seats as available
-        for seat in screen.seats:
-            self.seat_statuses[seat.seat_id] = SeatStatus.AVAILABLE
+public class Show {
+    private final String showId;
+    private final Movie movie;
+    private final Screen screen;
+    private final LocalDateTime startTime;
+    private final Map<String, SeatStatus> seatStatuses = new HashMap<>();
+    private final Map<SeatType, Double> prices = new EnumMap<>(SeatType.class);
+    private final Object lock = new Object();
 
-    def get_available_seats(self) -> list[Seat]:
-        return [s for s in self.screen.seats
-                if self.seat_statuses[s.seat_id] == SeatStatus.AVAILABLE]
+    public Show(String showId, Movie movie, Screen screen, LocalDateTime startTime) {
+        this.showId = showId; this.movie = movie;
+        this.screen = screen; this.startTime = startTime;
+        for (Seat seat : screen.getSeats())
+            seatStatuses.put(seat.getSeatId(), SeatStatus.AVAILABLE);
+    }
+
+    public List<Seat> getAvailableSeats() {
+        return screen.getSeats().stream()
+            .filter(s -> seatStatuses.get(s.getSeatId()) == SeatStatus.AVAILABLE)
+            .collect(Collectors.toList());
+    }
+
+    public Movie getMovie() { return movie; }
+    public Screen getScreen() { return screen; }
+    public LocalDateTime getStartTime() { return startTime; }
+    public Map<String, SeatStatus> getSeatStatuses() { return seatStatuses; }
+    public Map<SeatType, Double> getPrices() { return prices; }
+    public Object getLock() { return lock; }
+}
 ```
 
 ---
 
 ## 3. Booking System
 
-```python
-class Booking:
-    def __init__(self, user_id: str, show: Show, seats: list[Seat]):
-        self.booking_id = str(uuid.uuid4())
-        self.user_id = user_id
-        self.show = show
-        self.seats = seats
-        self.status = BookingStatus.PENDING
-        self.total_amount = sum(show.prices.get(s.seat_type, 0) for s in seats)
-        self.created_at = datetime.now()
-        self.lock_expires_at = datetime.now() + timedelta(minutes=7)
+```java
+public class Booking {
+    private final String bookingId;
+    private final String userId;
+    private final Show show;
+    private final List<Seat> seats;
+    private BookingStatus status = BookingStatus.PENDING;
+    private final double totalAmount;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime lockExpiresAt;
 
+    public Booking(String userId, Show show, List<Seat> seats) {
+        this.bookingId = UUID.randomUUID().toString();
+        this.userId = userId;
+        this.show = show;
+        this.seats = seats;
+        this.totalAmount = seats.stream()
+            .mapToDouble(s -> show.getPrices().getOrDefault(s.getSeatType(), 0.0)).sum();
+        this.createdAt = LocalDateTime.now();
+        this.lockExpiresAt = LocalDateTime.now().plusMinutes(7);
+    }
 
-class BookingService:
-    def __init__(self):
-        self.bookings: dict[str, Booking] = {}
-        self.lock = threading.Lock()
+    public String getBookingId() { return bookingId; }
+    public Show getShow() { return show; }
+    public List<Seat> getSeats() { return seats; }
+    public BookingStatus getStatus() { return status; }
+    public void setStatus(BookingStatus status) { this.status = status; }
+    public double getTotalAmount() { return totalAmount; }
+    public LocalDateTime getLockExpiresAt() { return lockExpiresAt; }
+}
 
-    def lock_seats(self, user_id: str, show: Show, seat_ids: list[str]) -> Booking:
-        """Lock selected seats for 7 minutes."""
-        with show.lock:
-            # Verify all seats are available
-            for seat_id in seat_ids:
-                if show.seat_statuses.get(seat_id) != SeatStatus.AVAILABLE:
-                    raise Exception(f"Seat {seat_id} is not available")
+public class BookingService {
+    private final Map<String, Booking> bookings = new HashMap<>();
 
-            # Lock all seats atomically
-            seats = []
-            for seat in show.screen.seats:
-                if seat.seat_id in seat_ids:
-                    show.seat_statuses[seat.seat_id] = SeatStatus.LOCKED
-                    seats.append(seat)
+    public Booking lockSeats(String userId, Show show, List<String> seatIds) {
+        synchronized (show.getLock()) {
+            for (String seatId : seatIds) {
+                if (show.getSeatStatuses().get(seatId) != SeatStatus.AVAILABLE)
+                    throw new RuntimeException("Seat " + seatId + " is not available");
+            }
+            List<Seat> seats = show.getScreen().getSeats().stream()
+                .filter(s -> seatIds.contains(s.getSeatId())).collect(Collectors.toList());
+            seats.forEach(s -> show.getSeatStatuses().put(s.getSeatId(), SeatStatus.LOCKED));
+            Booking booking = new Booking(userId, show, seats);
+            bookings.put(booking.getBookingId(), booking);
+            return booking;
+        }
+    }
 
-            booking = Booking(user_id, show, seats)
-            self.bookings[booking.booking_id] = booking
-            return booking
+    public Booking confirmBooking(String bookingId, boolean paymentConfirmed) {
+        Booking booking = bookings.get(bookingId);
+        if (booking == null) throw new RuntimeException("Booking not found");
+        if (booking.getStatus() != BookingStatus.PENDING)
+            throw new RuntimeException("Booking is " + booking.getStatus());
 
-    def confirm_booking(self, booking_id: str, payment_confirmed: bool) -> Booking:
-        """Confirm booking after payment."""
-        booking = self.bookings.get(booking_id)
-        if not booking:
-            raise Exception("Booking not found")
+        if (LocalDateTime.now().isAfter(booking.getLockExpiresAt())) {
+            releaseSeats(booking);
+            booking.setStatus(BookingStatus.EXPIRED);
+            throw new RuntimeException("Booking expired - seats released");
+        }
 
-        if booking.status != BookingStatus.PENDING:
-            raise Exception(f"Booking is {booking.status.name}")
+        if (paymentConfirmed) {
+            synchronized (booking.getShow().getLock()) {
+                booking.getSeats().forEach(s ->
+                    booking.getShow().getSeatStatuses().put(s.getSeatId(), SeatStatus.BOOKED));
+            }
+            booking.setStatus(BookingStatus.CONFIRMED);
+        } else {
+            releaseSeats(booking);
+            booking.setStatus(BookingStatus.CANCELLED);
+        }
+        return booking;
+    }
 
-        if datetime.now() > booking.lock_expires_at:
-            self._release_seats(booking)
-            booking.status = BookingStatus.EXPIRED
-            raise Exception("Booking expired — seats released")
+    public double cancelBooking(String bookingId) {
+        Booking booking = bookings.get(bookingId);
+        if (booking == null || booking.getStatus() != BookingStatus.CONFIRMED)
+            throw new RuntimeException("Cannot cancel this booking");
+        releaseSeats(booking);
+        booking.setStatus(BookingStatus.CANCELLED);
+        long hoursToShow = java.time.Duration.between(
+            LocalDateTime.now(), booking.getShow().getStartTime()).toHours();
+        return (hoursToShow > 2) ? booking.getTotalAmount() : booking.getTotalAmount() * 0.5;
+    }
 
-        if payment_confirmed:
-            with booking.show.lock:
-                for seat in booking.seats:
-                    booking.show.seat_statuses[seat.seat_id] = SeatStatus.BOOKED
-            booking.status = BookingStatus.CONFIRMED
-        else:
-            self._release_seats(booking)
-            booking.status = BookingStatus.CANCELLED
+    private void releaseSeats(Booking booking) {
+        synchronized (booking.getShow().getLock()) {
+            booking.getSeats().forEach(s ->
+                booking.getShow().getSeatStatuses().put(s.getSeatId(), SeatStatus.AVAILABLE));
+        }
+    }
 
-        return booking
-
-    def cancel_booking(self, booking_id: str) -> float:
-        """Cancel a confirmed booking, return refund amount."""
-        booking = self.bookings.get(booking_id)
-        if not booking or booking.status != BookingStatus.CONFIRMED:
-            raise Exception("Cannot cancel this booking")
-
-        self._release_seats(booking)
-        booking.status = BookingStatus.CANCELLED
-
-        # Refund policy: full if > 2 hours before show, 50% otherwise
-        time_to_show = (booking.show.start_time - datetime.now()).total_seconds() / 3600
-        if time_to_show > 2:
-            return booking.total_amount
-        return booking.total_amount * 0.5
-
-    def _release_seats(self, booking: Booking):
-        with booking.show.lock:
-            for seat in booking.seats:
-                booking.show.seat_statuses[seat.seat_id] = SeatStatus.AVAILABLE
-
-    def cleanup_expired_locks(self):
-        """Run periodically to release expired seat locks."""
-        for booking in list(self.bookings.values()):
-            if (booking.status == BookingStatus.PENDING and
-                datetime.now() > booking.lock_expires_at):
-                self._release_seats(booking)
-                booking.status = BookingStatus.EXPIRED
+    public void cleanupExpiredLocks() {
+        for (Booking booking : new ArrayList<>(bookings.values())) {
+            if (booking.getStatus() == BookingStatus.PENDING
+                    && LocalDateTime.now().isAfter(booking.getLockExpiresAt())) {
+                releaseSeats(booking);
+                booking.setStatus(BookingStatus.EXPIRED);
+            }
+        }
+    }
+}
 ```
 
 ---
 
 ## 4. Search Service
 
-```python
-class MovieSearchService:
-    def __init__(self):
-        self.shows: list[Show] = []
+```java
+public class MovieSearchService {
+    private final List<Show> shows = new ArrayList<>();
 
-    def search_by_city(self, city: str) -> list[Show]:
-        return [s for s in self.shows if s.screen.cinema.city == city]
+    public List<Show> searchByCity(String city) {
+        return shows.stream()
+            .filter(s -> s.getScreen().getCinema().getCity().equals(city))
+            .collect(Collectors.toList());
+    }
 
-    def search_by_movie(self, movie_id: str, city: str) -> list[Show]:
-        return [s for s in self.shows
-                if s.movie.movie_id == movie_id and s.screen.cinema.city == city]
+    public List<Show> searchByMovie(String movieId, String city) {
+        return shows.stream()
+            .filter(s -> s.getMovie().getMovieId().equals(movieId)
+                      && s.getScreen().getCinema().getCity().equals(city))
+            .collect(Collectors.toList());
+    }
 
-    def search_by_cinema(self, cinema_id: str) -> list[Show]:
-        return [s for s in self.shows if s.screen.cinema.cinema_id == cinema_id]
+    public List<Show> searchByCinema(String cinemaId) {
+        return shows.stream()
+            .filter(s -> s.getScreen().getCinema().getCinemaId().equals(cinemaId))
+            .collect(Collectors.toList());
+    }
+
+    public void addShow(Show show) { shows.add(show); }
+}
 ```
 
 ---

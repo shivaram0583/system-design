@@ -835,40 +835,46 @@ After Flash Sale:
 
 #### Data Models
 
-```python
-class ScalingConfig:
-    service_name: str
-    min_instances: int         # Never go below this
-    max_instances: int         # Never exceed this
-    cooldown_seconds: int      # Wait between scale actions
-    scale_up_threshold: float  # e.g., CPU > 70%
-    scale_down_threshold: float # e.g., CPU < 40%
-    scale_up_step: int         # How many to add (e.g., 2)
-    scale_down_step: int       # How many to remove (e.g., 1)
-    scale_up_evaluation_periods: int   # Must exceed for N periods
-    scale_down_evaluation_periods: int # Must be below for N periods
-    metric: str                # "cpu", "qps", "memory", "custom"
+```java
+public class ScalingConfig {
+    private String serviceName;
+    private int minInstances;          // Never go below this
+    private int maxInstances;          // Never exceed this
+    private int cooldownSeconds;       // Wait between scale actions
+    private double scaleUpThreshold;   // e.g., CPU > 70%
+    private double scaleDownThreshold; // e.g., CPU < 40%
+    private int scaleUpStep;           // How many to add (e.g., 2)
+    private int scaleDownStep;         // How many to remove (e.g., 1)
+    private int scaleUpEvaluationPeriods;   // Must exceed for N periods
+    private int scaleDownEvaluationPeriods; // Must be below for N periods
+    private String metric;             // "cpu", "qps", "memory", "custom"
+    // getters and setters
+}
 
-class ScalingDecision:
-    action: str       # "scale_up", "scale_down", "no_action"
-    reason: str       # Human-readable explanation
-    current: int      # Current instance count
-    target: int       # Desired instance count
-    metric_value: float
-    threshold: float
-    timestamp: datetime
+public class ScalingDecision {
+    private String action;     // "scale_up", "scale_down", "no_action"
+    private String reason;     // Human-readable explanation
+    private int current;       // Current instance count
+    private int target;        // Desired instance count
+    private double metricValue;
+    private double threshold;
+    private LocalDateTime timestamp;
+    // getters and setters
+}
 
-class ScalingEvent:
-    event_id: str
-    service_name: str
-    action: str
-    from_count: int
-    to_count: int
-    trigger_metric: str
-    trigger_value: float
-    timestamp: datetime
-    success: bool
-    error: str | None
+public class ScalingEvent {
+    private String eventId;
+    private String serviceName;
+    private String action;
+    private int fromCount;
+    private int toCount;
+    private String triggerMetric;
+    private double triggerValue;
+    private LocalDateTime timestamp;
+    private boolean success;
+    private String error;
+    // getters and setters
+}
 ```
 
 ```sql
@@ -892,119 +898,107 @@ CREATE INDEX idx_scaling_events_service ON scaling_events(service_name, timestam
 
 #### Pseudocode — Auto-Scaler
 
-```python
-class AutoScaler:
-    def __init__(self, config: ScalingConfig, metrics: MetricsProvider, cloud: CloudProvider):
-        self.config = config
-        self.metrics = metrics
-        self.cloud = cloud
-        self.last_scale_time = None
-        self.high_readings = 0   # Consecutive readings above threshold
-        self.low_readings = 0    # Consecutive readings below threshold
+```java
+public class AutoScaler {
+    private final ScalingConfig config;
+    private final MetricsProvider metrics;
+    private final CloudProvider cloud;
+    private LocalDateTime lastScaleTime;
+    private int highReadings = 0;
+    private int lowReadings = 0;
 
-    def evaluate(self) -> ScalingDecision:
-        """Called every 30 seconds by scheduler"""
-        
-        # 1. Check cooldown
-        if self.last_scale_time and not self._cooldown_expired():
-            return ScalingDecision(
-                action="no_action",
-                reason=f"Cooldown active ({self._cooldown_remaining()}s remaining)"
-            )
-        
-        # 2. Get current metrics
-        current_instances = self.cloud.list_instances(self.config.service_name)
-        metric_value = self._get_metric_value()
-        
-        # 3. Evaluate scale-up
-        if metric_value > self.config.scale_up_threshold:
-            self.high_readings += 1
-            self.low_readings = 0
-            
-            if self.high_readings >= self.config.scale_up_evaluation_periods:
-                target = min(
-                    len(current_instances) + self.config.scale_up_step,
-                    self.config.max_instances
-                )
-                if target > len(current_instances):
-                    return self._create_decision(
-                        "scale_up", current_instances, target, metric_value,
-                        f"{self.config.metric} ({metric_value:.1f}) > "
-                        f"threshold ({self.config.scale_up_threshold}) "
-                        f"for {self.high_readings} periods"
-                    )
-        
-        # 4. Evaluate scale-down
-        elif metric_value < self.config.scale_down_threshold:
-            self.low_readings += 1
-            self.high_readings = 0
-            
-            if self.low_readings >= self.config.scale_down_evaluation_periods:
-                target = max(
-                    len(current_instances) - self.config.scale_down_step,
-                    self.config.min_instances
-                )
-                if target < len(current_instances):
-                    return self._create_decision(
-                        "scale_down", current_instances, target, metric_value,
-                        f"{self.config.metric} ({metric_value:.1f}) < "
-                        f"threshold ({self.config.scale_down_threshold}) "
-                        f"for {self.low_readings} periods"
-                    )
-        else:
-            # Within normal range, reset counters
-            self.high_readings = 0
-            self.low_readings = 0
-        
-        return ScalingDecision(action="no_action", reason="Within thresholds")
+    public AutoScaler(ScalingConfig config, MetricsProvider metrics, CloudProvider cloud) {
+        this.config = config; this.metrics = metrics; this.cloud = cloud;
+    }
 
-    def execute(self, decision: ScalingDecision):
-        """Execute a scaling decision"""
-        if decision.action == "no_action":
-            return
-        
-        try:
-            if decision.action == "scale_up":
-                count = decision.target - decision.current
-                for _ in range(count):
-                    self.cloud.launch_instance(self.config.service_name)
-                    # Wait for health check to pass
-                    self._wait_for_healthy(timeout_sec=120)
-            
-            elif decision.action == "scale_down":
-                count = decision.current - decision.target
-                # Pick instances with lowest load (drain connections first)
-                instances = self._select_for_termination(count)
-                for inst in instances:
-                    self.cloud.drain_connections(inst, timeout_sec=30)
-                    self.cloud.terminate_instance(inst)
-            
-            self.last_scale_time = time.now()
-            self._log_event(decision, success=True)
-            
-        except Exception as e:
-            self._log_event(decision, success=False, error=str(e))
-            raise
+    /** Called every 30 seconds by scheduler */
+    public ScalingDecision evaluate() {
+        // 1. Check cooldown
+        if (lastScaleTime != null && !cooldownExpired())
+            return new ScalingDecision("no_action", "Cooldown active");
 
-    def _get_metric_value(self) -> float:
-        if self.config.metric == "cpu":
-            return self.metrics.get_avg_cpu(self.config.service_name)
-        elif self.config.metric == "qps":
-            instances = self.cloud.list_instances(self.config.service_name)
-            total_qps = self.metrics.get_total_qps(self.config.service_name)
-            return total_qps / len(instances)  # QPS per instance
-        elif self.config.metric == "memory":
-            return self.metrics.get_avg_memory(self.config.service_name)
-    
-    def _cooldown_expired(self) -> bool:
-        return (time.now() - self.last_scale_time).seconds > self.config.cooldown_seconds
+        // 2. Get current metrics
+        List<Instance> currentInstances = cloud.listInstances(config.getServiceName());
+        double metricValue = getMetricValue();
 
-    def _select_for_termination(self, count: int) -> list:
-        """Select instances with lowest load for graceful termination"""
-        instances = self.cloud.list_instances(self.config.service_name)
-        # Sort by current connections (ascending) — terminate least busy first
-        instances.sort(key=lambda i: i.active_connections)
-        return instances[:count]
+        // 3. Evaluate scale-up
+        if (metricValue > config.getScaleUpThreshold()) {
+            highReadings++; lowReadings = 0;
+            if (highReadings >= config.getScaleUpEvaluationPeriods()) {
+                int target = Math.min(
+                    currentInstances.size() + config.getScaleUpStep(),
+                    config.getMaxInstances());
+                if (target > currentInstances.size())
+                    return createDecision("scale_up", currentInstances.size(),
+                        target, metricValue,
+                        config.getMetric() + " (" + metricValue + ") > threshold");
+            }
+        // 4. Evaluate scale-down
+        } else if (metricValue < config.getScaleDownThreshold()) {
+            lowReadings++; highReadings = 0;
+            if (lowReadings >= config.getScaleDownEvaluationPeriods()) {
+                int target = Math.max(
+                    currentInstances.size() - config.getScaleDownStep(),
+                    config.getMinInstances());
+                if (target < currentInstances.size())
+                    return createDecision("scale_down", currentInstances.size(),
+                        target, metricValue,
+                        config.getMetric() + " (" + metricValue + ") < threshold");
+            }
+        } else {
+            highReadings = 0; lowReadings = 0;
+        }
+        return new ScalingDecision("no_action", "Within thresholds");
+    }
+
+    /** Execute a scaling decision */
+    public void execute(ScalingDecision decision) {
+        if ("no_action".equals(decision.getAction())) return;
+        try {
+            if ("scale_up".equals(decision.getAction())) {
+                int count = decision.getTarget() - decision.getCurrent();
+                for (int i = 0; i < count; i++) {
+                    cloud.launchInstance(config.getServiceName());
+                    waitForHealthy(120);
+                }
+            } else if ("scale_down".equals(decision.getAction())) {
+                int count = decision.getCurrent() - decision.getTarget();
+                List<Instance> toTerminate = selectForTermination(count);
+                for (Instance inst : toTerminate) {
+                    cloud.drainConnections(inst, 30);
+                    cloud.terminateInstance(inst);
+                }
+            }
+            lastScaleTime = LocalDateTime.now();
+            logEvent(decision, true, null);
+        } catch (Exception e) {
+            logEvent(decision, false, e.getMessage());
+            throw e;
+        }
+    }
+
+    private double getMetricValue() {
+        switch (config.getMetric()) {
+            case "cpu": return metrics.getAvgCpu(config.getServiceName());
+            case "qps":
+                int count = cloud.listInstances(config.getServiceName()).size();
+                return metrics.getTotalQps(config.getServiceName()) / count;
+            case "memory": return metrics.getAvgMemory(config.getServiceName());
+            default: return 0;
+        }
+    }
+
+    private boolean cooldownExpired() {
+        return Duration.between(lastScaleTime, LocalDateTime.now()).getSeconds()
+            > config.getCooldownSeconds();
+    }
+
+    private List<Instance> selectForTermination(int count) {
+        List<Instance> instances = new ArrayList<>(cloud.listInstances(config.getServiceName()));
+        instances.sort(Comparator.comparingInt(Instance::getActiveConnections));
+        return instances.subList(0, Math.min(count, instances.size()));
+    }
+}
 ```
 
 #### Edge Cases

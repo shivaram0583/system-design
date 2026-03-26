@@ -29,35 +29,16 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌──────────────┐       ┌──────────────────┐                 │
-│  │ API / CLI    │──────►│  Scheduler       │                 │
-│  │ (submit job) │       │  Service         │                 │
-│  └──────────────┘       │  (cron trigger,  │                 │
-│                          │   job dispatch)  │                 │
-│                          └────────┬─────────┘                 │
-│                                   │                            │
-│                          ┌────────┴─────────┐                 │
-│                          │  Job Queue       │                 │
-│                          │  (Kafka/Redis)   │                 │
-│                          │  priority-based  │                 │
-│                          └────────┬─────────┘                 │
-│                                   │                            │
-│              ┌────────────────────┼────────────────┐         │
-│              │                    │                 │         │
-│        ┌─────┴─────┐  ┌──────────┴──┐  ┌──────────┴──┐    │
-│        │ Worker 1  │  │ Worker 2    │  │ Worker N    │    │
-│        │ (executor)│  │ (executor)  │  │ (executor)  │    │
-│        └───────────┘  └─────────────┘  └─────────────┘    │
-│                                                              │
-│  ┌────────────┐  ┌─────────────┐  ┌──────────────┐        │
-│  │PostgreSQL  │  │ Redis       │  │ Kafka        │        │
-│  │(job defs,  │  │ (locks,     │  │ (job events, │        │
-│  │ history)   │  │  heartbeat) │  │  dead letter)│        │
-│  └────────────┘  └─────────────┘  └──────────────┘        │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    API[API / CLI<br/>submit job] --> Sched[Scheduler Service<br/>cron trigger, job dispatch]
+    Sched --> Queue[Job Queue<br/>Kafka / Redis, priority-based]
+    Queue --> W1[Worker 1 - executor]
+    Queue --> W2[Worker 2 - executor]
+    Queue --> WN[Worker N - executor]
+    Sched --> PG[(PostgreSQL<br/>job defs, history)]
+    Sched --> Redis[(Redis<br/>locks, heartbeat)]
+    Sched --> Kafka[Kafka<br/>job events, dead letter]
 ```
 
 ---

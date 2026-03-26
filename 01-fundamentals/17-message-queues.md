@@ -264,49 +264,59 @@ Each consumer is a different consumer group:
 
 ### E.2 LLD — Message Consumer with Retry
 
-```python
-class MessageConsumer:
-    def __init__(self, queue_client, handler_fn, dlq_client, max_retries=3):
-        self.queue = queue_client
-        self.handler = handler_fn
-        self.dlq = dlq_client
-        self.max_retries = max_retries
+```java
+public class MessageConsumer {
+    private final QueueClient queue;
+    private final Consumer<String> handler;
+    private final QueueClient dlq;
+    private final RedisClient redis;
+    private final int maxRetries;
 
-    def start(self):
-        while True:
-            message = self.queue.receive(timeout_ms=1000)
-            if message:
-                self._process(message)
+    public MessageConsumer(QueueClient queue, Consumer<String> handler,
+                           QueueClient dlq, RedisClient redis, int maxRetries) {
+        this.queue = queue; this.handler = handler;
+        this.dlq = dlq; this.redis = redis; this.maxRetries = maxRetries;
+    }
 
-    def _process(self, message):
-        retry_count = message.attributes.get("retry_count", 0)
-        try:
-            # Idempotency check
-            if self._already_processed(message.id):
-                self.queue.ack(message)
-                return
+    public void start() {
+        while (true) {
+            Message message = queue.receive(1000);
+            if (message != null) process(message);
+        }
+    }
 
-            self.handler(message.body)
-            self._mark_processed(message.id)
-            self.queue.ack(message)
+    private void process(Message message) {
+        int retryCount = message.getAttributeOrDefault("retry_count", 0);
+        try {
+            // Idempotency check
+            if (alreadyProcessed(message.getId())) { queue.ack(message); return; }
 
-        except RetryableError as e:
-            if retry_count < self.max_retries:
-                self.queue.nack(message, delay_seconds=2 ** retry_count)
-            else:
-                self.dlq.send(message, error=str(e))
-                self.queue.ack(message)
-                alert(f"Message {message.id} sent to DLQ after {self.max_retries} retries")
+            handler.accept(message.getBody());
+            markProcessed(message.getId());
+            queue.ack(message);
 
-        except NonRetryableError as e:
-            self.dlq.send(message, error=str(e))
-            self.queue.ack(message)
+        } catch (RetryableException e) {
+            if (retryCount < maxRetries) {
+                queue.nack(message, (int) Math.pow(2, retryCount));
+            } else {
+                dlq.send(message, e.getMessage());
+                queue.ack(message);
+                alert("Message " + message.getId() + " sent to DLQ after " + maxRetries + " retries");
+            }
+        } catch (NonRetryableException e) {
+            dlq.send(message, e.getMessage());
+            queue.ack(message);
+        }
+    }
 
-    def _already_processed(self, message_id):
-        return self.redis.exists(f"processed:{message_id}")
+    private boolean alreadyProcessed(String messageId) {
+        return redis.exists("processed:" + messageId);
+    }
 
-    def _mark_processed(self, message_id):
-        self.redis.setex(f"processed:{message_id}", 86400, "1")
+    private void markProcessed(String messageId) {
+        redis.setex("processed:" + messageId, 86400, "1");
+    }
+}
 ```
 
 ---

@@ -82,138 +82,165 @@ classDiagram
 
 ## 3. Core Implementation
 
-```python
-import threading
-import json
-from enum import IntEnum
-from datetime import datetime
-from abc import ABC, abstractmethod
+```java
+public enum LogLevel {
+    DEBUG(10), INFO(20), WARN(30), ERROR(40), FATAL(50);
+    private final int value;
+    LogLevel(int value) { this.value = value; }
+    public int getValue() { return value; }
+}
 
-class LogLevel(IntEnum):
-    DEBUG = 10
-    INFO = 20
-    WARN = 30
-    ERROR = 40
-    FATAL = 50
+public class LogRecord {
+    private final LocalDateTime timestamp;
+    private final LogLevel level;
+    private final String message;
+    private final String loggerName;
+    private final Map<String, String> context;
 
-class LogRecord:
-    def __init__(self, level: LogLevel, message: str, logger_name: str,
-                 context: dict = None):
-        self.timestamp = datetime.now()
-        self.level = level
-        self.message = message
-        self.logger_name = logger_name
-        self.context = context or {}
+    public LogRecord(LogLevel level, String message, String loggerName, Map<String, String> context) {
+        this.timestamp = LocalDateTime.now();
+        this.level = level; this.message = message;
+        this.loggerName = loggerName;
+        this.context = (context != null) ? context : Map.of();
+    }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public LogLevel getLevel() { return level; }
+    public String getMessage() { return message; }
+    public String getLoggerName() { return loggerName; }
+    public Map<String, String> getContext() { return context; }
+}
 
+public interface LogFormatter {
+    String format(LogRecord record);
+}
 
-class LogFormatter(ABC):
-    @abstractmethod
-    def format(self, record: LogRecord) -> str:
-        pass
+public class TextFormatter implements LogFormatter {
+    @Override
+    public String format(LogRecord record) {
+        String ts = record.getTimestamp().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        String ctx = record.getContext().isEmpty() ? "" : " | " + record.getContext();
+        return "[" + ts + "] [" + record.getLevel() + "] [" + record.getLoggerName()
+            + "] " + record.getMessage() + ctx;
+    }
+}
 
-class TextFormatter(LogFormatter):
-    def format(self, record: LogRecord) -> str:
-        ts = record.timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        ctx = f" | {record.context}" if record.context else ""
-        return f"[{ts}] [{record.level.name}] [{record.logger_name}] {record.message}{ctx}"
-
-class JsonFormatter(LogFormatter):
-    def format(self, record: LogRecord) -> str:
-        data = {
-            "timestamp": record.timestamp.isoformat(),
-            "level": record.level.name,
-            "logger": record.logger_name,
-            "message": record.message,
-            **record.context,
+public class JsonFormatter implements LogFormatter {
+    @Override
+    public String format(LogRecord record) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("timestamp", record.getTimestamp().toString());
+        data.put("level", record.getLevel().name());
+        data.put("logger", record.getLoggerName());
+        data.put("message", record.getMessage());
+        data.putAll(record.getContext());
+        // Simple JSON serialization
+        StringBuilder sb = new StringBuilder("{");
+        int i = 0;
+        for (Map.Entry<String, Object> e : data.entrySet()) {
+            if (i++ > 0) sb.append(",");
+            sb.append("\"").append(e.getKey()).append("\":\"").append(e.getValue()).append("\"");
         }
-        return json.dumps(data)
+        return sb.append("}").toString();
+    }
+}
 
+public abstract class LogHandler {
+    protected LogFormatter formatter;
+    protected LogLevel level;
 
-class LogHandler(ABC):
-    def __init__(self, formatter: LogFormatter = None, level: LogLevel = LogLevel.DEBUG):
-        self.formatter = formatter or TextFormatter()
-        self.level = level
+    public LogHandler(LogFormatter formatter, LogLevel level) {
+        this.formatter = (formatter != null) ? formatter : new TextFormatter();
+        this.level = level;
+    }
+    public LogHandler() { this(null, LogLevel.DEBUG); }
 
-    @abstractmethod
-    def emit(self, record: LogRecord):
-        pass
+    protected abstract void emit(LogRecord record);
 
-    def handle(self, record: LogRecord):
-        if record.level >= self.level:
-            self.emit(record)
+    public void handle(LogRecord record) {
+        if (record.getLevel().getValue() >= level.getValue()) emit(record);
+    }
+}
 
-class ConsoleHandler(LogHandler):
-    def emit(self, record: LogRecord):
-        print(self.formatter.format(record))
+public class ConsoleHandler extends LogHandler {
+    public ConsoleHandler(LogFormatter f, LogLevel l) { super(f, l); }
+    public ConsoleHandler() { super(); }
+    @Override
+    protected void emit(LogRecord record) { System.out.println(formatter.format(record)); }
+}
 
-class FileHandler(LogHandler):
-    def __init__(self, file_path: str, formatter: LogFormatter = None,
-                 level: LogLevel = LogLevel.DEBUG):
-        super().__init__(formatter, level)
-        self.file_path = file_path
-        self.lock = threading.Lock()
+public class FileHandler extends LogHandler {
+    private final String filePath;
+    private final Object lock = new Object();
 
-    def emit(self, record: LogRecord):
-        line = self.formatter.format(record) + "\n"
-        with self.lock:
-            with open(self.file_path, "a") as f:
-                f.write(line)
+    public FileHandler(String filePath, LogFormatter formatter, LogLevel level) {
+        super(formatter, level); this.filePath = filePath;
+    }
+    public FileHandler(String filePath) { this(filePath, null, LogLevel.DEBUG); }
+
+    @Override
+    protected void emit(LogRecord record) {
+        String line = formatter.format(record) + "\n";
+        synchronized (lock) {
+            try (var writer = new java.io.FileWriter(filePath, true)) {
+                writer.write(line);
+            } catch (java.io.IOException e) {
+                System.err.println("Failed to write log: " + e.getMessage());
+            }
+        }
+    }
+}
 ```
 
 ---
 
 ## 4. Logger & Manager
 
-```python
-class Logger:
-    def __init__(self, name: str, level: LogLevel = LogLevel.DEBUG):
-        self.name = name
-        self.level = level
-        self.handlers: list[LogHandler] = []
-        self.lock = threading.Lock()
+```java
+public class Logger {
+    private final String name;
+    private final LogLevel level;
+    private final List<LogHandler> handlers = new ArrayList<>();
+    private final Object lock = new Object();
 
-    def add_handler(self, handler: LogHandler):
-        self.handlers.append(handler)
+    public Logger(String name, LogLevel level) { this.name = name; this.level = level; }
+    public Logger(String name) { this(name, LogLevel.DEBUG); }
 
-    def log(self, level: LogLevel, message: str, **context):
-        if level < self.level:
-            return
-        record = LogRecord(level, message, self.name, context)
-        with self.lock:
-            for handler in self.handlers:
-                try:
-                    handler.handle(record)
-                except Exception as e:
-                    print(f"Handler error: {e}")
+    public void addHandler(LogHandler handler) { handlers.add(handler); }
 
-    def debug(self, message: str, **ctx):
-        self.log(LogLevel.DEBUG, message, **ctx)
+    public void log(LogLevel level, String message, Map<String, String> context) {
+        if (level.getValue() < this.level.getValue()) return;
+        LogRecord record = new LogRecord(level, message, name, context);
+        synchronized (lock) {
+            for (LogHandler handler : handlers) {
+                try { handler.handle(record); }
+                catch (Exception e) { System.err.println("Handler error: " + e.getMessage()); }
+            }
+        }
+    }
 
-    def info(self, message: str, **ctx):
-        self.log(LogLevel.INFO, message, **ctx)
+    public void debug(String msg) { log(LogLevel.DEBUG, msg, null); }
+    public void info(String msg)  { log(LogLevel.INFO, msg, null); }
+    public void warn(String msg)  { log(LogLevel.WARN, msg, null); }
+    public void error(String msg) { log(LogLevel.ERROR, msg, null); }
+    public void fatal(String msg) { log(LogLevel.FATAL, msg, null); }
 
-    def warn(self, message: str, **ctx):
-        self.log(LogLevel.WARN, message, **ctx)
+    public void error(String msg, Map<String, String> ctx) { log(LogLevel.ERROR, msg, ctx); }
+}
 
-    def error(self, message: str, **ctx):
-        self.log(LogLevel.ERROR, message, **ctx)
+public class LoggerManager {
+    private static final Map<String, Logger> loggers = new HashMap<>();
+    private static final Object lock = new Object();
 
-    def fatal(self, message: str, **ctx):
-        self.log(LogLevel.FATAL, message, **ctx)
+    private LoggerManager() {}
 
-
-class LoggerManager:
-    """Singleton factory for loggers."""
-    _instance = None
-    _loggers: dict[str, Logger] = {}
-    _lock = threading.Lock()
-
-    @classmethod
-    def get_logger(cls, name: str, level: LogLevel = LogLevel.DEBUG) -> Logger:
-        with cls._lock:
-            if name not in cls._loggers:
-                cls._loggers[name] = Logger(name, level)
-            return cls._loggers[name]
+    public static Logger getLogger(String name, LogLevel level) {
+        synchronized (lock) {
+            return loggers.computeIfAbsent(name, k -> new Logger(k, level));
+        }
+    }
+    public static Logger getLogger(String name) { return getLogger(name, LogLevel.DEBUG); }
+}
 ```
 
 ---

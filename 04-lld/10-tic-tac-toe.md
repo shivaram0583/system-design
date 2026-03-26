@@ -55,117 +55,130 @@ classDiagram
 
 ## 3. Core Classes
 
-```python
-from enum import Enum
+```java
+public enum Symbol {
+    X("X"), O("O"), EMPTY(" ");
+    private final String value;
+    Symbol(String value) { this.value = value; }
+    public String getValue() { return value; }
+}
 
-class Symbol(Enum):
-    X = "X"
-    O = "O"
-    EMPTY = " "
+public enum GameStatus { IN_PROGRESS, X_WINS, O_WINS, DRAW }
 
-class GameStatus(Enum):
-    IN_PROGRESS = 1
-    X_WINS = 2
-    O_WINS = 3
-    DRAW = 4
+public class Player {
+    private final String name;
+    private final Symbol symbol;
 
-class Player:
-    def __init__(self, name: str, symbol: Symbol):
-        self.name = name
-        self.symbol = symbol
+    public Player(String name, Symbol symbol) { this.name = name; this.symbol = symbol; }
+    public String getName() { return name; }
+    public Symbol getSymbol() { return symbol; }
+}
 
+public class Board {
+    private final int size;
+    private final Symbol[][] grid;
+    private int movesCount = 0;
 
-class Board:
-    def __init__(self, size: int = 3):
-        self.size = size
-        self.grid: list[list[Symbol]] = [
-            [Symbol.EMPTY] * size for _ in range(size)
-        ]
-        self.moves_count = 0
+    public Board() { this(3); }
+    public Board(int size) {
+        this.size = size;
+        grid = new Symbol[size][size];
+        for (Symbol[] row : grid) Arrays.fill(row, Symbol.EMPTY);
+    }
 
-    def place(self, row: int, col: int, symbol: Symbol) -> bool:
-        if not (0 <= row < self.size and 0 <= col < self.size):
-            raise ValueError(f"Position ({row},{col}) is out of bounds")
-        if self.grid[row][col] != Symbol.EMPTY:
-            raise ValueError(f"Position ({row},{col}) is already occupied")
-        self.grid[row][col] = symbol
-        self.moves_count += 1
-        return True
+    public boolean place(int row, int col, Symbol symbol) {
+        if (row < 0 || row >= size || col < 0 || col >= size)
+            throw new IllegalArgumentException("Position (" + row + "," + col + ") is out of bounds");
+        if (grid[row][col] != Symbol.EMPTY)
+            throw new IllegalArgumentException("Position (" + row + "," + col + ") is already occupied");
+        grid[row][col] = symbol;
+        movesCount++;
+        return true;
+    }
 
-    def is_full(self) -> bool:
-        return self.moves_count == self.size * self.size
+    public boolean isFull() { return movesCount == size * size; }
 
-    def check_win(self, symbol: Symbol) -> bool:
-        n = self.size
+    public boolean checkWin(Symbol symbol) {
+        for (int r = 0; r < size; r++) {
+            boolean rowWin = true;
+            for (int c = 0; c < size; c++) if (grid[r][c] != symbol) { rowWin = false; break; }
+            if (rowWin) return true;
+        }
+        for (int c = 0; c < size; c++) {
+            boolean colWin = true;
+            for (int r = 0; r < size; r++) if (grid[r][c] != symbol) { colWin = false; break; }
+            if (colWin) return true;
+        }
+        boolean diag = true, antiDiag = true;
+        for (int i = 0; i < size; i++) {
+            if (grid[i][i] != symbol) diag = false;
+            if (grid[i][size - 1 - i] != symbol) antiDiag = false;
+        }
+        return diag || antiDiag;
+    }
 
-        # Check rows
-        for r in range(n):
-            if all(self.grid[r][c] == symbol for c in range(n)):
-                return True
+    public String display() {
+        StringBuilder sb = new StringBuilder();
+        String sep = "-".repeat(size * 4 - 1);
+        for (int r = 0; r < size; r++) {
+            if (r > 0) sb.append("\n").append(sep).append("\n");
+            for (int c = 0; c < size; c++) {
+                if (c > 0) sb.append(" | ");
+                sb.append(" ").append(grid[r][c].getValue()).append(" ");
+            }
+        }
+        return sb.toString();
+    }
 
-        # Check columns
-        for c in range(n):
-            if all(self.grid[r][c] == symbol for r in range(n)):
-                return True
-
-        # Check main diagonal
-        if all(self.grid[i][i] == symbol for i in range(n)):
-            return True
-
-        # Check anti-diagonal
-        if all(self.grid[i][n - 1 - i] == symbol for i in range(n)):
-            return True
-
-        return False
-
-    def display(self) -> str:
-        rows = []
-        for r in range(self.size):
-            row_str = " | ".join(cell.value for cell in self.grid[r])
-            rows.append(f" {row_str} ")
-        separator = "-" * (self.size * 4 - 1)
-        return f"\n{separator}\n".join(rows)
+    public int getSize() { return size; }
+}
 ```
 
 ---
 
 ## 4. Game Controller
 
-```python
-class Game:
-    def __init__(self, player1_name: str, player2_name: str, board_size: int = 3):
-        self.board = Board(board_size)
-        self.player1 = Player(player1_name, Symbol.X)
-        self.player2 = Player(player2_name, Symbol.O)
-        self.current_player = self.player1
-        self.status = GameStatus.IN_PROGRESS
+```java
+public class Game {
+    private Board board;
+    private final Player player1;
+    private final Player player2;
+    private Player currentPlayer;
+    private GameStatus status = GameStatus.IN_PROGRESS;
 
-    def make_move(self, row: int, col: int) -> str:
-        if self.status != GameStatus.IN_PROGRESS:
-            raise Exception("Game is already over")
+    public Game(String player1Name, String player2Name, int boardSize) {
+        this.board = new Board(boardSize);
+        this.player1 = new Player(player1Name, Symbol.X);
+        this.player2 = new Player(player2Name, Symbol.O);
+        this.currentPlayer = player1;
+    }
+    public Game(String p1, String p2) { this(p1, p2, 3); }
 
-        self.board.place(row, col, self.current_player.symbol)
+    public String makeMove(int row, int col) {
+        if (status != GameStatus.IN_PROGRESS)
+            throw new RuntimeException("Game is already over");
 
-        if self.board.check_win(self.current_player.symbol):
-            self.status = (GameStatus.X_WINS
-                           if self.current_player.symbol == Symbol.X
-                           else GameStatus.O_WINS)
-            return f"{self.current_player.name} ({self.current_player.symbol.value}) wins!"
+        board.place(row, col, currentPlayer.getSymbol());
 
-        if self.board.is_full():
-            self.status = GameStatus.DRAW
-            return "It's a draw!"
+        if (board.checkWin(currentPlayer.getSymbol())) {
+            status = (currentPlayer.getSymbol() == Symbol.X) ? GameStatus.X_WINS : GameStatus.O_WINS;
+            return currentPlayer.getName() + " (" + currentPlayer.getSymbol().getValue() + ") wins!";
+        }
+        if (board.isFull()) {
+            status = GameStatus.DRAW;
+            return "It's a draw!";
+        }
 
-        # Switch turns
-        self.current_player = (self.player2
-                               if self.current_player == self.player1
-                               else self.player1)
-        return f"{self.current_player.name}'s turn ({self.current_player.symbol.value})"
+        currentPlayer = (currentPlayer == player1) ? player2 : player1;
+        return currentPlayer.getName() + "'s turn (" + currentPlayer.getSymbol().getValue() + ")";
+    }
 
-    def reset(self):
-        self.board = Board(self.board.size)
-        self.current_player = self.player1
-        self.status = GameStatus.IN_PROGRESS
+    public void reset() {
+        board = new Board(board.getSize());
+        currentPlayer = player1;
+        status = GameStatus.IN_PROGRESS;
+    }
+}
 ```
 
 ---

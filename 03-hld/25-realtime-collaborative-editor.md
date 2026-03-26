@@ -28,31 +28,12 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌──────────┐  WebSocket  ┌──────────────────┐              │
-│  │ Client A │◄───────────►│  Collab Service  │              │
-│  │ (editor) │             │  (per-document   │              │
-│  └──────────┘             │   session mgr)   │              │
-│                            └────────┬─────────┘              │
-│  ┌──────────┐                      │                          │
-│  │ Client B │◄─────────────────────┤                          │
-│  │ (editor) │                      │                          │
-│  └──────────┘                      │                          │
-│                            ┌───────┴────────┐                │
-│                            │ Document Store │                │
-│                            │ (PostgreSQL +  │                │
-│                            │  S3 snapshots) │                │
-│                            └───────┬────────┘                │
-│                                    │                          │
-│                            ┌───────┴────────┐                │
-│                            │ Redis          │                │
-│                            │ (sessions,     │                │
-│                            │  presence,     │                │
-│                            │  op buffer)    │                │
-│                            └────────────────┘                │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Client A - editor] <-->|WebSocket| Collab[Collab Service<br/>per-document session mgr]
+    B[Client B - editor] <-->|WebSocket| Collab
+    Collab --> Doc[(Document Store<br/>PostgreSQL + S3 snapshots)]
+    Collab --> Redis[(Redis<br/>sessions, presence, op buffer)]
 ```
 
 ---

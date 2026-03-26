@@ -326,81 +326,82 @@ ALB Configuration:
 
 ### E.2 LLD — Simple Load Balancer
 
-```python
-import random
-import time
-from collections import defaultdict
+```java
+public class Server {
+    private final String host;
+    private final int port;
+    private int weight = 1;
+    private boolean healthy = true;
+    private int activeConnections = 0;
+    private long lastHealthCheck = 0;
 
-class Server:
-    def __init__(self, host: str, port: int, weight: int = 1):
-        self.host = host
-        self.port = port
-        self.weight = weight
-        self.healthy = True
-        self.active_connections = 0
-        self.last_health_check = 0
+    public Server(String host, int port, int weight) {
+        this.host = host; this.port = port; this.weight = weight;
+    }
+    // getters and setters
+}
 
-class LoadBalancer:
-    def __init__(self, algorithm="round_robin"):
-        self.servers = []
-        self.algorithm = algorithm
-        self.rr_index = 0
-        self.request_counts = defaultdict(int)
+public class LoadBalancer {
+    private final List<Server> servers = new ArrayList<>();
+    private final String algorithm;
+    private int rrIndex = 0;
 
-    def add_server(self, server: Server):
-        self.servers.append(server)
+    public LoadBalancer(String algorithm) { this.algorithm = algorithm; }
 
-    def remove_server(self, server: Server):
-        self.servers.remove(server)
+    public void addServer(Server server) { servers.add(server); }
+    public void removeServer(Server server) { servers.remove(server); }
 
-    def get_healthy_servers(self):
-        return [s for s in self.servers if s.healthy]
+    public List<Server> getHealthyServers() {
+        return servers.stream().filter(Server::isHealthy).toList();
+    }
 
-    def get_server(self, client_ip: str = None) -> Server:
-        healthy = self.get_healthy_servers()
-        if not healthy:
-            raise Exception("No healthy servers available")
+    public Server getServer(String clientIp) {
+        List<Server> healthy = getHealthyServers();
+        if (healthy.isEmpty()) throw new RuntimeException("No healthy servers available");
 
-        if self.algorithm == "round_robin":
-            return self._round_robin(healthy)
-        elif self.algorithm == "least_connections":
-            return self._least_connections(healthy)
-        elif self.algorithm == "ip_hash":
-            return self._ip_hash(healthy, client_ip)
-        elif self.algorithm == "weighted_round_robin":
-            return self._weighted_round_robin(healthy)
-        elif self.algorithm == "random":
-            return random.choice(healthy)
+        switch (algorithm) {
+            case "round_robin":          return roundRobin(healthy);
+            case "least_connections":    return leastConnections(healthy);
+            case "ip_hash":             return ipHash(healthy, clientIp);
+            case "weighted_round_robin": return weightedRoundRobin(healthy);
+            case "random":              return healthy.get(new Random().nextInt(healthy.size()));
+            default: throw new IllegalArgumentException("Unknown algorithm: " + algorithm);
+        }
+    }
 
-    def _round_robin(self, servers):
-        server = servers[self.rr_index % len(servers)]
-        self.rr_index += 1
-        return server
+    private Server roundRobin(List<Server> servers) {
+        Server server = servers.get(rrIndex % servers.size());
+        rrIndex++;
+        return server;
+    }
 
-    def _least_connections(self, servers):
-        return min(servers, key=lambda s: s.active_connections)
+    private Server leastConnections(List<Server> servers) {
+        return servers.stream().min(Comparator.comparingInt(Server::getActiveConnections)).orElseThrow();
+    }
 
-    def _ip_hash(self, servers, client_ip):
-        index = hash(client_ip) % len(servers)
-        return servers[index]
+    private Server ipHash(List<Server> servers, String clientIp) {
+        int index = Math.abs(clientIp.hashCode()) % servers.size();
+        return servers.get(index);
+    }
 
-    def _weighted_round_robin(self, servers):
-        weighted_list = []
-        for s in servers:
-            weighted_list.extend([s] * s.weight)
-        server = weighted_list[self.rr_index % len(weighted_list)]
-        self.rr_index += 1
-        return server
+    private Server weightedRoundRobin(List<Server> servers) {
+        List<Server> weightedList = new ArrayList<>();
+        for (Server s : servers)
+            for (int i = 0; i < s.getWeight(); i++) weightedList.add(s);
+        Server server = weightedList.get(rrIndex % weightedList.size());
+        rrIndex++;
+        return server;
+    }
 
-    def health_check(self, check_fn, interval_sec=10):
-        """Run health checks on all servers"""
-        for server in self.servers:
-            try:
-                healthy = check_fn(server.host, server.port)
-                server.healthy = healthy
-            except Exception:
-                server.healthy = False
-            server.last_health_check = time.time()
+    /** Run health checks on all servers */
+    public void healthCheck(BiFunction<String, Integer, Boolean> checkFn) {
+        for (Server server : servers) {
+            try { server.setHealthy(checkFn.apply(server.getHost(), server.getPort())); }
+            catch (Exception e) { server.setHealthy(false); }
+            server.setLastHealthCheck(System.currentTimeMillis());
+        }
+    }
+}
 ```
 
 #### Edge Cases

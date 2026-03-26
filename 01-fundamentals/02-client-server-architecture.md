@@ -28,15 +28,12 @@ Client-Server Architecture is a computing model where **two distinct roles** exi
 
 This is the most fundamental pattern in networked computing. Every time you open a website, use an app, or call an API — you are a client talking to a server.
 
-```
-┌──────────┐         Request          ┌──────────┐
-│          │ ──────────────────────►   │          │
-│  CLIENT  │    "Give me user #42"    │  SERVER  │
-│          │                          │          │
-│ (Browser,│   ◄──────────────────    │ (Web     │
-│  App,    │        Response          │  Server, │
-│  Script) │    {name: "Alice"...}    │  API)    │
-└──────────┘                          └──────────┘
+```mermaid
+sequenceDiagram
+    participant C as Client (Browser, App, Script)
+    participant S as Server (Web Server, API)
+    C->>S: Request — "Give me user #42"
+    S-->>C: Response — {name: "Alice"...}
 ```
 
 ### Why is Client-Server Important?
@@ -56,13 +53,18 @@ It is the **foundational model** upon which virtually all modern systems are bui
 
 #### Peer-to-Peer (P2P)
 
-```
-CLIENT-SERVER:                    PEER-TO-PEER:
-
-  Client ──► Server               Peer ◄──► Peer
-  Client ──► Server               Peer ◄──► Peer
-  Client ──► Server               Peer ◄──► Peer
-                                  (Every node is both client AND server)
+```mermaid
+flowchart LR
+    subgraph Client-Server
+        C1[Client] --> S[Server]
+        C2[Client] --> S
+        C3[Client] --> S
+    end
+    subgraph Peer-to-Peer
+        P1[Peer] <--> P2[Peer]
+        P2 <--> P3[Peer]
+        P3 <--> P1
+    end
 ```
 
 | Aspect | Client-Server | Peer-to-Peer |
@@ -82,41 +84,29 @@ Serverless is **still client-server** — the "server" is just managed by a clou
 
 #### The Request-Response Cycle
 
-```
-┌──────────┐                              ┌──────────┐
-│  CLIENT  │                              │  SERVER  │
-└────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  1. DNS Lookup (translate domain        │
-     │     to IP address)                      │
-     │  ─────────────────────────────────►     │
-     │  ◄─────────────────────────────────     │
-     │     IP: 93.184.216.34                   │
-     │                                         │
-     │  2. TCP Handshake (establish             │
-     │     connection)                         │
-     │  ── SYN ──────────────────────────►     │
-     │  ◄── SYN-ACK ─────────────────────     │
-     │  ── ACK ──────────────────────────►     │
-     │                                         │
-     │  3. TLS Handshake (if HTTPS)            │
-     │  ── ClientHello ──────────────────►     │
-     │  ◄── ServerHello + Certificate ────     │
-     │  ── Key Exchange ─────────────────►     │
-     │                                         │
-     │  4. HTTP Request                        │
-     │  ── GET /api/users/42 ────────────►     │
-     │                                         │
-     │  5. Server Processing                   │
-     │     (auth, business logic, DB query)    │
-     │                                         │
-     │  6. HTTP Response                       │
-     │  ◄── 200 OK {name: "Alice"...} ───     │
-     │                                         │
-     │  7. Connection close (or keep-alive)    │
-     │  ── FIN ──────────────────────────►     │
-     │  ◄── FIN-ACK ─────────────────────     │
-     ▼                                         ▼
+```mermaid
+sequenceDiagram
+    participant C as CLIENT
+    participant S as SERVER
+    Note over C,S: 1. DNS Lookup
+    C->>S: Resolve domain
+    S-->>C: IP: 93.184.216.34
+    Note over C,S: 2. TCP Handshake
+    C->>S: SYN
+    S-->>C: SYN-ACK
+    C->>S: ACK
+    Note over C,S: 3. TLS Handshake (if HTTPS)
+    C->>S: ClientHello
+    S-->>C: ServerHello + Certificate
+    C->>S: Key Exchange
+    Note over C,S: 4. HTTP Request
+    C->>S: GET /api/users/42
+    Note over S: 5. Server Processing (auth, logic, DB)
+    Note over C,S: 6. HTTP Response
+    S-->>C: 200 OK {name: "Alice"...}
+    Note over C,S: 7. Connection close or keep-alive
+    C->>S: FIN
+    S-->>C: FIN-ACK
 ```
 
 #### Key Protocols in Client-Server
@@ -135,13 +125,11 @@ Serverless is **still client-server** — the "server" is just managed by a clou
 
 #### 1-Tier (Single Machine)
 
-```
-┌────────────────────────────────┐
-│         Single Machine          │
-│  ┌────────┐ ┌──────┐ ┌─────┐  │
-│  │  UI    │ │Logic │ │ DB  │  │
-│  └────────┘ └──────┘ └─────┘  │
-└────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Single Machine
+        UI[UI] --- Logic[Logic] --- DB[DB]
+    end
 ```
 
 - Everything on one machine
@@ -150,13 +138,9 @@ Serverless is **still client-server** — the "server" is just managed by a clou
 
 #### 2-Tier (Client + Server)
 
-```
-┌──────────┐           ┌────────────────┐
-│  Client  │ ────────► │    Server      │
-│  (UI +   │           │  (Logic + DB)  │
-│  some    │ ◄──────── │               │
-│  logic)  │           └────────────────┘
-└──────────┘
+```mermaid
+flowchart LR
+    Client["Client (UI + some logic)"] <--> Server["Server (Logic + DB)"]
 ```
 
 - Client talks directly to database server
@@ -165,14 +149,9 @@ Serverless is **still client-server** — the "server" is just managed by a clou
 
 #### 3-Tier (Client + App Server + DB) ⭐ Most Common
 
-```
-┌──────────┐     ┌────────────┐     ┌──────────┐
-│  Client  │────►│ App Server │────►│ Database │
-│  (UI)    │     │ (Logic)    │     │ (Data)   │
-│          │◄────│            │◄────│          │
-└──────────┘     └────────────┘     └──────────┘
-  Presentation     Business Logic     Data Layer
-     Tier              Tier              Tier
+```mermaid
+flowchart LR
+    Client["Client (UI)<br/>Presentation Tier"] <--> App["App Server (Logic)<br/>Business Logic Tier"] <--> DB["Database (Data)<br/>Data Tier"]
 ```
 
 - Clear separation of concerns
@@ -182,11 +161,9 @@ Serverless is **still client-server** — the "server" is just managed by a clou
 
 #### N-Tier (Multi-Tier)
 
-```
-┌────────┐  ┌─────┐  ┌────────┐  ┌───────┐  ┌─────┐  ┌────┐
-│ Client │─►│ CDN │─►│  Load  │─►│  App  │─►│Cache│─►│ DB │
-│        │  │     │  │Balancer│  │Server │  │     │  │    │
-└────────┘  └─────┘  └────────┘  └───────┘  └─────┘  └────┘
+```mermaid
+flowchart LR
+    Client --> CDN --> LB[Load Balancer] --> App[App Server] --> Cache --> DB
 ```
 
 - Real production systems have many tiers
@@ -224,34 +201,37 @@ Serverless is **still client-server** — the "server" is just managed by a clou
 
 As the number of clients grows, a single server becomes a bottleneck. Here's how the architecture evolves:
 
+```mermaid
+flowchart LR
+    subgraph Stage 1: Single Server
+        C1[Client] --> S1[Server + DB]
+    end
 ```
-Stage 1: Single Server
-┌──────────┐     ┌──────────────────┐
-│  Client  │────►│  Server + DB     │
-└──────────┘     └──────────────────┘
 
-Stage 2: Separate DB
-┌──────────┐     ┌──────────┐     ┌──────┐
-│  Client  │────►│  Server  │────►│  DB  │
-└──────────┘     └──────────┘     └──────┘
+```mermaid
+flowchart LR
+    subgraph Stage 2: Separate DB
+        C2[Client] --> S2[Server] --> DB2[DB]
+    end
+```
 
-Stage 3: Load Balancer + Multiple Servers
-┌──────────┐     ┌────┐     ┌──────────┐     ┌──────┐
-│  Client  │────►│ LB │────►│ Server 1 │────►│  DB  │
-│  Client  │────►│    │────►│ Server 2 │────►│      │
-│  Client  │────►│    │────►│ Server 3 │     └──────┘
-└──────────┘     └────┘     └──────────┘
+```mermaid
+flowchart LR
+    subgraph Stage 3: LB + Multiple Servers
+        C3[Clients] --> LB3[LB] --> S3a[Server 1] --> DB3[DB]
+        LB3 --> S3b[Server 2] --> DB3
+        LB3 --> S3c[Server 3] --> DB3
+    end
+```
 
-Stage 4: Add Cache, CDN, Queue, DB Replicas
-┌────────┐  ┌─────┐  ┌────┐  ┌────────┐  ┌───────┐  ┌──────────┐
-│ Client │─►│ CDN │─►│ LB │─►│Servers │─►│ Cache │─►│ DB       │
-│        │  │     │  │    │  │(N)     │  │(Redis)│  │(Primary) │
-└────────┘  └─────┘  └────┘  └───┬────┘  └───────┘  └────┬─────┘
-                                  │                        │
-                              ┌───┴────┐            ┌──────┴─────┐
-                              │ Queue  │            │ DB Replica │
-                              │(Kafka) │            │ (Read)     │
-                              └────────┘            └────────────┘
+```mermaid
+flowchart LR
+    subgraph Stage 4: Full N-Tier
+        C4[Client] --> CDN4[CDN] --> LB4[LB] --> Servers4["Servers (N)"]
+        Servers4 --> Cache4["Cache (Redis)"] --> DBP["DB (Primary)"]
+        Servers4 --> Queue4["Queue (Kafka)"]
+        DBP --> DBR["DB Replica (Read)"]
+    end
 ```
 
 ### Communication Patterns
@@ -267,13 +247,19 @@ Stage 4: Add Cache, CDN, Queue, DB Replicas
 
 #### When to Use Each
 
-```
-Need standard CRUD?                    → Request-Response (REST)
-Need updates every few seconds?        → Polling (simple) or SSE (efficient)
-Need real-time bidirectional?          → WebSocket
-Need server to push events?            → SSE or WebSocket
-Need server-to-server async notify?    → Webhook
-Need low-latency inter-service?        → gRPC
+```mermaid
+flowchart LR
+    A[Need standard CRUD?] -->|Yes|> B[Request-Response (REST)]
+    A -->|No|> C[Need updates every few seconds?]
+    C -->|Yes|> D[ Polling (simple) or SSE (efficient)]
+    C -->|No|> E[Need real-time bidirectional?]
+    E -->|Yes|> F[WebSocket]
+    E -->|No|> G[Need server to push events?]
+    G -->|Yes|> H[SSE or WebSocket]
+    G -->|No|> I[Need server-to-server async notify?]
+    I -->|Yes|> J[Webhook]
+    I -->|No|> K[Need low-latency inter-service?]
+    K -->|Yes|> L[gRPC]
 ```
 
 ---
@@ -326,12 +312,11 @@ Client-server is **implicitly assumed** in nearly every system design interview.
 
 Real servers evolve over time. Clients may be on different versions:
 
-```
-Client v1 → /api/v1/users   → Old response format
-Client v2 → /api/v2/users   → New response format
-Client v3 → /api/v3/users   → Latest format
-
-The server must support all active versions simultaneously.
+```mermaid
+flowchart LR
+    C1[Client v1] -->|GET /api/v1/users|> S1[Server]
+    C2[Client v2] -->|GET /api/v2/users|> S1
+    C3[Client v3] -->|GET /api/v3/users|> S1
 ```
 
 **Strategies:**
@@ -346,15 +331,12 @@ The server must support all active versions simultaneously.
 
 Creating a new TCP connection for every request is expensive. Real servers use **connection pooling**:
 
-```
-Without pooling:
-  Request 1: TCP handshake → Request → Response → Close
-  Request 2: TCP handshake → Request → Response → Close   (slow)
-
-With pooling:
-  Pool: [conn1, conn2, conn3, conn4, conn5]
-  Request 1: Borrow conn1 → Request → Response → Return conn1
-  Request 2: Borrow conn2 → Request → Response → Return conn2  (fast)
+```mermaid
+flowchart LR
+    C[Client] --> P[Pool]
+    P -->|conn1|> S1[Server]
+    P -->|conn2|> S1
+    P -->|conn3|> S1
 ```
 
 This applies to:
@@ -366,19 +348,11 @@ This applies to:
 
 In production, clients must handle server failures gracefully:
 
-```
-Client sends request
-  │
-  ├── Server responds in <200ms → Success ✓
-  │
-  ├── Server responds in >5s → Timeout → Retry with backoff
-  │   ├── Retry 1 (after 1s)
-  │   ├── Retry 2 (after 2s)
-  │   ├── Retry 3 (after 4s)
-  │   └── Give up → Show error to user
-  │
-  └── Server returns 5xx → Retry (server error)
-      Server returns 4xx → Don't retry (client error)
+```mermaid
+flowchart LR
+    C[Client] -->|Request|> S[Server]
+    S -->|Timeout|> C
+    C -->|Retry|> S
 ```
 
 #### Observability in Client-Server
@@ -433,81 +407,63 @@ Design the client-server interaction for loading a product page on an e-commerce
 
 ### Architecture Flow
 
-```
-┌──────────┐     ┌───────┐     ┌─────────┐     ┌───────────────┐
-│  Browser │────►│  CDN  │     │  Load   │     │  App Servers  │
-│  (React) │     │       │     │ Balancer│     │  (Stateless)  │
-└──────────┘     └───┬───┘     └────┬────┘     └───────┬───────┘
-                     │              │                   │
-           ┌─────────┴──┐          │           ┌───────┴───────┐
-           │ Static files│          │           │               │
-           │ (JS,CSS,img)│          │      ┌────┴────┐  ┌───────┴──────┐
-           └────────────┘          │      │  Redis  │  │  PostgreSQL  │
-                                   │      │ (Cache) │  │  (Products,  │
-                              ┌────┴────┐ └─────────┘  │   Reviews)   │
-                              │ Server 1│              └──────────────┘
-                              │ Server 2│
-                              │ Server 3│
-                              └─────────┘
+```mermaid
+flowchart LR
+    Browser["Browser (React)"] --> CDN
+    CDN --> Static["Static files (JS, CSS, img)"]
+    Browser --> LB[Load Balancer]
+    LB --> S1[Server 1]
+    LB --> S2[Server 2]
+    LB --> S3[Server 3]
+    S1 & S2 & S3 --> Redis["Redis (Cache)"]
+    S1 & S2 & S3 --> PG["PostgreSQL (Products, Reviews)"]
 ```
 
 ### Step-by-Step Request Flow
 
-```
-1. User visits https://shop.com/product/12345
-
-2. DNS resolves shop.com → CDN IP (e.g., CloudFront)
-
-3. CDN serves cached static assets (HTML shell, CSS, JS, product images)
-   - Cache HIT → Return immediately (~20ms)
-   - Cache MISS → Fetch from origin server, cache for next time
-
-4. Browser loads React app, which makes API calls:
-
-   GET /api/v1/products/12345
-   GET /api/v1/products/12345/reviews?page=1&limit=10
-   GET /api/v1/recommendations?product_id=12345
-
-5. Requests hit the Load Balancer → routed to an App Server
-
-6. App Server checks Redis cache:
-   - Cache HIT for product details → Return from cache (~1ms)
-   - Cache MISS → Query PostgreSQL (~5-20ms) → Store in cache → Return
-
-7. All 3 API responses return to the browser in parallel
-
-8. React renders the complete product page
-
-Total time: ~200-500ms (with cache hits)
+```mermaid
+flowchart LR
+    C[Client] -->|GET /product/12345|> CDN
+    CDN -->|Cache HIT|> C
+    CDN -->|Cache MISS|> LB
+    LB -->|Forward|> S[Server]
+    S -->|Cache HIT|> C
+    S -->|Cache MISS|> PG
+    PG -->|Row data|> S
+    S -->|SET cache|> Redis
+    S -->|200 OK|> C
 ```
 
 ### API Design
 
-```
-GET /api/v1/products/{id}
-Response: {
-  "id": "12345",
-  "name": "Wireless Headphones",
-  "price": 79.99,
-  "currency": "USD",
-  "description": "...",
-  "images": ["https://cdn.shop.com/img/12345_1.jpg", ...],
-  "in_stock": true,
-  "rating": 4.5,
-  "review_count": 1203
+```java
+public class Product {
+    private int id;
+    private String name;
+    private double price;
+    private String currency;
+    private String description;
+    private List<String> images;
+    private boolean inStock;
+    private double rating;
+    private int reviewCount;
+    // getters and setters
 }
 
-GET /api/v1/products/{id}/reviews?page=1&limit=10
-Response: {
-  "reviews": [...],
-  "total": 1203,
-  "page": 1,
-  "has_next": true
+public class Review {
+    private int id;
+    private int productId;
+    private String text;
+    private int rating;
+    // getters and setters
 }
 
-GET /api/v1/recommendations?product_id={id}&limit=6
-Response: {
-  "products": [...]
+public class Recommendation {
+    private int id;
+    private int productId;
+    private String name;
+    private double price;
+    // getters and setters
 }
 ```
 
@@ -543,60 +499,62 @@ Response: {
 
 #### Capacity Estimation
 
-```
-DAU: 1M users
-Avg requests per user per session: 20
-Sessions per day per user: 2
-Total requests/day: 1M × 20 × 2 = 40M
-QPS: 40M / 86,400 ≈ 460 req/sec
-Peak QPS: 460 × 3 ≈ 1,400 req/sec
-Avg response size: 5 KB
-Bandwidth: 1,400 × 5 KB = 7 MB/sec
+```java
+public class CapacityEstimator {
+    private int dau; // Daily Active Users
+    private int requestsPerUser; // Average requests per user per session
+    private int sessionsPerDay; // Average sessions per day per user
+    private int qps; // Queries per second
+    private int peakQps; // Peak queries per second
+    private int avgResponseSize; // Average response size in bytes
+    private int bandwidth; // Bandwidth in bytes per second
+
+    public CapacityEstimator(int dau, int requestsPerUser, int sessionsPerDay) {
+        this.dau = dau;
+        this.requestsPerUser = requestsPerUser;
+        this.sessionsPerDay = sessionsPerDay;
+        this.qps = calculateQps();
+        this.peakQps = calculatePeakQps();
+        this.avgResponseSize = 5000; // 5 KB
+        this.bandwidth = calculateBandwidth();
+    }
+
+    private int calculateQps() {
+        return dau * requestsPerUser * sessionsPerDay / 86400;
+    }
+
+    private int calculatePeakQps() {
+        return qps * 3;
+    }
+
+    private int calculateBandwidth() {
+        return peakQps * avgResponseSize;
+    }
+
+    public static void main(String[] args) {
+        CapacityEstimator estimator = new CapacityEstimator(1000000, 20, 2);
+        System.out.println("QPS: " + estimator.qps);
+        System.out.println("Peak QPS: " + estimator.peakQps);
+        System.out.println("Bandwidth: " + estimator.bandwidth + " bytes/sec");
+    }
+}
 ```
 
 #### Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENTS                               │
-│  ┌──────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐   │
-│  │ Web  │  │  Mobile  │  │  Mobile  │  │  3rd Party    │   │
-│  │(React│  │  (iOS)   │  │(Android) │  │  API Consumer │   │
-│  └──┬───┘  └────┬─────┘  └────┬─────┘  └───────┬───────┘   │
-└─────┼───────────┼──────────────┼────────────────┼───────────┘
-      │           │              │                │
-      └───────────┴──────┬───────┴────────────────┘
-                         │ HTTPS
-                    ┌────┴─────┐
-                    │   CDN    │ ← Static assets (images, CSS, JS)
-                    └────┬─────┘
-                         │
-                    ┌────┴─────┐
-                    │   DNS    │ ← Domain → IP resolution
-                    └────┬─────┘
-                         │
-                    ┌────┴─────┐
-                    │   WAF    │ ← Web Application Firewall
-                    └────┬─────┘
-                         │
-                    ┌────┴─────┐
-                    │    LB    │ ← Load Balancer (L7)
-                    └────┬─────┘
-                         │
-              ┌──────────┼──────────┐
-              │          │          │
-         ┌────┴───┐ ┌───┴────┐ ┌───┴────┐
-         │Server 1│ │Server 2│ │Server 3│  ← Stateless App Servers
-         └────┬───┘ └───┬────┘ └───┬────┘
-              │         │          │
-              └─────────┼──────────┘
-                        │
-              ┌─────────┼──────────┐
-              │         │          │
-         ┌────┴───┐ ┌───┴────┐ ┌───┴────┐
-         │ Cache  │ │  DB    │ │ Queue  │
-         │(Redis) │ │(Postgres│ │(Kafka) │
-         └────────┘ └────────┘ └────────┘
+```mermaid
+flowchart TD
+    subgraph Clients
+        Web["Web (React)"] & iOS["Mobile (iOS)"] & Android["Mobile (Android)"] & API["3rd Party API"]
+    end
+    Clients -->|HTTPS| CDN["CDN — Static assets"]
+    CDN --> DNS["DNS — Domain → IP"]
+    DNS --> WAF["WAF — Firewall"]
+    WAF --> LB["LB — Load Balancer (L7)"]
+    LB --> S1[Server 1] & S2[Server 2] & S3[Server 3]
+    S1 & S2 & S3 --> Cache["Cache (Redis)"]
+    S1 & S2 & S3 --> DB["DB (Postgres)"]
+    S1 & S2 & S3 --> Queue["Queue (Kafka)"]
 ```
 
 #### Data Flow
@@ -640,63 +598,67 @@ Bandwidth: 1,400 × 5 KB = 7 MB/sec
 
 #### Classes and Components
 
-```
-┌───────────────────────────────────┐
-│           HTTPServer              │
-│  - port: int                      │
-│  - router: Router                 │
-│  - middlewareChain: Middleware[]   │
-│  + start(): void                  │
-│  + stop(): void                   │
-│  + handleRequest(req, res): void  │
-└──────────────┬────────────────────┘
-               │ uses
-     ┌─────────┴──────────┐
-     │                    │
-┌────┴──────┐     ┌───────┴────────┐
-│  Router   │     │  Middleware     │
-│           │     │  (Interface)    │
-│ + addRoute│     │ + process(     │
-│   (method,│     │   req, res,    │
-│    path,  │     │   next): void  │
-│    handler│     └───────┬────────┘
-│   ): void │             │
-│ + resolve │    ┌────────┼─────────────┐
-│   (req):  │    │        │             │
-│   Handler │  ┌─┴──┐  ┌──┴───┐  ┌─────┴────┐
-└───────────┘  │Auth │  │Logger│  │RateLimit │
-               │MW   │  │MW    │  │MW        │
-               └─────┘  └──────┘  └──────────┘
+```mermaid
+classDiagram
+    class HTTPServer {
+        -int port
+        -Router router
+        -Middleware[] middlewareChain
+        +start() void
+        +stop() void
+        +handleRequest(req, res) void
+    }
+    class Router {
+        +addRoute(method, path, handler) void
+        +resolve(req) Handler
+    }
+    class Middleware {
+        <<interface>>
+        +process(req, res, next) void
+    }
+    class AuthMW
+    class LoggerMW
+    class RateLimitMW
+    HTTPServer --> Router
+    HTTPServer --> Middleware
+    AuthMW ..|> Middleware
+    LoggerMW ..|> Middleware
+    RateLimitMW ..|> Middleware
 ```
 
 #### Interfaces
 
-```python
-# Request object
-class Request:
-    method: str          # GET, POST, PUT, DELETE
-    path: str            # /api/v1/users/42
-    headers: dict        # {Authorization: "Bearer ...", Content-Type: "..."}
-    query_params: dict   # {page: 1, limit: 10}
-    body: dict | None    # JSON body for POST/PUT
-    client_ip: str       # Client IP address
-    timestamp: datetime  # When the request was received
+```java
+public class Request {
+    private String method;          // GET, POST, PUT, DELETE
+    private String path;            // /api/v1/users/42
+    private Map<String, String> headers;   // {Authorization: "Bearer ..."}
+    private Map<String, String> queryParams; // {page: "1", limit: "10"}
+    private String body;            // JSON body for POST/PUT
+    private String clientIp;
+    private LocalDateTime timestamp;
+    // getters and setters
+}
 
-# Response object
-class Response:
-    status_code: int     # 200, 404, 500
-    headers: dict        # {Content-Type: "application/json"}
-    body: dict | str     # Response payload
+public class Response {
+    private int statusCode;         // 200, 404, 500
+    private Map<String, String> headers;
+    private Object body;            // Response payload
 
-# Handler interface
-class Handler:
-    def handle(self, request: Request) -> Response:
-        pass
+    public Response() {}
+    public Response(int statusCode, Object body) {
+        this.statusCode = statusCode; this.body = body;
+    }
+    // getters and setters
+}
 
-# Middleware interface
-class Middleware:
-    def process(self, request: Request, response: Response, next: Callable) -> Response:
-        pass
+public interface Handler {
+    Response handle(Request request);
+}
+
+public interface Middleware {
+    void process(Request request, Response response, Runnable next);
+}
 ```
 
 #### Data Models
@@ -753,57 +715,56 @@ Client              LB              Server           Middleware          Handler
 
 #### Pseudocode — Server Request Handling
 
-```python
-class HTTPServer:
-    def __init__(self, port):
-        self.port = port
-        self.router = Router()
-        self.middlewares = []
+```java
+public class HTTPServer {
+    private final int port;
+    private final Router router = new Router();
+    private final List<Middleware> middlewares = new ArrayList<>();
 
-    def use(self, middleware: Middleware):
-        self.middlewares.append(middleware)
+    public HTTPServer(int port) { this.port = port; }
 
-    def handle_request(self, raw_request):
-        # 1. Parse the raw HTTP request
-        request = self.parse_request(raw_request)
-        response = Response()
+    public void use(Middleware middleware) { middlewares.add(middleware); }
 
-        try:
-            # 2. Run middleware chain
-            chain = self.build_middleware_chain(request, response)
-            chain()
+    public Response handleRequest(String rawRequest) {
+        // 1. Parse the raw HTTP request
+        Request request = parseRequest(rawRequest);
+        Response response = new Response();
 
-            # 3. Route to the correct handler
-            handler = self.router.resolve(request)
-            if handler is None:
-                return Response(status_code=404, body={"error": "Not Found"})
+        try {
+            // 2. Run middleware chain
+            buildMiddlewareChain(request, response, 0);
 
-            # 4. Execute handler
-            response = handler.handle(request)
+            // 3. Route to the correct handler
+            Handler handler = router.resolve(request);
+            if (handler == null)
+                return new Response(404, Map.of("error", "Not Found"));
 
-        except AuthenticationError:
-            response = Response(status_code=401, body={"error": "Unauthorized"})
-        except RateLimitExceeded:
-            response = Response(status_code=429, body={"error": "Too Many Requests"})
-        except ValidationError as e:
-            response = Response(status_code=400, body={"error": str(e)})
-        except Exception as e:
-            log.error(f"Unhandled error: {e}", request_id=request.id)
-            response = Response(status_code=500, body={"error": "Internal Server Error"})
-        finally:
-            # 5. Log the request
-            self.log_request(request, response)
+            // 4. Execute handler
+            response = handler.handle(request);
 
-        return response
+        } catch (AuthenticationException e) {
+            response = new Response(401, Map.of("error", "Unauthorized"));
+        } catch (RateLimitExceededException e) {
+            response = new Response(429, Map.of("error", "Too Many Requests"));
+        } catch (ValidationException e) {
+            response = new Response(400, Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unhandled error: " + e.getMessage());
+            response = new Response(500, Map.of("error", "Internal Server Error"));
+        } finally {
+            // 5. Log the request
+            logRequest(request, response);
+        }
+        return response;
+    }
 
-    def build_middleware_chain(self, request, response):
-        """Build a chain of middleware functions"""
-        def chain(index=0):
-            if index < len(self.middlewares):
-                self.middlewares[index].process(
-                    request, response, lambda: chain(index + 1)
-                )
-        return chain
+    private void buildMiddlewareChain(Request req, Response res, int index) {
+        if (index < middlewares.size()) {
+            middlewares.get(index).process(req, res,
+                () -> buildMiddlewareChain(req, res, index + 1));
+        }
+    }
+}
 ```
 
 #### Edge Cases

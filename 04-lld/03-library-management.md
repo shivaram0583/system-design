@@ -18,153 +18,174 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from datetime import datetime, timedelta
+```java
+public enum BookStatus { AVAILABLE, CHECKED_OUT, RESERVED, LOST }
 
-class BookStatus(Enum):
-    AVAILABLE = 1
-    CHECKED_OUT = 2
-    RESERVED = 3
-    LOST = 4
+public enum MemberStatus { ACTIVE, SUSPENDED, CLOSED }
 
-class MemberStatus(Enum):
-    ACTIVE = 1
-    SUSPENDED = 2
-    CLOSED = 3
+public class Book {
+    private final String isbn;
+    private final String title;
+    private final String author;
+    private final String category;
 
-class Book:
-    def __init__(self, isbn: str, title: str, author: str, category: str):
-        self.isbn = isbn
-        self.title = title
-        self.author = author
-        self.category = category
+    public Book(String isbn, String title, String author, String category) {
+        this.isbn = isbn; this.title = title;
+        this.author = author; this.category = category;
+    }
+    public String getIsbn() { return isbn; }
+    public String getTitle() { return title; }
+    public String getAuthor() { return author; }
+}
 
-class BookCopy:
-    def __init__(self, copy_id: str, book: Book):
-        self.copy_id = copy_id
-        self.book = book
-        self.status = BookStatus.AVAILABLE
-        self.due_date = None
-        self.borrowed_by = None
-        self.reserved_by = None
+public class BookCopy {
+    private final String copyId;
+    private final Book book;
+    private BookStatus status = BookStatus.AVAILABLE;
+    private LocalDateTime dueDate;
+    private Member borrowedBy;
+    private Member reservedBy;
 
-    def checkout(self, member: "Member", loan_days: int = 14):
-        if self.status != BookStatus.AVAILABLE:
-            raise Exception(f"Book copy {self.copy_id} is not available")
-        self.status = BookStatus.CHECKED_OUT
-        self.borrowed_by = member
-        self.due_date = datetime.now() + timedelta(days=loan_days)
+    public BookCopy(String copyId, Book book) {
+        this.copyId = copyId; this.book = book;
+    }
 
-    def return_book(self) -> float:
-        fine = self._calculate_fine()
-        if self.reserved_by:
-            self.status = BookStatus.RESERVED
-        else:
-            self.status = BookStatus.AVAILABLE
-        self.borrowed_by = None
-        self.due_date = None
-        return fine
+    public void checkout(Member member, int loanDays) {
+        if (status != BookStatus.AVAILABLE)
+            throw new RuntimeException("Book copy " + copyId + " is not available");
+        status = BookStatus.CHECKED_OUT;
+        borrowedBy = member;
+        dueDate = LocalDateTime.now().plusDays(loanDays);
+    }
+    public void checkout(Member member) { checkout(member, 14); }
 
-    def reserve(self, member: "Member"):
-        if self.status not in (BookStatus.CHECKED_OUT, BookStatus.AVAILABLE):
-            raise Exception("Cannot reserve this book")
-        self.reserved_by = member
-        if self.status == BookStatus.AVAILABLE:
-            self.status = BookStatus.RESERVED
+    public double returnBook() {
+        double fine = calculateFine();
+        status = (reservedBy != null) ? BookStatus.RESERVED : BookStatus.AVAILABLE;
+        borrowedBy = null;
+        dueDate = null;
+        return fine;
+    }
 
-    def _calculate_fine(self) -> float:
-        if self.due_date and datetime.now() > self.due_date:
-            overdue_days = (datetime.now() - self.due_date).days
-            return overdue_days * 0.50  # $0.50 per day
-        return 0.0
+    public void reserve(Member member) {
+        if (status != BookStatus.CHECKED_OUT && status != BookStatus.AVAILABLE)
+            throw new RuntimeException("Cannot reserve this book");
+        reservedBy = member;
+        if (status == BookStatus.AVAILABLE) status = BookStatus.RESERVED;
+    }
 
+    private double calculateFine() {
+        if (dueDate != null && LocalDateTime.now().isAfter(dueDate)) {
+            long overdueDays = java.time.Duration.between(dueDate, LocalDateTime.now()).toDays();
+            return overdueDays * 0.50;
+        }
+        return 0.0;
+    }
 
-class Member:
-    MAX_BOOKS = 5
+    public String getCopyId() { return copyId; }
+    public Book getBook() { return book; }
+    public BookStatus getStatus() { return status; }
+}
 
-    def __init__(self, member_id: str, name: str, email: str):
-        self.member_id = member_id
-        self.name = name
-        self.email = email
-        self.status = MemberStatus.ACTIVE
-        self.checked_out_books: list[BookCopy] = []
-        self.total_fines = 0.0
+public class Member {
+    private static final int MAX_BOOKS = 5;
+    private final String memberId;
+    private final String name;
+    private final String email;
+    private MemberStatus status = MemberStatus.ACTIVE;
+    private final List<BookCopy> checkedOutBooks = new ArrayList<>();
+    private double totalFines = 0.0;
 
-    def can_checkout(self) -> bool:
-        return (self.status == MemberStatus.ACTIVE and
-                len(self.checked_out_books) < self.MAX_BOOKS and
-                self.total_fines == 0)
+    public Member(String memberId, String name, String email) {
+        this.memberId = memberId; this.name = name; this.email = email;
+    }
+
+    public boolean canCheckout() {
+        return status == MemberStatus.ACTIVE
+            && checkedOutBooks.size() < MAX_BOOKS
+            && totalFines == 0;
+    }
+
+    public String getMemberId() { return memberId; }
+    public List<BookCopy> getCheckedOutBooks() { return checkedOutBooks; }
+    public double getTotalFines() { return totalFines; }
+    public void addFine(double fine) { totalFines += fine; }
+}
 ```
 
 ---
 
 ## 3. Library System
 
-```python
-class Library:
-    def __init__(self):
-        self.books: dict[str, Book] = {}           # isbn -> Book
-        self.copies: dict[str, BookCopy] = {}       # copy_id -> BookCopy
-        self.members: dict[str, Member] = {}        # member_id -> Member
+```java
+public class Library {
+    private final Map<String, Book> books = new HashMap<>();       // isbn -> Book
+    private final Map<String, BookCopy> copies = new HashMap<>();  // copyId -> BookCopy
+    private final Map<String, Member> members = new HashMap<>();   // memberId -> Member
 
-    def add_book(self, book: Book, num_copies: int = 1):
-        self.books[book.isbn] = book
-        for i in range(num_copies):
-            copy_id = f"{book.isbn}-{i+1}"
-            self.copies[copy_id] = BookCopy(copy_id, book)
+    public void addBook(Book book, int numCopies) {
+        books.put(book.getIsbn(), book);
+        for (int i = 1; i <= numCopies; i++) {
+            String copyId = book.getIsbn() + "-" + i;
+            copies.put(copyId, new BookCopy(copyId, book));
+        }
+    }
 
-    def register_member(self, member: Member):
-        self.members[member.member_id] = member
+    public void registerMember(Member member) { members.put(member.getMemberId(), member); }
 
-    def search_by_title(self, title: str) -> list[Book]:
-        return [b for b in self.books.values() if title.lower() in b.title.lower()]
+    public List<Book> searchByTitle(String title) {
+        return books.values().stream()
+            .filter(b -> b.getTitle().toLowerCase().contains(title.toLowerCase()))
+            .collect(Collectors.toList());
+    }
 
-    def search_by_author(self, author: str) -> list[Book]:
-        return [b for b in self.books.values() if author.lower() in b.author.lower()]
+    public List<Book> searchByAuthor(String author) {
+        return books.values().stream()
+            .filter(b -> b.getAuthor().toLowerCase().contains(author.toLowerCase()))
+            .collect(Collectors.toList());
+    }
 
-    def search_by_isbn(self, isbn: str) -> Book | None:
-        return self.books.get(isbn)
+    public Book searchByIsbn(String isbn) { return books.get(isbn); }
 
-    def checkout_book(self, member_id: str, isbn: str) -> BookCopy:
-        member = self.members[member_id]
-        if not member.can_checkout():
-            raise Exception("Member cannot checkout (limit reached or fines owed)")
+    public BookCopy checkoutBook(String memberId, String isbn) {
+        Member member = members.get(memberId);
+        if (!member.canCheckout())
+            throw new RuntimeException("Member cannot checkout (limit reached or fines owed)");
+        BookCopy copy = findAvailableCopy(isbn);
+        if (copy == null) throw new RuntimeException("No available copies");
+        copy.checkout(member);
+        member.getCheckedOutBooks().add(copy);
+        return copy;
+    }
 
-        # Find available copy
-        copy = self._find_available_copy(isbn)
-        if not copy:
-            raise Exception("No available copies")
+    public double returnBook(String memberId, String copyId) {
+        Member member = members.get(memberId);
+        BookCopy copy = copies.get(copyId);
+        double fine = copy.returnBook();
+        member.getCheckedOutBooks().remove(copy);
+        member.addFine(fine);
+        return fine;
+    }
 
-        copy.checkout(member)
-        member.checked_out_books.append(copy)
-        return copy
+    public void reserveBook(String memberId, String isbn) {
+        Member member = members.get(memberId);
+        for (BookCopy copy : copies.values()) {
+            if (copy.getBook().getIsbn().equals(isbn)
+                    && copy.getStatus() == BookStatus.CHECKED_OUT) {
+                copy.reserve(member);
+                return;
+            }
+        }
+        throw new RuntimeException("No checked-out copies to reserve");
+    }
 
-    def return_book(self, member_id: str, copy_id: str) -> float:
-        member = self.members[member_id]
-        copy = self.copies[copy_id]
-        fine = copy.return_book()
-        member.checked_out_books.remove(copy)
-        member.total_fines += fine
-        return fine
-
-    def reserve_book(self, member_id: str, isbn: str):
-        member = self.members[member_id]
-        copies = [c for c in self.copies.values() if c.book.isbn == isbn]
-        if not copies:
-            raise Exception("Book not found")
-        # Reserve the first checked-out copy
-        for copy in copies:
-            if copy.status == BookStatus.CHECKED_OUT:
-                copy.reserve(member)
-                return
-        raise Exception("All copies are available — just check one out")
-
-    def _find_available_copy(self, isbn: str) -> BookCopy | None:
-        for copy in self.copies.values():
-            if copy.book.isbn == isbn and copy.status == BookStatus.AVAILABLE:
-                return copy
-        return None
+    private BookCopy findAvailableCopy(String isbn) {
+        return copies.values().stream()
+            .filter(c -> c.getBook().getIsbn().equals(isbn)
+                      && c.getStatus() == BookStatus.AVAILABLE)
+            .findFirst().orElse(null);
+    }
+}
 ```
 
 ---

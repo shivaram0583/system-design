@@ -17,161 +17,162 @@
 
 ## 2. Core Classes
 
-```python
-from enum import Enum
-from threading import Lock
-import heapq
+```java
+public enum Direction { UP, DOWN, IDLE }
 
-class Direction(Enum):
-    UP = 1
-    DOWN = -1
-    IDLE = 0
+public enum ElevatorState { MOVING, STOPPED, MAINTENANCE }
 
-class ElevatorState(Enum):
-    MOVING = 1
-    STOPPED = 2
-    MAINTENANCE = 3
+public class Request {
+    private final int floor;
+    private final Direction direction;
 
-class Request:
-    def __init__(self, floor: int, direction: Direction):
-        self.floor = floor
-        self.direction = direction
+    public Request(int floor, Direction direction) {
+        this.floor = floor;
+        this.direction = direction;
+    }
+    public int getFloor() { return floor; }
+    public Direction getDirection() { return direction; }
+}
 
-class Elevator:
-    def __init__(self, elevator_id: int, capacity: int = 10):
-        self.id = elevator_id
-        self.current_floor = 0
-        self.direction = Direction.IDLE
-        self.state = ElevatorState.STOPPED
-        self.capacity = capacity
-        self.destinations = set()  # floors to stop at
-        self.lock = Lock()
+public class Elevator {
+    private final int id;
+    private int currentFloor = 0;
+    private Direction direction = Direction.IDLE;
+    private ElevatorState state = ElevatorState.STOPPED;
+    private final int capacity;
+    private final Set<Integer> destinations = new HashSet<>();
+    private final Object lock = new Object();
 
-    def add_destination(self, floor: int):
-        with self.lock:
-            self.destinations.add(floor)
-            self._update_direction()
+    public Elevator(int id, int capacity) {
+        this.id = id;
+        this.capacity = capacity;
+    }
 
-    def _update_direction(self):
-        if not self.destinations:
-            self.direction = Direction.IDLE
-            return
-        if all(f > self.current_floor for f in self.destinations):
-            self.direction = Direction.UP
-        elif all(f < self.current_floor for f in self.destinations):
-            self.direction = Direction.DOWN
+    public void addDestination(int floor) {
+        synchronized (lock) {
+            destinations.add(floor);
+            updateDirection();
+        }
+    }
 
-    def move(self):
-        """Simulate one step of movement."""
-        with self.lock:
-            if self.direction == Direction.UP:
-                self.current_floor += 1
-            elif self.direction == Direction.DOWN:
-                self.current_floor -= 1
+    private void updateDirection() {
+        if (destinations.isEmpty()) { direction = Direction.IDLE; return; }
+        if (destinations.stream().allMatch(f -> f > currentFloor)) direction = Direction.UP;
+        else if (destinations.stream().allMatch(f -> f < currentFloor)) direction = Direction.DOWN;
+    }
 
-            if self.current_floor in self.destinations:
-                self.destinations.remove(self.current_floor)
-                self.state = ElevatorState.STOPPED
-                # Open doors, let people in/out
-                self._update_direction()
-            else:
-                self.state = ElevatorState.MOVING
+    public void move() {
+        synchronized (lock) {
+            if (direction == Direction.UP) currentFloor++;
+            else if (direction == Direction.DOWN) currentFloor--;
 
-    def is_idle(self) -> bool:
-        return self.direction == Direction.IDLE
+            if (destinations.remove(currentFloor)) {
+                state = ElevatorState.STOPPED;
+                updateDirection();
+            } else {
+                state = ElevatorState.MOVING;
+            }
+        }
+    }
+
+    public boolean isIdle() { return direction == Direction.IDLE; }
+    public int getId() { return id; }
+    public int getCurrentFloor() { return currentFloor; }
+    public Direction getDirection() { return direction; }
+}
 ```
 
 ---
 
 ## 3. Scheduling Strategy
 
-```python
-from abc import ABC, abstractmethod
+```java
+public interface SchedulingStrategy {
+    Elevator selectElevator(List<Elevator> elevators, Request request);
+}
 
-class SchedulingStrategy(ABC):
-    @abstractmethod
-    def select_elevator(self, elevators: list[Elevator], request: Request) -> Elevator:
-        pass
+public class LookScheduling implements SchedulingStrategy {
+    // LOOK algorithm (elevator scan) — most common real-world strategy
 
-class LookScheduling(SchedulingStrategy):
-    """LOOK algorithm (elevator scan) — most common real-world strategy."""
+    @Override
+    public Elevator selectElevator(List<Elevator> elevators, Request request) {
+        Elevator best = null;
+        int bestScore = Integer.MAX_VALUE;
+        for (Elevator e : elevators) {
+            int score = calculateScore(e, request);
+            if (score < bestScore) { bestScore = score; best = e; }
+        }
+        return best;
+    }
 
-    def select_elevator(self, elevators: list[Elevator], request: Request) -> Elevator:
-        best = None
-        best_score = float('inf')
+    private int calculateScore(Elevator elevator, Request request) {
+        int distance = Math.abs(elevator.getCurrentFloor() - request.getFloor());
 
-        for elevator in elevators:
-            score = self._calculate_score(elevator, request)
-            if score < best_score:
-                best_score = score
-                best = elevator
-        return best
+        if (elevator.isIdle()) return distance;
 
-    def _calculate_score(self, elevator: Elevator, request: Request) -> int:
-        distance = abs(elevator.current_floor - request.floor)
+        if (elevator.getDirection() == Direction.UP &&
+            elevator.getCurrentFloor() <= request.getFloor() &&
+            request.getDirection() == Direction.UP) return distance;
 
-        # Idle elevator: just distance
-        if elevator.is_idle():
-            return distance
+        if (elevator.getDirection() == Direction.DOWN &&
+            elevator.getCurrentFloor() >= request.getFloor() &&
+            request.getDirection() == Direction.DOWN) return distance;
 
-        # Moving toward request in same direction: best case
-        if (elevator.direction == Direction.UP and
-            elevator.current_floor <= request.floor and
-            request.direction == Direction.UP):
-            return distance
+        return distance + 1000; // moving away: penalize
+    }
+}
 
-        if (elevator.direction == Direction.DOWN and
-            elevator.current_floor >= request.floor and
-            request.direction == Direction.DOWN):
-            return distance
+public class NearestElevator implements SchedulingStrategy {
+    // Simple: pick the closest idle or same-direction elevator
 
-        # Moving away: penalize (will need to reverse)
-        return distance + 1000
-
-
-class NearestElevator(SchedulingStrategy):
-    """Simple: pick the closest idle or same-direction elevator."""
-
-    def select_elevator(self, elevators: list[Elevator], request: Request) -> Elevator:
-        idle = [e for e in elevators if e.is_idle()]
-        if idle:
-            return min(idle, key=lambda e: abs(e.current_floor - request.floor))
-        return min(elevators, key=lambda e: abs(e.current_floor - request.floor))
+    @Override
+    public Elevator selectElevator(List<Elevator> elevators, Request request) {
+        List<Elevator> idle = elevators.stream()
+            .filter(Elevator::isIdle).collect(Collectors.toList());
+        List<Elevator> pool = idle.isEmpty() ? elevators : idle;
+        return pool.stream()
+            .min(Comparator.comparingInt(e -> Math.abs(e.getCurrentFloor() - request.getFloor())))
+            .orElse(null);
+    }
+}
 ```
 
 ---
 
 ## 4. Elevator Controller
 
-```python
-class ElevatorController:
-    def __init__(self, elevators: list[Elevator], strategy: SchedulingStrategy):
-        self.elevators = elevators
-        self.strategy = strategy
-        self.pending_requests = []
+```java
+public class ElevatorController {
+    private final List<Elevator> elevators;
+    private final SchedulingStrategy strategy;
 
-    def request_elevator(self, floor: int, direction: Direction):
-        """External request: user presses UP/DOWN on a floor."""
-        request = Request(floor, direction)
-        elevator = self.strategy.select_elevator(self.elevators, request)
-        elevator.add_destination(floor)
-        return elevator.id
+    public ElevatorController(List<Elevator> elevators, SchedulingStrategy strategy) {
+        this.elevators = elevators;
+        this.strategy = strategy;
+    }
 
-    def select_floor(self, elevator_id: int, floor: int):
-        """Internal request: user presses floor button inside elevator."""
-        elevator = self._get_elevator(elevator_id)
-        elevator.add_destination(floor)
+    public int requestElevator(int floor, Direction direction) {
+        Request request = new Request(floor, direction);
+        Elevator elevator = strategy.selectElevator(elevators, request);
+        elevator.addDestination(floor);
+        return elevator.getId();
+    }
 
-    def step(self):
-        """Advance all elevators by one step (called by simulation loop)."""
-        for elevator in self.elevators:
-            elevator.move()
+    public void selectFloor(int elevatorId, int floor) {
+        Elevator elevator = getElevator(elevatorId);
+        elevator.addDestination(floor);
+    }
 
-    def _get_elevator(self, elevator_id: int) -> Elevator:
-        for e in self.elevators:
-            if e.id == elevator_id:
-                return e
-        raise ValueError(f"Elevator {elevator_id} not found")
+    public void step() {
+        for (Elevator elevator : elevators) elevator.move();
+    }
+
+    private Elevator getElevator(int elevatorId) {
+        return elevators.stream()
+            .filter(e -> e.getId() == elevatorId).findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Elevator " + elevatorId + " not found"));
+    }
+}
 ```
 
 ---

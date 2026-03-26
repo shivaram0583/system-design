@@ -83,215 +83,238 @@ classDiagram
 
 ## 3. Core Implementation
 
-```python
-import uuid
-import threading
-from enum import Enum
-from datetime import datetime
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
+```java
+public enum PaymentStatus {
+    CREATED, PROCESSING, COMPLETED, FAILED, REFUNDED, PARTIALLY_REFUNDED;
 
-class PaymentStatus(Enum):
-    CREATED = "created"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    REFUNDED = "refunded"
-    PARTIALLY_REFUNDED = "partially_refunded"
+    private static final Map<PaymentStatus, Set<PaymentStatus>> VALID_TRANSITIONS = Map.of(
+        CREATED, Set.of(PROCESSING),
+        PROCESSING, Set.of(COMPLETED, FAILED),
+        COMPLETED, Set.of(REFUNDED, PARTIALLY_REFUNDED),
+        PARTIALLY_REFUNDED, Set.of(REFUNDED, PARTIALLY_REFUNDED),
+        FAILED, Set.of(),
+        REFUNDED, Set.of()
+    );
 
-# Valid state transitions
-VALID_TRANSITIONS = {
-    PaymentStatus.CREATED: {PaymentStatus.PROCESSING},
-    PaymentStatus.PROCESSING: {PaymentStatus.COMPLETED, PaymentStatus.FAILED},
-    PaymentStatus.COMPLETED: {PaymentStatus.REFUNDED, PaymentStatus.PARTIALLY_REFUNDED},
-    PaymentStatus.PARTIALLY_REFUNDED: {PaymentStatus.REFUNDED, PaymentStatus.PARTIALLY_REFUNDED},
-    PaymentStatus.FAILED: set(),
-    PaymentStatus.REFUNDED: set(),
+    public boolean canTransitionTo(PaymentStatus next) {
+        return VALID_TRANSITIONS.getOrDefault(this, Set.of()).contains(next);
+    }
 }
 
-@dataclass
-class Money:
-    amount_cents: int
-    currency: str = "USD"
+public class Money {
+    private final int amountCents;
+    private final String currency;
 
-    def add(self, other: "Money") -> "Money":
-        assert self.currency == other.currency
-        return Money(self.amount_cents + other.amount_cents, self.currency)
+    public Money(int amountCents, String currency) {
+        this.amountCents = amountCents; this.currency = currency;
+    }
+    public Money(int amountCents) { this(amountCents, "USD"); }
 
-    def subtract(self, other: "Money") -> "Money":
-        assert self.currency == other.currency
-        return Money(self.amount_cents - other.amount_cents, self.currency)
+    public Money add(Money other) {
+        assert currency.equals(other.currency);
+        return new Money(amountCents + other.amountCents, currency);
+    }
+    public Money subtract(Money other) {
+        assert currency.equals(other.currency);
+        return new Money(amountCents - other.amountCents, currency);
+    }
+    public int getAmountCents() { return amountCents; }
+    public String getCurrency() { return currency; }
+    @Override public String toString() {
+        return String.format("$%.2f %s", amountCents / 100.0, currency);
+    }
+}
 
-    def __str__(self):
-        return f"${self.amount_cents / 100:.2f} {self.currency}"
+public class ProviderResult {
+    private final boolean success;
+    private final String providerTxnId;
+    private final String errorMessage;
 
-@dataclass
-class ProviderResult:
-    success: bool
-    provider_txn_id: str = ""
-    error_message: str = ""
+    public ProviderResult(boolean success, String providerTxnId, String errorMessage) {
+        this.success = success; this.providerTxnId = providerTxnId;
+        this.errorMessage = errorMessage;
+    }
+    public boolean isSuccess() { return success; }
+    public String getProviderTxnId() { return providerTxnId; }
+}
 
+public class Payment {
+    private final String id;
+    private final String idempotencyKey;
+    private final Money amount;
+    private final String userId;
+    private final String providerName;
+    private PaymentStatus status = PaymentStatus.CREATED;
+    private String providerTxnId = "";
+    private Money refundedAmount;
+    private LocalDateTime updatedAt;
 
-class Payment:
-    def __init__(self, idempotency_key: str, amount: Money, user_id: str,
-                 provider_name: str):
-        self.id = str(uuid.uuid4())
-        self.idempotency_key = idempotency_key
-        self.amount = amount
-        self.user_id = user_id
-        self.provider_name = provider_name
-        self.status = PaymentStatus.CREATED
-        self.provider_txn_id: str = ""
-        self.refunded_amount = Money(0, amount.currency)
-        self.created_at = datetime.now()
-        self.updated_at = datetime.now()
+    public Payment(String idempotencyKey, Money amount, String userId, String providerName) {
+        this.id = UUID.randomUUID().toString();
+        this.idempotencyKey = idempotencyKey;
+        this.amount = amount; this.userId = userId;
+        this.providerName = providerName;
+        this.refundedAmount = new Money(0, amount.getCurrency());
+        this.updatedAt = LocalDateTime.now();
+    }
 
-    def transition_to(self, new_status: PaymentStatus):
-        if new_status not in VALID_TRANSITIONS.get(self.status, set()):
-            raise ValueError(
-                f"Invalid transition: {self.status.value} -> {new_status.value}"
-            )
-        self.status = new_status
-        self.updated_at = datetime.now()
+    public void transitionTo(PaymentStatus newStatus) {
+        if (!status.canTransitionTo(newStatus))
+            throw new IllegalStateException("Invalid transition: " + status + " -> " + newStatus);
+        status = newStatus;
+        updatedAt = LocalDateTime.now();
+    }
+
+    public String getId() { return id; }
+    public Money getAmount() { return amount; }
+    public String getUserId() { return userId; }
+    public String getProviderName() { return providerName; }
+    public PaymentStatus getStatus() { return status; }
+    public String getProviderTxnId() { return providerTxnId; }
+    public void setProviderTxnId(String id) { providerTxnId = id; }
+    public Money getRefundedAmount() { return refundedAmount; }
+    public void setRefundedAmount(Money m) { refundedAmount = m; }
+}
 ```
 
 ---
 
 ## 4. Payment Provider & Ledger
 
-```python
-class PaymentProvider(ABC):
-    @abstractmethod
-    def charge(self, amount: Money, metadata: dict) -> ProviderResult:
-        pass
+```java
+public interface PaymentProvider {
+    ProviderResult charge(Money amount, Map<String, String> metadata);
+    ProviderResult refund(String providerTxnId, Money amount);
+}
 
-    @abstractmethod
-    def refund(self, provider_txn_id: str, amount: Money) -> ProviderResult:
-        pass
+public class StripeProvider implements PaymentProvider {
+    @Override
+    public ProviderResult charge(Money amount, Map<String, String> metadata) {
+        String txnId = "stripe_" + UUID.randomUUID().toString().substring(0, 12);
+        System.out.println("[Stripe] Charged " + amount + " | txn: " + txnId);
+        return new ProviderResult(true, txnId, "");
+    }
+    @Override
+    public ProviderResult refund(String providerTxnId, Money amount) {
+        String refundId = "stripe_ref_" + UUID.randomUUID().toString().substring(0, 12);
+        System.out.println("[Stripe] Refunded " + amount + " for " + providerTxnId);
+        return new ProviderResult(true, refundId, "");
+    }
+}
 
-class StripeProvider(PaymentProvider):
-    def charge(self, amount: Money, metadata: dict) -> ProviderResult:
-        # In production: call Stripe API
-        txn_id = f"stripe_{uuid.uuid4().hex[:12]}"
-        print(f"[Stripe] Charged {amount} | txn: {txn_id}")
-        return ProviderResult(success=True, provider_txn_id=txn_id)
+public class LedgerEntry {
+    final String txnId, account, entryType;
+    final int amountCents;
+    final LocalDateTime timestamp;
 
-    def refund(self, provider_txn_id: str, amount: Money) -> ProviderResult:
-        refund_id = f"stripe_ref_{uuid.uuid4().hex[:12]}"
-        print(f"[Stripe] Refunded {amount} for {provider_txn_id}")
-        return ProviderResult(success=True, provider_txn_id=refund_id)
+    public LedgerEntry(String txnId, String account, int amountCents,
+                       String entryType, LocalDateTime timestamp) {
+        this.txnId = txnId; this.account = account;
+        this.amountCents = amountCents; this.entryType = entryType;
+        this.timestamp = timestamp;
+    }
+}
 
+public class LedgerService {
+    private final List<LedgerEntry> entries = new ArrayList<>();
+    private final Object lock = new Object();
 
-@dataclass
-class LedgerEntry:
-    txn_id: str
-    account: str
-    amount_cents: int
-    entry_type: str  # "debit" or "credit"
-    timestamp: datetime
+    public void recordPayment(Payment payment) {
+        synchronized (lock) {
+            entries.add(new LedgerEntry(payment.getId(), "user:" + payment.getUserId(),
+                payment.getAmount().getAmountCents(), "debit", LocalDateTime.now()));
+            entries.add(new LedgerEntry(payment.getId(), "merchant:revenue",
+                payment.getAmount().getAmountCents(), "credit", LocalDateTime.now()));
+        }
+    }
 
-class LedgerService:
-    def __init__(self):
-        self.entries: list[LedgerEntry] = []
-        self.lock = threading.Lock()
-
-    def record_payment(self, payment: Payment):
-        """Double-entry: debit user account, credit merchant account."""
-        with self.lock:
-            self.entries.append(LedgerEntry(
-                payment.id, f"user:{payment.user_id}",
-                payment.amount.amount_cents, "debit", datetime.now()
-            ))
-            self.entries.append(LedgerEntry(
-                payment.id, "merchant:revenue",
-                payment.amount.amount_cents, "credit", datetime.now()
-            ))
-
-    def record_refund(self, payment: Payment, refund_amount: Money):
-        with self.lock:
-            self.entries.append(LedgerEntry(
-                payment.id, f"user:{payment.user_id}",
-                refund_amount.amount_cents, "credit", datetime.now()
-            ))
-            self.entries.append(LedgerEntry(
-                payment.id, "merchant:revenue",
-                refund_amount.amount_cents, "debit", datetime.now()
-            ))
+    public void recordRefund(Payment payment, Money refundAmount) {
+        synchronized (lock) {
+            entries.add(new LedgerEntry(payment.getId(), "user:" + payment.getUserId(),
+                refundAmount.getAmountCents(), "credit", LocalDateTime.now()));
+            entries.add(new LedgerEntry(payment.getId(), "merchant:revenue",
+                refundAmount.getAmountCents(), "debit", LocalDateTime.now()));
+        }
+    }
+}
 ```
 
 ---
 
 ## 5. Payment Service
 
-```python
-class PaymentService:
-    def __init__(self):
-        self.providers: dict[str, PaymentProvider] = {}
-        self.payments: dict[str, Payment] = {}
-        self.idempotency_map: dict[str, str] = {}  # key -> payment_id
-        self.ledger = LedgerService()
-        self.lock = threading.Lock()
+```java
+public class PaymentService {
+    private final Map<String, PaymentProvider> providers = new HashMap<>();
+    private final Map<String, Payment> payments = new HashMap<>();
+    private final Map<String, String> idempotencyMap = new HashMap<>(); // key -> paymentId
+    private final LedgerService ledger = new LedgerService();
+    private final Object lock = new Object();
 
-    def register_provider(self, name: str, provider: PaymentProvider):
-        self.providers[name] = provider
+    public void registerProvider(String name, PaymentProvider provider) {
+        providers.put(name, provider);
+    }
 
-    def create_payment(self, idempotency_key: str, amount: Money,
-                       user_id: str, provider_name: str = "stripe") -> Payment:
-        with self.lock:
-            # Idempotency: return existing payment if key already used
-            if idempotency_key in self.idempotency_map:
-                return self.payments[self.idempotency_map[idempotency_key]]
+    public Payment createPayment(String idempotencyKey, Money amount,
+                                 String userId, String providerName) {
+        synchronized (lock) {
+            if (idempotencyMap.containsKey(idempotencyKey))
+                return payments.get(idempotencyMap.get(idempotencyKey));
+            Payment payment = new Payment(idempotencyKey, amount, userId, providerName);
+            payments.put(payment.getId(), payment);
+            idempotencyMap.put(idempotencyKey, payment.getId());
+            return payment;
+        }
+    }
 
-            payment = Payment(idempotency_key, amount, user_id, provider_name)
-            self.payments[payment.id] = payment
-            self.idempotency_map[idempotency_key] = payment.id
-            return payment
+    public Payment processPayment(String paymentId) {
+        Payment payment = payments.get(paymentId);
+        if (payment == null) throw new IllegalArgumentException("Payment not found");
 
-    def process_payment(self, payment_id: str) -> Payment:
-        payment = self.payments.get(payment_id)
-        if not payment:
-            raise ValueError("Payment not found")
+        payment.transitionTo(PaymentStatus.PROCESSING);
 
-        payment.transition_to(PaymentStatus.PROCESSING)
+        PaymentProvider provider = providers.get(payment.getProviderName());
+        if (provider == null) {
+            payment.transitionTo(PaymentStatus.FAILED);
+            throw new IllegalArgumentException("Provider '" + payment.getProviderName() + "' not registered");
+        }
 
-        provider = self.providers.get(payment.provider_name)
-        if not provider:
-            payment.transition_to(PaymentStatus.FAILED)
-            raise ValueError(f"Provider '{payment.provider_name}' not registered")
+        ProviderResult result = provider.charge(payment.getAmount(),
+            Map.of("payment_id", payment.getId()));
 
-        result = provider.charge(payment.amount, {"payment_id": payment.id})
+        if (result.isSuccess()) {
+            payment.setProviderTxnId(result.getProviderTxnId());
+            payment.transitionTo(PaymentStatus.COMPLETED);
+            ledger.recordPayment(payment);
+        } else {
+            payment.transitionTo(PaymentStatus.FAILED);
+        }
+        return payment;
+    }
 
-        if result.success:
-            payment.provider_txn_id = result.provider_txn_id
-            payment.transition_to(PaymentStatus.COMPLETED)
-            self.ledger.record_payment(payment)
-        else:
-            payment.transition_to(PaymentStatus.FAILED)
+    public Payment refund(String paymentId, Money amount) {
+        Payment payment = payments.get(paymentId);
+        if (payment == null) throw new IllegalArgumentException("Payment not found");
 
-        return payment
+        Money refundAmount = (amount != null) ? amount : payment.getAmount();
+        Money maxRefundable = payment.getAmount().subtract(payment.getRefundedAmount());
+        if (refundAmount.getAmountCents() > maxRefundable.getAmountCents())
+            throw new IllegalArgumentException("Refund exceeds remaining amount");
 
-    def refund(self, payment_id: str, amount: Money = None) -> Payment:
-        payment = self.payments.get(payment_id)
-        if not payment:
-            raise ValueError("Payment not found")
+        PaymentProvider provider = providers.get(payment.getProviderName());
+        ProviderResult result = provider.refund(payment.getProviderTxnId(), refundAmount);
 
-        refund_amount = amount or payment.amount
-        max_refundable = payment.amount.subtract(payment.refunded_amount)
-        if refund_amount.amount_cents > max_refundable.amount_cents:
-            raise ValueError("Refund exceeds remaining amount")
-
-        provider = self.providers[payment.provider_name]
-        result = provider.refund(payment.provider_txn_id, refund_amount)
-
-        if result.success:
-            payment.refunded_amount = payment.refunded_amount.add(refund_amount)
-            if payment.refunded_amount.amount_cents >= payment.amount.amount_cents:
-                payment.transition_to(PaymentStatus.REFUNDED)
-            else:
-                payment.transition_to(PaymentStatus.PARTIALLY_REFUNDED)
-            self.ledger.record_refund(payment, refund_amount)
-
-        return payment
+        if (result.isSuccess()) {
+            payment.setRefundedAmount(payment.getRefundedAmount().add(refundAmount));
+            if (payment.getRefundedAmount().getAmountCents() >= payment.getAmount().getAmountCents())
+                payment.transitionTo(PaymentStatus.REFUNDED);
+            else
+                payment.transitionTo(PaymentStatus.PARTIALLY_REFUNDED);
+            ledger.recordRefund(payment, refundAmount);
+        }
+        return payment;
+    }
+}
 ```
 
 ---

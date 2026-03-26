@@ -27,29 +27,15 @@
 
 ## 2. High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                                │
-│  ┌────────┐         ┌────────────────┐                       │
-│  │ Client │────────►│  API Gateway   │                       │
-│  └────────┘         └───────┬────────┘                       │
-│                              │                                │
-│       ┌──────────────────────┼──────────────┐               │
-│       │                      │               │               │
-│  ┌────┴──────┐  ┌───────────┴──┐  ┌────────┴────┐         │
-│  │Event Svc  │  │Booking Svc   │  │Queue Svc    │         │
-│  │(catalog)  │  │(seat lock +  │  │(virtual     │         │
-│  └───────────┘  │ payment)     │  │ waiting room)│        │
-│                  └──────┬───────┘  └─────────────┘         │
-│                         │                                    │
-│         ┌───────────────┼────────────────┐                  │
-│         │               │                │                  │
-│  ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐         │
-│  │PostgreSQL   │ │ Redis       │ │ Kafka       │         │
-│  │(bookings,   │ │ (seat locks,│ │ (events,    │         │
-│  │ events)     │ │  queue)     │ │  async)     │         │
-│  └─────────────┘ └─────────────┘ └─────────────┘         │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client --> GW[API Gateway]
+    GW --> Event[Event Service<br/>catalog]
+    GW --> Booking[Booking Service<br/>seat lock + payment]
+    GW --> Queue[Queue Service<br/>virtual waiting room]
+    Booking --> PG[(PostgreSQL<br/>bookings, events)]
+    Booking --> Redis[(Redis<br/>seat locks, queue)]
+    Booking --> Kafka[Kafka<br/>events, async]
 ```
 
 ---
