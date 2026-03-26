@@ -23,7 +23,20 @@
 
 An architectural pattern where services communicate by producing and consuming **events** — records of something that happened — rather than making direct synchronous calls.
 
-![What is Event-Driven Architecture (EDA)? diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["REQUEST-DRIVEN (synchronous):<br/>Order Service call -&gt; Payment Service call -&gt; Inventory Service<br/>Tight coupling: each service must know about the next."]
+    class N0 primary
+    N1["EVENT-DRIVEN (asynchronous):<br/>Order Service publishes &quot;OrderCreated&quot; -&gt; Event Bus<br/>Payment Service &lt;- subscribes to &quot;OrderCreated&quot;<br/>Inventory Service &lt;- subscribes to &quot;OrderCreated&quot;<br/>Notification Service &lt;- subscribes to &quot;OrderCreated&quot;"]
+    class N1 secondary
+    N2["Loose coupling: Order Service doesn't know who listens."]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### Core Concepts
 
@@ -71,7 +84,32 @@ EVENT SOURCING:
 
 Often paired with Event Sourcing:
 
-![CQRS (Command Query Responsibility Segregation) diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["TRADITIONAL:<br/>Same model for reads and writes"]
+    class N0 primary
+    N1["Service read/write -&gt; Database"]
+    class N1 secondary
+    N2["CQRS:<br/>Separate models optimized for reads vs writes"]
+    class N2 secondary
+    N3["Command writes -&gt; Write DB<br/>Service (normalized)"]
+    class N3 secondary
+    N4["events"]
+    class N4 secondary
+    N5["Query reads -&gt; Read DB<br/>Service (denormalized)"]
+    class N5 secondary
+    N6["Write DB: Optimized for writes (normalized, ACID)<br/>Read DB: Optimized for reads (denormalized, cached, materialized views)<br/>Sync: Events from write side update the read side (eventual consistency)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### Choreography vs Orchestration
 
@@ -196,7 +234,26 @@ DO use EDA for:
 
 ## D. Example: E-Commerce Event Flow
 
-![D. Example: E-Commerce Event Flow diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Event Bus (Kafka)"]
+    class N0 primary
+    N1["order.created<br/>Order<br/>Service<br/>down down down"]
+    class N1 secondary
+    N2["Payment Inventory Email<br/>Service Service Svc"]
+    class N2 secondary
+    N3["payment.processed &lt;-<br/>inventory.reserved &lt;-"]
+    class N3 secondary
+    N4["All events stored in Kafka (7 days retention)<br/>Analytics consumer replays events for reporting"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ---
 
@@ -204,7 +261,29 @@ DO use EDA for:
 
 ### E.1 HLD — Event-Driven Microservices
 
-![E.1 HLD — Event-Driven Microservices diagram](../assets/generated/01-fundamentals-18-event-driven-architecture-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["API Gateway"]
+    class N0 primary
+    N1["commands (writes)<br/>Command API"]
+    class N1 secondary
+    N2["down"]
+    class N2 secondary
+    N3["Kafka (Event Bus)<br/>Topics: orders, payments, inventory<br/>Partitions: 12 each<br/>Retention: 7 days"]
+    class N3 secondary
+    N4["Order Pay Inv Notif Event consumers<br/>Proj Proc Mgr Worker"]
+    class N4 secondary
+    N5["queries (reads)<br/>Query API -&gt; Read-optimized DB (materialized)"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ### E.2 LLD — Event Bus Abstraction
 

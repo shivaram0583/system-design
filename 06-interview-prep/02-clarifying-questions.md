@@ -1,4 +1,4 @@
-# Interview Prep 02: Clarifying Questions
+﻿# Interview Prep 02: Clarifying Questions
 
 > The first 5 minutes of your interview determine its trajectory. Great engineers ask great questions.
 

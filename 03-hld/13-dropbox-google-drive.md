@@ -1,4 +1,4 @@
-# HLD 13: Dropbox / Google Drive
+﻿# HLD 13: Dropbox / Google Drive
 
 > **Difficulty**: Hard
 > **Key Concepts**: File sync, chunking, conflict resolution, deduplication

@@ -1,4 +1,4 @@
-# Interview Prep 08: Time Management
+﻿# Interview Prep 08: Time Management
 
 > 45 minutes is shorter than you think. Knowing when to go deep and when to move on is a skill.
 

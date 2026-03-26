@@ -1,4 +1,4 @@
-# HLD 26: Stock Trading Platform
+﻿# HLD 26: Stock Trading Platform
 
 > **Difficulty**: Hard
 > **Key Concepts**: Order matching, low latency, audit trail, market data

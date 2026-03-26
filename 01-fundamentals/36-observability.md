@@ -35,7 +35,23 @@ Observability = Monitoring + ability to ask arbitrary questions about system sta
 
 ### Three Pillars of Observability
 
-![Three Pillars of Observability diagram](../assets/generated/01-fundamentals-36-observability-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["OBSERVABILITY"]
+    class N0 primary
+    N1["LOGS METRICS TRACES"]
+    class N1 secondary
+    N2["What How much Where<br/>happened / how (across<br/>(events) fast services)"]
+    class N2 secondary
+    N3["Logs: Discrete events with context<br/>Metrics: Numeric measurements over time<br/>Traces: Request path across services"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Logs
 
@@ -99,7 +115,32 @@ Tools:
 
 ### Traces (Distributed Tracing)
 
-![Traces (Distributed Tracing) diagram](../assets/generated/01-fundamentals-36-observability-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["A trace follows a single request across multiple services:"]
+    class N0 primary
+    N1["User clicks &quot;Buy&quot; -&gt; API Gateway -&gt; Order Service -&gt; Payment Service -&gt; Inventory -&gt; Email"]
+    class N1 secondary
+    N2["Trace ID: trace_abc123"]
+    class N2 secondary
+    N3["Span: API Gateway [0ms 500ms]<br/>Span: Order Service [50ms 450ms]<br/>Span: Payment Svc [100ms 350ms]<br/>Span: Stripe API [150ms 300ms]<br/>Span: Inventory Svc [360ms 420ms]<br/>Span: Email Svc [430ms 445ms]"]
+    class N3 secondary
+    N4["Each span: service, operation, start_time, duration, status, tags<br/>Trace ID propagated via HTTP header: X-Trace-Id: trace_abc123"]
+    class N4 secondary
+    N5["&quot;Why was this request slow?&quot;<br/>&gt; Look at trace -&gt; Payment/Stripe span took 200ms (bottleneck!)"]
+    class N5 secondary
+    N6["Tools:<br/>Jaeger (open source, CNCF)<br/>Zipkin (open source)<br/>Datadog APM<br/>AWS X-Ray<br/>OpenTelemetry (standard SDK for all three pillars)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### OpenTelemetry (OTel)
 
@@ -197,13 +238,57 @@ Alert tiers:
 
 ### Dashboards
 
-![Dashboards diagram](../assets/generated/01-fundamentals-36-observability-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Four golden signals dashboard:"]
+    class N0 primary
+    N1["SERVICE: payment-service"]
+    class N1 secondary
+    N2["Traffic (RPS): ████████████████ 1,200/s<br/>Error Rate: ██ 0.5%<br/>Latency (p99): ████████ 180ms<br/>Saturation: ██████████ 65% CPU"]
+    class N2 secondary
+    N3["[Request Rate] [Error Rate] [Latency]"]
+    class N3 secondary
+    N4["╱╲ ╱╲ ╱╲<br/>╱ ╲╱ ╲ ╱ ╲"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ---
 
 ## D. Example: Observability Stack for Microservices
 
-![D. Example: Observability Stack for Microservices diagram](../assets/generated/01-fundamentals-36-observability-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Services (instrumented with OpenTelemetry)"]
+    class N0 primary
+    N1["Order Pay Inv User<br/>Svc Svc Svc Svc"]
+    class N1 secondary
+    N2["down"]
+    class N2 secondary
+    N3["OTel Collector (receives traces, metrics,<br/>(central aggregation) logs from all services)"]
+    class N3 secondary
+    N4["Jaeger Prom Loki<br/>Traces Metrics Logs"]
+    class N4 secondary
+    N5["Grafana (unified dashboards + alerts)"]
+    class N5 secondary
+    N6["PagerDuty (incident management)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ---
 
@@ -211,7 +296,29 @@ Alert tiers:
 
 ### E.1 HLD — Observability Platform
 
-![E.1 HLD — Observability Platform diagram](../assets/generated/01-fundamentals-36-observability-diagram-05.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Application Layer<br/>(OTel SDK auto-instrumented)"]
+    class N0 primary
+    N1["OTel Collector (×3 replicas)<br/>Receives, processes, exports"]
+    class N1 secondary
+    N2["Metrics Traces Logs<br/>Prom Jaeger Loki/ELK<br/>(15d) (7d) (30d)"]
+    class N2 secondary
+    N3["Grafana Unified: dashboards, explore,<br/>alerts, correlate across pillars"]
+    class N3 secondary
+    N4["alerts"]
+    class N4 secondary
+    N5["PagerDuty -&gt; on-call -&gt; Slack notification"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ### E.2 LLD — Instrumentation Middleware
 

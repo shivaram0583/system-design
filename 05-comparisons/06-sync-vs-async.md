@@ -1,4 +1,4 @@
-# Comparison 06: Sync vs Async Communication
+﻿# Comparison 06: Sync vs Async Communication
 
 > How services talk to each other determines system resilience and performance.
 

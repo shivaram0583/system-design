@@ -55,7 +55,38 @@ You can pick TWO:
 
 In any real distributed system, **network partitions are inevitable** — cables get cut, switches fail, cloud AZs lose connectivity. Therefore:
 
-![Why You Must Choose P diagram](../assets/generated/01-fundamentals-08-cap-theorem-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["REALITY: P (Partition Tolerance) is NOT optional."]
+    class N0 primary
+    N1["Since P is required, the real choice is:"]
+    class N1 secondary
+    N2["CP: When partition happens -&gt; BLOCK requests until partition heals<br/>(maintain consistency, sacrifice availability)"]
+    class N2 secondary
+    N3["AP: When partition happens -&gt; SERVE requests with possibly stale data<br/>(maintain availability, sacrifice consistency)"]
+    class N3 secondary
+    N4["NETWORK PARTITION OCCURS:"]
+    class N4 secondary
+    N5["✗ ✗ ✗<br/>Node A ╳ ╳ ╳ Node B<br/>Data: X=5 can't communicate Data: X=3"]
+    class N5 secondary
+    N6["Client asks Node B for X:"]
+    class N6 secondary
+    N7["CP choice: &quot;Sorry, I can't confirm X is up to date.<br/>Returning error 503.&quot; (Unavailable but consistent)"]
+    class N7 secondary
+    N8["AP choice: &quot;X = 3. (It might be stale, but here's a<br/>response.)&quot; (Available but potentially stale)"]
+    class N8 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+    N7 --> N8
+```
 
 ### CA — The Impossible Choice
 
@@ -333,7 +364,26 @@ Payment (for premium features): CP
 
 ### Architecture
 
-![Architecture diagram](../assets/generated/01-fundamentals-08-cap-theorem-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Chat Application"]
+    class N0 primary
+    N1["Messages: -&gt; Cassandra (AP)<br/>Eventual consistency<br/>Multi-region replication"]
+    class N1 secondary
+    N2["Presence: -&gt; Redis Cluster (AP)<br/>Async replication<br/>TTL-based (auto-expire)"]
+    class N2 secondary
+    N3["Groups: -&gt; PostgreSQL (CP)<br/>Sync replication<br/>Single-region primary"]
+    class N3 secondary
+    N4["Payments: -&gt; PostgreSQL (CP)<br/>Synchronous writes<br/>Strict consistency"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ---
 
@@ -343,7 +393,29 @@ Payment (for premium features): CP
 
 #### Architecture
 
-![Architecture diagram](../assets/generated/01-fundamentals-08-cap-theorem-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Global Router<br/>Routes by: data type -&gt; CP or AP path"]
+    class N0 primary
+    N1["CP Path AP Path<br/>(Strong) (Eventual)"]
+    class N1 secondary
+    N2["Raft/Paxos Ring-based<br/>Consensus Replication"]
+    class N2 secondary
+    N3["L F R1 R2"]
+    class N3 secondary
+    N4["F R3"]
+    class N4 secondary
+    N5["Leader + Followers All peers equal<br/>Writes go to leader Write to any node<br/>Blocks if no quorum Always writable"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 #### Trade-offs
 

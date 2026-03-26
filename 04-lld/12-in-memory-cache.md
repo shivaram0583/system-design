@@ -1,4 +1,4 @@
-# LLD 12: In-Memory Cache (LRU)
+﻿# LLD 12: In-Memory Cache (LRU)
 
 > **Difficulty**: Medium
 > **Key Concepts**: LRU eviction, doubly linked list, hash map, TTL

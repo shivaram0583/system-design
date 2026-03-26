@@ -23,7 +23,35 @@
 
 **SQL databases** store data in tables with rows and columns, enforce schemas, and support powerful joins and transactions via SQL (Structured Query Language).
 
-![SQL (Relational) Databases diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Table: users"]
+    class N0 primary
+    N1["id name email created_at"]
+    class N1 secondary
+    N2["1 Alice alice@example.com 2024-01-01<br/>2 Bob bob@example.com 2024-01-02"]
+    class N2 secondary
+    N3["Table: orders"]
+    class N3 secondary
+    N4["id user_id total status"]
+    class N4 secondary
+    N5["101 1 99.99 paid<br/>102 2 49.50 pending"]
+    class N5 secondary
+    N6["SELECT u.name, o.total<br/>FROM users u JOIN orders o ON u.id = o.user_id<br/>WHERE o.status = 'paid';"]
+    class N6 secondary
+    N7["Properties:<br/>Fixed schema (ALTER TABLE to change)<br/>ACID transactions<br/>Rich queries: JOIN, GROUP BY, subqueries, window functions<br/>Referential integrity (foreign keys)<br/>Normalization: no data duplication"]
+    class N7 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+```
 
 ### NoSQL Databases
 
@@ -140,7 +168,26 @@ Distributed SQL databases: SQL interface + horizontal scaling
 
 ### Polyglot Persistence
 
-![Polyglot Persistence diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Use the right database for each use case:"]
+    class N0 primary
+    N1["E-Commerce<br/>Platform"]
+    class N1 secondary
+    N2["Postgres MongoDB Redis<br/>Orders, Product Sessions,<br/>Payments Catalog Cart,<br/>Users Reviews Cache"]
+    class N2 secondary
+    N3["Elastic ClickHouse<br/>Search Analytics"]
+    class N3 secondary
+    N4["Orders -&gt; PostgreSQL (ACID transactions, money)<br/>Product catalog -&gt; MongoDB (flexible schema, nested attributes)<br/>Sessions/cache -&gt; Redis (speed, TTL)<br/>Search -&gt; Elasticsearch (full-text, facets)<br/>Analytics -&gt; ClickHouse (columnar, fast aggregations)"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Migration Considerations
 
@@ -183,7 +230,29 @@ Key insight: DynamoDB is cheap for simple key-value access patterns.
 
 ## D. Example: Choosing a Database for a Chat Application
 
-![D. Example: Choosing a Database for a Chat Application diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Requirements:<br/>10M users, 1B messages/month<br/>1:1 and group chats (up to 500 members)<br/>Message history (read-heavy)<br/>User profiles and contacts<br/>Real-time presence (online/offline)"]
+    class N0 primary
+    N1["Decision:"]
+    class N1 secondary
+    N2["USER PROFILES &amp; AUTH: PostgreSQL<br/>Structured data, relationships<br/>Transactions for account operations<br/>~10M rows, manageable size"]
+    class N2 secondary
+    N3["MESSAGES: Cassandra<br/>Massive write throughput (1B/month)<br/>Partitioned by chat_id, sorted by timestamp<br/>Horizontal scaling, multi-DC replication<br/>Append-only (messages rarely updated)"]
+    class N3 secondary
+    N4["PRESENCE &amp; SESSIONS: Redis<br/>Sub-millisecond reads<br/>TTL for automatic expiry<br/>Pub/Sub for real-time updates"]
+    class N4 secondary
+    N5["SEARCH: Elasticsearch<br/>Full-text search across messages<br/>Async indexing from Cassandra via CDC"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ---
 
@@ -191,7 +260,26 @@ Key insight: DynamoDB is cheap for simple key-value access patterns.
 
 ### E.1 HLD — Multi-Database Architecture
 
-![E.1 HLD — Multi-Database Architecture diagram](../assets/generated/02-databases-01-sql-vs-nosql-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Clients"]
+    class N0 primary
+    N1["API Gateway"]
+    class N1 secondary
+    N2["User Service Chat Service Search Svc"]
+    class N2 secondary
+    N3["PostgreSQL Cassandra Elasticsearch<br/>(users, (messages, (message<br/>contacts) chats) search)"]
+    class N3 secondary
+    N4["Redis Kafka<br/>(sessions, (events,<br/>presence, CDC for<br/>cache) search sync)"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### E.2 LLD — Database Abstraction Layer
 

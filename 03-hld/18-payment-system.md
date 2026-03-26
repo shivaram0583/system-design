@@ -48,7 +48,20 @@ graph TD
 
 ### Payment State Machine
 
-![Payment State Machine diagram](../assets/generated/03-hld-18-payment-system-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["CREATED -&gt; PROCESSING -&gt; SUCCEEDED -&gt; SETTLED"]
+    class N0 primary
+    N1["&gt; FAILED REFUND_REQUESTED -&gt; REFUNDED<br/>&gt; FAILED<br/>REFUND_FAILED"]
+    class N1 secondary
+    N2["Each transition:<br/>1. Validate transition is allowed<br/>2. Update DB in transaction (optimistic locking)<br/>3. Call PSP if needed (Stripe charge, refund)<br/>4. Emit event to Kafka (payment.succeeded, payment.failed)<br/>5. Never delete records — append-only for audit trail"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### Idempotency (No Double Charges)
 

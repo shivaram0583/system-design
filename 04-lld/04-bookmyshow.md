@@ -1,4 +1,4 @@
-# LLD 04: BookMyShow (Movie Ticket Booking)
+﻿# LLD 04: BookMyShow (Movie Ticket Booking)
 
 > **Difficulty**: Medium
 > **Key Concepts**: Seat locking, concurrency, state machine, payment

@@ -1,4 +1,4 @@
-# LLD 14: Logger Framework
+﻿# LLD 14: Logger Framework
 
 > **Difficulty**: Easy
 > **Key Concepts**: Singleton, Chain of Responsibility, Strategy pattern

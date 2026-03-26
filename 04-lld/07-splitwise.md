@@ -1,4 +1,4 @@
-# LLD 07: Splitwise (Expense Sharing)
+﻿# LLD 07: Splitwise (Expense Sharing)
 
 > **Difficulty**: Medium
 > **Key Concepts**: Graph simplification, debt minimization, split strategies

@@ -1,4 +1,4 @@
-# HLD 21: Ticket Booking (BookMyShow / Ticketmaster)
+﻿# HLD 21: Ticket Booking (BookMyShow / Ticketmaster)
 
 > **Difficulty**: Medium
 > **Key Concepts**: Seat locking, concurrency, fairness, virtual queue

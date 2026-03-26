@@ -1,4 +1,4 @@
-# HLD 03: Rate Limiter
+﻿# HLD 03: Rate Limiter
 
 > **Difficulty**: Easy-Medium
 > **Key Concepts**: Sliding window, token bucket, distributed counting, Redis

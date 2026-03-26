@@ -1,4 +1,4 @@
-# HLD 09: Instagram
+﻿# HLD 09: Instagram
 
 > **Difficulty**: Medium
 > **Key Concepts**: Media storage, CDN, feed generation, image processing

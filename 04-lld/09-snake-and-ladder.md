@@ -1,4 +1,4 @@
-# LLD 09: Snake and Ladder
+﻿# LLD 09: Snake and Ladder
 
 > **Difficulty**: Easy
 > **Key Concepts**: OOP, game loop, board modeling, dice

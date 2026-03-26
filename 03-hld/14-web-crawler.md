@@ -1,4 +1,4 @@
-# HLD 14: Web Crawler
+﻿# HLD 14: Web Crawler
 
 > **Difficulty**: Medium
 > **Key Concepts**: BFS/DFS, politeness, deduplication, distributed crawling

@@ -1,4 +1,4 @@
-# Topic 3: Monolith vs Microservices
+﻿# Topic 3: Monolith vs Microservices
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner → Intermediate
@@ -488,7 +488,7 @@ graph TD
     GW --> Search["Search Service<br/>Elasticsearch"]
     GW --> Cart["Cart Service<br/>Redis"]
     Ord --> Kafka["Message Broker<br/>Kafka / RabbitMQ"]
-    Pay --> Kafka
+    Pay --> Kafka["Message Broker<br/>Kafka / RabbitMQ"]
     Kafka --> Notif
     Kafka --> Inv
 ```
@@ -629,7 +629,10 @@ All requests include: Authorization: Bearer <JWT>
 ```mermaid
 flowchart TD
     subgraph Clients["CLIENTS"]
-        Web["Web"] & iOS["iOS"] & Android["Android"] & Partner["Partner API"]
+        Web["Web"]
+        iOS["iOS"]
+        Android["Android"]
+        Partner["Partner API"]
     end
 
     Clients --> CDN["CDN<br/>Static assets, product images"]
@@ -649,8 +652,8 @@ flowchart TD
     Notif --> NotifDB["Redis + SQS"]
 
     Ord --> Kafka["Kafka Cluster<br/>Event Bus"]
-    Pay --> Kafka
-    Notif --> Kafka
+    Pay --> Kafka["Kafka Cluster<br/>Event Bus"]
+    Notif --> Kafka["Kafka Cluster<br/>Event Bus"]
 ```
 
 #### Scaling Approach

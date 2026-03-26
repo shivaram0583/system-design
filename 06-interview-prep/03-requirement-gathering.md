@@ -1,4 +1,4 @@
-# Interview Prep 03: Requirement Gathering
+﻿# Interview Prep 03: Requirement Gathering
 
 > Separating functional from non-functional requirements is the foundation of every system design.
 

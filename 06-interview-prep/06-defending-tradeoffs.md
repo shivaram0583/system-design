@@ -1,4 +1,4 @@
-# Interview Prep 06: Defending Trade-offs
+﻿# Interview Prep 06: Defending Trade-offs
 
 > Every design decision has a cost. The best candidates name the trade-off before the interviewer asks.
 

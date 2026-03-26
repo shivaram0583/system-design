@@ -1,4 +1,4 @@
-# High-Level Design (HLD) Problems
+﻿# High-Level Design (HLD) Problems
 
 > Each HLD covers: Requirements, Capacity Estimation, API Design, Database Choice, Architecture Diagram, Data Flow, Scaling, Bottlenecks, and Trade-offs.
 

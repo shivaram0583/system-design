@@ -1,4 +1,4 @@
-# HLD 08: Social Media Feed (Facebook News Feed)
+﻿# HLD 08: Social Media Feed (Facebook News Feed)
 
 > **Difficulty**: Medium
 > **Key Concepts**: Fan-out, ranking, caching, feed generation

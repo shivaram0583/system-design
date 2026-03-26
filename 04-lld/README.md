@@ -1,4 +1,4 @@
-# Low-Level Design (LLD) Problems
+﻿# Low-Level Design (LLD) Problems
 
 > Each LLD covers: Classes/Modules, Responsibilities, Interfaces, Data Models, Sequence Flow, Pseudocode, Edge Cases, and Error Handling.
 

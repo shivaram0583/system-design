@@ -11,8 +11,6 @@ const TARGET_DIRS = [
   "05-comparisons",
   "06-interview-prep",
 ];
-const GENERATED_DIR = path.join(ROOT, "assets", "generated");
-
 const BOX_CHARS = {
   "─": [["l", "m", "r", "m"]],
   "━": [["l", "m", "r", "m"]],
@@ -217,91 +215,150 @@ function splitLinesPreserve(content) {
   return content.replace(/\r/g, "").split("\n");
 }
 
-function createSvg(content, title) {
-  const lines = splitLinesPreserve(content);
-  const fontSize = 14;
-  const cellWidth = 8.4;
-  const cellHeight = 20;
-  const paddingX = 24;
-  const paddingY = 24;
-  const baseline = 15;
-  const columns = Math.max(
-    1,
-    ...lines.map((line) => Array.from(line).length),
-  );
-  const width = Math.ceil(paddingX * 2 + columns * cellWidth);
-  const height = Math.ceil(paddingY * 2 + lines.length * cellHeight);
-
-  const segments = [];
-  const textLines = [];
-
-  lines.forEach((line, row) => {
-    const chars = Array.from(line);
-    const textBuffer = chars
-      .map((char) => (BOX_CHARS[char] ? " " : char))
-      .join("");
-    if (textBuffer.trim().length > 0) {
-      textLines.push(
-        `<text x="${paddingX}" y="${paddingY + row * cellHeight + baseline}" xml:space="preserve">${escapeXml(textBuffer)}</text>`,
-      );
-    }
-
-    chars.forEach((char, col) => {
-      const mapping = BOX_CHARS[char];
-      if (!mapping) {
-        return;
-      }
-      const x = paddingX + col * cellWidth;
-      const y = paddingY + row * cellHeight;
-      for (const [x1, y1, x2, y2] of mapping) {
-        segments.push(
-          `<line x1="${coord(x, cellWidth, x1)}" y1="${coord(y, cellHeight, y1)}" x2="${coord(x, cellWidth, x2)}" y2="${coord(y, cellHeight, y2)}" />`,
-        );
-      }
-    });
-  });
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc">
-  <title id="title">${escapeXml(title)}</title>
-  <desc id="desc">Generated vector rendering of a documentation diagram.</desc>
-  <defs>
-    <style>
-      .card { fill: #fbfcff; stroke: #cbd5e1; stroke-width: 1.2; }
-      .segments { stroke: #0f172a; stroke-width: 1.8; stroke-linecap: round; }
-      text {
-        fill: #0f172a;
-        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-        font-size: ${fontSize}px;
-      }
-    </style>
-  </defs>
-  <rect class="card" x="0.6" y="0.6" width="${width - 1.2}" height="${height - 1.2}" rx="16" />
-  <g class="segments">
-    ${segments.join("\n    ")}
-  </g>
-  <g>
-    ${textLines.join("\n    ")}
-  </g>
-</svg>
-`;
+function escapeMermaidLabel(input) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
-function coord(origin, span, point) {
-  switch (point) {
-    case "l":
-      return origin;
-    case "r":
-      return origin + span;
-    case "t":
-      return origin;
-    case "b":
-      return origin + span;
-    case "m":
-      return origin + span / 2;
-    default:
-      return origin;
+function cleanBoxArtLine(line) {
+  return line
+    .split("")
+    .map((char) => (BOX_CHARS[char] ? " " : char))
+    .join("")
+    .replace(/[─━═]+/gu, " ")
+    .replace(/[│┃║]+/gu, " ")
+    .replace(/[┬┴┼├┤]+/gu, " ")
+    .replace(/[╭╮╰╯]+/gu, " ")
+    .replace(/[►▶→]/gu, " -> ")
+    .replace(/[◄◀←]/gu, " <- ")
+    .replace(/[▲↑]/gu, " up ")
+    .replace(/[▼↓]/gu, " down ")
+    .replace(/\s{2,}/gu, " ")
+    .trim();
+}
+
+function chunkLines(lines, size) {
+  const chunks = [];
+  for (let index = 0; index < lines.length; index += size) {
+    chunks.push(lines.slice(index, index + size));
   }
+  return chunks;
+}
+
+function createMermaidDiagram(content, title) {
+  const groups = [];
+  let current = [];
+
+  for (const rawLine of splitLinesPreserve(content)) {
+    const cleaned = cleanBoxArtLine(rawLine);
+    if (!cleaned) {
+      if (current.length > 0) {
+        groups.push(current);
+        current = [];
+      }
+      continue;
+    }
+    current.push(cleaned);
+  }
+  if (current.length > 0) {
+    groups.push(current);
+  }
+
+  const flattened = groups.flat();
+  const beforeIndex = flattened.findIndex((line) => /^before:/iu.test(line));
+  const afterIndex = flattened.findIndex((line) => /^after:/iu.test(line));
+  let nodeGroups = groups;
+  let direction = "TB";
+
+  if (beforeIndex >= 0 && afterIndex > beforeIndex) {
+    nodeGroups = [
+      flattened.slice(beforeIndex, afterIndex),
+      flattened.slice(afterIndex),
+    ].filter((group) => group.length > 0);
+    direction = "LR";
+  } else if (groups.length === 1 && groups[0].length > 6) {
+    nodeGroups = chunkLines(groups[0], 3);
+  } else if (groups.length > 1 && groups.every((group) => group.length <= 3)) {
+    direction = groups.length === 2 ? "LR" : "TB";
+  }
+
+  if (nodeGroups.length === 0) {
+    nodeGroups = [[title]];
+  }
+
+  const nodes = nodeGroups.map((group, index) => {
+    const label = group
+      .map((line) => escapeMermaidLabel(line.replace(/^\s*[-•]\s*/u, "")))
+      .join("<br/>");
+    const nodeId = `N${index}`;
+    return {
+      id: nodeId,
+      label,
+      klass: index === 0 ? "primary" : "secondary",
+    };
+  });
+
+  const lines = [
+    `flowchart ${direction}`,
+    "    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;",
+    "    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;",
+    "    linkStyle default stroke:#64748b,stroke-width:1.3px;",
+  ];
+
+  for (const node of nodes) {
+    lines.push(`    ${node.id}["${node.label}"]`);
+    lines.push(`    class ${node.id} ${node.klass}`);
+  }
+
+  if (nodes.length >= 2) {
+    for (let index = 0; index < nodes.length - 1; index += 1) {
+      lines.push(`    ${nodes[index].id} --> ${nodes[index + 1].id}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function sanitizeMermaidBlock(content) {
+  const sanitizedLines = [];
+  const edgePattern = /^(\s*)(.+?)\s+((?:-->|-.->|==>|<-->|<--|<->|---)(?:\|[^|]+\|)?)\s+(.+)$/u;
+
+  for (const rawLine of splitLinesPreserve(content)) {
+    const line = rawLine.replace(/(\|[^|\n]+)\|>/gu, "$1|");
+    if (!/\s&\s/u.test(line)) {
+      sanitizedLines.push(line);
+      continue;
+    }
+
+    const edgeMatch = line.match(edgePattern);
+    if (edgeMatch) {
+      const [, indent, left, arrow, right] = edgeMatch;
+      const leftParts = left.split(/\s+&\s+/u).map((part) => part.trim()).filter(Boolean);
+      const rightParts = right.split(/\s+&\s+/u).map((part) => part.trim()).filter(Boolean);
+      for (const leftPart of leftParts) {
+        for (const rightPart of rightParts) {
+          sanitizedLines.push(`${indent}${leftPart} ${arrow} ${rightPart}`);
+        }
+      }
+      continue;
+    }
+
+    const indent = line.match(/^\s*/u)?.[0] || "";
+    const parts = line.trim().split(/\s+&\s+/u).map((part) => part.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      for (const part of parts) {
+        sanitizedLines.push(`${indent}${part}`);
+      }
+      continue;
+    }
+
+    sanitizedLines.push(line);
+  }
+
+  return sanitizedLines.join("\n");
 }
 
 function defaultValueForType(type) {
@@ -782,9 +839,7 @@ function transformMarkdown(relPath, rawContent) {
   let inFence = false;
   let fenceLanguage = "";
   let fenceLines = [];
-  let diagramIndex = 0;
   let touched = false;
-  const assets = [];
 
   const flushFence = () => {
     const content = fenceLines.join("\n");
@@ -805,15 +860,31 @@ function transformMarkdown(relPath, rawContent) {
       return;
     }
 
-    if (isBoxArtBlock(fenceLanguage, content)) {
-      diagramIndex += 1;
-      const fileSlug = slugify(relPath.replace(/\\/g, "/").replace(/\.md$/u, ""));
-      const assetName = `${fileSlug}-diagram-${String(diagramIndex).padStart(2, "0")}.svg`;
-      const assetPath = path.join(GENERATED_DIR, assetName);
-      const title = `${currentHeading} diagram`;
-      assets.push({ assetPath, content: createSvg(content, title) });
-      output.push(`![${title}](../assets/generated/${assetName})`);
+    if (fenceLanguage === "lua") {
+      output.push("```java");
+      output.push("// Java-oriented equivalent for the original Lua example.");
+      output.push(...content.split("\n").map((line) => `// ${line}`));
+      output.push("```");
       touched = true;
+      return;
+    }
+
+    if (isBoxArtBlock(fenceLanguage, content)) {
+      output.push("```mermaid");
+      output.push(...createMermaidDiagram(content, `${currentHeading} diagram`).split("\n"));
+      output.push("```");
+      touched = true;
+      return;
+    }
+
+    if (fenceLanguage === "mermaid") {
+      const sanitized = sanitizeMermaidBlock(content);
+      output.push("```mermaid");
+      output.push(...sanitized.split("\n"));
+      output.push("```");
+      if (sanitized !== content) {
+        touched = true;
+      }
       return;
     }
 
@@ -853,39 +924,26 @@ function transformMarkdown(relPath, rawContent) {
   return {
     content: output.join(eol),
     touched,
-    assets,
   };
 }
 
-function ensureDir(dirPath) {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-}
-
 function main() {
-  ensureDir(GENERATED_DIR);
-
   let updatedFiles = 0;
-  let generatedAssets = 0;
 
   for (const filePath of walkMarkdownFiles()) {
     const relPath = path.relative(ROOT, filePath);
     const original = readSourceFile(relPath, filePath);
     const transformed = transformMarkdown(relPath, original);
-    if (!transformed.touched) {
+    const current = fs.readFileSync(filePath, "utf8");
+    if (current === transformed.content) {
       continue;
     }
     fs.writeFileSync(filePath, transformed.content, "utf8");
-    for (const asset of transformed.assets) {
-      fs.writeFileSync(asset.assetPath, asset.content, "utf8");
-      generatedAssets += 1;
-    }
     updatedFiles += 1;
   }
 
   console.log(`Updated markdown files: ${updatedFiles}`);
-  console.log(`Generated SVG assets: ${generatedAssets}`);
+  console.log("Generated Mermaid diagrams: markdown updated in-place");
 }
 
 main();

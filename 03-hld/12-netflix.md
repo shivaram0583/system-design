@@ -1,4 +1,4 @@
-# HLD 12: Netflix
+﻿# HLD 12: Netflix
 
 > **Difficulty**: Hard
 > **Key Concepts**: Adaptive streaming, CDN (Open Connect), microservices, recommendations

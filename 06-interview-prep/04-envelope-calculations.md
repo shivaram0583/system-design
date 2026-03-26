@@ -1,4 +1,4 @@
-# Interview Prep 04: Envelope Calculations
+﻿# Interview Prep 04: Envelope Calculations
 
 > Back-of-the-envelope estimation turns vague requirements into concrete design constraints.
 

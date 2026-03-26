@@ -1,4 +1,4 @@
-# Databases and Storage
+﻿# Databases and Storage
 
 > Choosing the right database is one of the most impactful decisions in system design. This section covers database types, scaling strategies, and operational patterns.
 

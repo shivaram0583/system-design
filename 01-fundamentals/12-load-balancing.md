@@ -23,11 +23,34 @@
 
 A **load balancer** distributes incoming network traffic across multiple servers to ensure no single server is overwhelmed, improving availability, throughput, and reliability.
 
-![What is Load Balancing? diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["WITHOUT Load Balancer:<br/>All traffic -&gt; Single Server -&gt; Overloaded -&gt; Crashes"]
+    class N0 primary
+    N1["WITH Load Balancer:"]
+    class N1 secondary
+    N2["Client -&gt; Load -&gt; Server 1 33% traffic<br/>Balancer -&gt; Server 2 33% traffic<br/>&gt; Server 3 33% traffic"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### Where Load Balancers Sit
 
-![Where Load Balancers Sit diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-02.svg)
+```mermaid
+flowchart LR
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Client -&gt; LB 1 -&gt; Web -&gt; LB 2 -&gt; App -&gt; LB 3 -&gt; DB<br/>Servers Servers"]
+    class N0 primary
+    N1["Layer 1 Layer 2 Layer 3<br/>(Internet (Internal (Database<br/>facing) services) connections)"]
+    class N1 secondary
+    N0 --> N1
+```
 
 ### L4 vs L7 Load Balancing
 
@@ -66,7 +89,20 @@ L7 Load Balancer:
 | **Least Response Time** | Routes to fastest-responding server | Best latency | Requires monitoring | Latency-sensitive apps |
 | **Consistent Hashing** | Hash ring; minimal redistribution on change | Minimal disruption | Complex implementation | Cache servers, DB sharding |
 
-![Load Balancing Algorithms diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["ROUND ROBIN:<br/>Request 1 -&gt; Server A<br/>Request 2 -&gt; Server B<br/>Request 3 -&gt; Server C<br/>Request 4 -&gt; Server A (cycles back)"]
+    class N0 primary
+    N1["LEAST CONNECTIONS:<br/>Server A: 5 connections<br/>Server B: 3 connections &lt;- next request goes here<br/>Server C: 7 connections"]
+    class N1 secondary
+    N2["CONSISTENT HASHING (for cache):<br/>Hash ring: [0 A B C 0]<br/>hash(&quot;user:123&quot;) -&gt; lands between A and B -&gt; goes to B<br/>If B is removed -&gt; those keys move to C (not all keys reshuffled)"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### Health Checks
 
@@ -98,11 +134,49 @@ ACTIVE health check:
 
 The LB itself can be a single point of failure:
 
-![High Availability for Load Balancers diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["ACTIVE-PASSIVE LB:"]
+    class N0 primary
+    N1["Primary LB Standby LB<br/>(Active) -&gt; (Passive)<br/>VIP: 1.2.3 Monitors"]
+    class N1 secondary
+    N2["If primary fails -&gt; standby takes over VIP (via VRRP/keepalived)<br/>Failover time: 1-5 seconds"]
+    class N2 secondary
+    N3["ACTIVE-ACTIVE LB:"]
+    class N3 secondary
+    N4["LB 1 LB 2<br/>(Active) (Active)"]
+    class N4 secondary
+    N5["up up"]
+    class N5 secondary
+    N6["DNS DNS returns both LB IPs<br/>Round Robin or uses ECMP/anycast"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### Global Server Load Balancing (GSLB)
 
-![Global Server Load Balancing (GSLB) diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-05.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["DNS (GSLB)<br/>User in US -&gt; resolve to 1.2.3.4 (US datacenter)<br/>User in EU -&gt; resolve to 5.6.7.8 (EU datacenter)"]
+    class N0 primary
+    N1["US Region EU Region<br/>LB -&gt; Servers LB -&gt; Servers"]
+    class N1 secondary
+    N2["Strategies:<br/>Geographic: Route to nearest datacenter<br/>Latency-based: Route to lowest-latency datacenter<br/>Failover: Route to backup if primary is down<br/>Weighted: Split traffic (80% US, 20% EU)"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ---
 
@@ -149,17 +223,68 @@ The LB itself can be a single point of failure:
 
 ### Connection Draining
 
-![Connection Draining diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-06.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["When removing a server from the pool (deploy, scale-down):"]
+    class N0 primary
+    N1["WITHOUT draining:<br/>Server removed -&gt; in-flight requests DROPPED -&gt; errors"]
+    class N1 secondary
+    N2["WITH draining:<br/>1. LB stops sending NEW requests to server<br/>2. Existing in-flight requests continue (grace period: 30-300s)<br/>3. Once all connections close (or timeout) -&gt; server removed<br/>4. Safe to terminate/update server"]
+    class N2 secondary
+    N3["Timeline:<br/>[Draining starts] [All connections closed] [Server removed]<br/>No new requests In-flight requests finish Safe to terminate"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### SSL/TLS Termination
 
-![SSL/TLS Termination diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-07.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["SSL at LB (recommended):<br/>Client HTTPS -&gt; LB HTTP -&gt; Servers"]
+    class N0 primary
+    N1["Pros:<br/>Servers don't need SSL certificates<br/>LB handles CPU-intensive encryption/decryption<br/>Easier certificate management (one place)"]
+    class N1 secondary
+    N2["Cons:<br/>Traffic between LB and servers is unencrypted (OK within VPC)<br/>If compliance requires end-to-end encryption: use SSL passthrough"]
+    class N2 secondary
+    N3["SSL passthrough (L4):<br/>Client HTTPS -&gt; LB HTTPS -&gt; Servers<br/>LB can't inspect traffic (just routes TCP)"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ---
 
 ## D. Example: Scaling an API with Load Balancing
 
-![D. Example: Scaling an API with Load Balancing diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-08.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Architecture:"]
+    class N0 primary
+    N1["Client -&gt; ALB -&gt; API Servers (×5)<br/>(L7) Target group:<br/>/api/* -&gt; API group<br/>/ws/* -&gt; WS group"]
+    class N1 secondary
+    N2["ALB Configuration:<br/>Algorithm: Least connections (weighted)<br/>Health check: GET /health every 30s<br/>Stickiness: Disabled (stateless API)<br/>SSL: Terminate at ALB (ACM certificate)"]
+    class N2 secondary
+    N3["Path-based routing:<br/>/api/* -&gt; API target group (5 instances, port 8080)<br/>/websocket/* -&gt; WS target group (3 instances, port 8081)<br/>/static/* -&gt; S3 bucket (via redirect)"]
+    class N3 secondary
+    N4["Auto-scaling:<br/>Min: 3, Max: 20<br/>Scale on: RequestCountPerTarget &gt; 1000"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ---
 
@@ -167,7 +292,29 @@ The LB itself can be a single point of failure:
 
 ### E.1 HLD — Multi-Tier Load Balanced Architecture
 
-![E.1 HLD — Multi-Tier Load Balanced Architecture diagram](../assets/generated/01-fundamentals-12-load-balancing-diagram-09.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Internet"]
+    class N0 primary
+    N1["Client"]
+    class N1 secondary
+    N2["DNS-based GSLB (Route 53)<br/>US: 1.2.3.4 Latency-based routing<br/>EU: 5.6.7.8"]
+    class N2 secondary
+    N3["ALB -&gt; Web/API Servers (×N)<br/>(L7) Stateless, auto-scaled"]
+    class N3 secondary
+    N4["Redis NLB Kafka<br/>Cluster (L4) Cluster"]
+    class N4 secondary
+    N5["Internal Services<br/>(gRPC, port 9090)"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ### E.2 LLD — Simple Load Balancer
 

@@ -1,4 +1,4 @@
-# Interview Prep 01: 45-Minute Interview Approach
+﻿# Interview Prep 01: 45-Minute Interview Approach
 
 > The most important skill in system design interviews isn't technical — it's time management and structure.
 
@@ -13,7 +13,8 @@ gantt
     axisFormat %M min
 
     section Phase 1
-    Requirements & Clarification   :a1, 00, 5m
+    Requirements
+    Clarification   :a1, 00, 5m
 
     section Phase 2
     Capacity Estimation            :a2, after a1, 5m
@@ -26,10 +27,12 @@ gantt
     Deep Dive (1-2 components)     :a5, after a4, 10m
 
     section Phase 5
-    Scaling & Bottlenecks          :a6, after a5, 7m
+    Scaling
+    Bottlenecks          :a6, after a5, 7m
 
     section Phase 6
-    Summary & Questions            :a7, after a6, 3m
+    Summary
+    Questions            :a7, after a6, 3m
 ```
 
 ---

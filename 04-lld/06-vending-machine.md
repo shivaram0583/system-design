@@ -1,4 +1,4 @@
-# LLD 06: Vending Machine
+﻿# LLD 06: Vending Machine
 
 > **Difficulty**: Easy
 > **Key Concepts**: State machine, inventory, coin handling

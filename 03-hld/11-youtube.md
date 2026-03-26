@@ -1,4 +1,4 @@
-# HLD 11: YouTube
+﻿# HLD 11: YouTube
 
 > **Difficulty**: Hard
 > **Key Concepts**: Video processing, adaptive streaming, CDN, recommendations

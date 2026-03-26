@@ -1,4 +1,4 @@
-# LLD 01: Parking Lot
+﻿# LLD 01: Parking Lot
 
 > **Difficulty**: Easy
 > **Key Concepts**: OOP, Strategy pattern, enums, class design

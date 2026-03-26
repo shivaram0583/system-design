@@ -1,4 +1,4 @@
-# Comparison 02: How to Choose a Cache
+﻿# Comparison 02: How to Choose a Cache
 
 > Caching is the most impactful performance optimization in any system.
 

@@ -1,4 +1,4 @@
-# HLD 24: Logging / Monitoring System
+﻿# HLD 24: Logging / Monitoring System
 
 > **Difficulty**: Medium
 > **Key Concepts**: ELK stack, time-series DB, alerting, distributed tracing

@@ -1,4 +1,4 @@
-# HLD 27: Ad Click Tracking
+﻿# HLD 27: Ad Click Tracking
 
 > **Difficulty**: Medium
 > **Key Concepts**: Event streaming, deduplication, analytics, real-time aggregation

@@ -1,4 +1,4 @@
-# HLD 23: Distributed Job Scheduler
+﻿# HLD 23: Distributed Job Scheduler
 
 > **Difficulty**: Hard
 > **Key Concepts**: Cron, at-least-once execution, priority queues, leader election

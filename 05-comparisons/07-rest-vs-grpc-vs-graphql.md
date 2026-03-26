@@ -1,4 +1,4 @@
-# Comparison 07: REST vs gRPC vs GraphQL
+﻿# Comparison 07: REST vs gRPC vs GraphQL
 
 > Choosing the right API protocol for your system.
 

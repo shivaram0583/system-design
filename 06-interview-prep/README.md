@@ -1,4 +1,4 @@
-# Interview Preparation
+﻿# Interview Preparation
 
 > Master the meta-skill of system design interviews: how to structure your time, communicate clearly, and defend your decisions.
 

@@ -1,4 +1,4 @@
-# HLD 17: E-Commerce Platform (Amazon)
+﻿# HLD 17: E-Commerce Platform (Amazon)
 
 > **Difficulty**: Hard
 > **Key Concepts**: Catalog, cart, inventory, payments, order management

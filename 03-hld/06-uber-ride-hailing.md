@@ -1,4 +1,4 @@
-# HLD 06: Uber / Ride-Hailing
+﻿# HLD 06: Uber / Ride-Hailing
 
 > **Difficulty**: Hard
 > **Key Concepts**: Geospatial indexing, real-time matching, ETA, location tracking

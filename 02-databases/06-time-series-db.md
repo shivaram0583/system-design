@@ -160,7 +160,32 @@ RETENTION POLICIES:
 
 ### Prometheus + Thanos Architecture
 
-![Prometheus + Thanos Architecture diagram](../assets/generated/02-databases-06-time-series-db-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Prometheus: Pull-based metrics collection"]
+    class N0 primary
+    N1["scrape every 15s<br/>Prometheus &lt;- App<br/>GET /metrics (exporter)"]
+    class N1 secondary
+    N2["remote_write"]
+    class N2 secondary
+    N3["Thanos (long-term storage + HA)"]
+    class N3 secondary
+    N4["Thanos Sidecar -&gt; uploads blocks to S3<br/>Thanos Query -&gt; queries across Prometheus + S3<br/>Thanos Compact -&gt; downsamples old data<br/>Thanos Store -&gt; serves data from S3"]
+    class N4 secondary
+    N5["Prometheus: Local storage (15 days, fast queries)<br/>Thanos/S3: Long-term storage (years, cheap)"]
+    class N5 secondary
+    N6["Result: Fast recent queries + cheap long-term storage"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### TimescaleDB (PostgreSQL Extension)
 
@@ -209,7 +234,32 @@ ORDER BY hour;
 
 ## D. Example: Infrastructure Monitoring Pipeline
 
-![D. Example: Infrastructure Monitoring Pipeline diagram](../assets/generated/02-databases-06-time-series-db-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["1000 servers, 50 metrics each, 15s scrape interval:"]
+    class N0 primary
+    N1["Write load: 1000 × 50 ÷ 15 = 3,333 samples/second<br/>Storage: ~3.3K × 86400 × 2 bytes/sample = ~570 MB/day (compressed)"]
+    class N1 secondary
+    N2["Servers -&gt; Prometheus -&gt; Thanos<br/>(exporters) (local 15d) (S3, years)"]
+    class N2 secondary
+    N3["Alertmanager -&gt; PagerDuty / Slack"]
+    class N3 secondary
+    N4["Alert rules (in Prometheus):<br/>alert: HighCPU<br/>expr: avg(cpu_usage) by (host) &gt; 90<br/>for: 5m"]
+    class N4 secondary
+    N5["alert: DiskFull<br/>expr: disk_used_percent &gt; 95<br/>for: 1m"]
+    class N5 secondary
+    N6["Dashboards: Grafana -&gt; queries Prometheus/Thanos<br/>Downsampling: Thanos Compact (5m avg after 7d, 1h avg after 30d)<br/>Retention: Raw 15d (Prometheus), 5m avg 90d, 1h avg 2 years (S3)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ---
 
@@ -217,7 +267,32 @@ ORDER BY hour;
 
 ### E.1 HLD — Metrics Platform
 
-![E.1 HLD — Metrics Platform diagram](../assets/generated/02-databases-06-time-series-db-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Data Sources"]
+    class N0 primary
+    N1["Servers K8s App IoT<br/>(node) (pods) (custom) (MQTT)"]
+    class N1 secondary
+    N2["down"]
+    class N2 secondary
+    N3["Prometheus (×3 HA pairs) Scrape + local store"]
+    class N3 secondary
+    N4["remote_write"]
+    class N4 secondary
+    N5["Thanos / VictoriaMetrics Long-term, query<br/>Backend: S3 federation"]
+    class N5 secondary
+    N6["Grafana Alertmanager<br/>Dashboards -&gt; PagerDuty<br/>&gt; Slack"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### E.2 LLD — Metrics Ingestion Service
 

@@ -23,7 +23,26 @@
 
 Every system design must address security. A brilliantly designed system that is easily compromised is a failed design. Security should be considered **from the start**, not bolted on later.
 
-![Why Security in System Design? diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["CIA Triad — the foundation of information security:"]
+    class N0 primary
+    N1["CONFIDENTIALITY Only authorized users can access data"]
+    class N1 secondary
+    N2["INTEGRITY Data is not tampered with or corrupted"]
+    class N2 secondary
+    N3["AVAILABILITY System is accessible when needed"]
+    class N3 secondary
+    N4["+ Non-repudiation: Cannot deny actions (audit trail)"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Common Threats (OWASP Top 10 Highlights)
 
@@ -41,7 +60,26 @@ Every system design must address security. A brilliantly designed system that is
 
 ### Defense in Depth
 
-![Defense in Depth diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Multiple layers of security — if one layer is breached, others protect:"]
+    class N0 primary
+    N1["Layer 1: NETWORK<br/>Firewall, VPC, security groups, WAF"]
+    class N1 secondary
+    N2["Layer 2: EDGE<br/>API Gateway, rate limiting, DDoS"]
+    class N2 secondary
+    N3["Layer 3: APPLICATION<br/>Auth, AuthZ, input valid"]
+    class N3 secondary
+    N4["Layer 4: DATA<br/>Encryption, masking"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Zero Trust Architecture
 
@@ -147,7 +185,26 @@ GOOD:
 
 ### Network Security
 
-![Network Security diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["AWS VPC example:"]
+    class N0 primary
+    N1["Public Subnet<br/>ALB (Load Balancer) &lt;- Internet-facing<br/>NAT Gateway"]
+    class N1 secondary
+    N2["Private Subnet<br/>App Servers (EC2 / ECS) &lt;- No direct internet access<br/>Security Group: Allow ALB:443"]
+    class N2 secondary
+    N3["Private Subnet<br/>Database (RDS) &lt;- Most restricted<br/>SG: Allow App servers:5432<br/>No internet access at all"]
+    class N3 secondary
+    N4["Principle: Minimize attack surface<br/>Only ALB is internet-facing<br/>App servers can't be reached directly<br/>DB can only be reached from app servers"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Security Headers
 
@@ -180,7 +237,32 @@ HTTP security headers every API/web app should set:
 
 ## D. Example: Securing an E-Commerce Platform
 
-![D. Example: Securing an E-Commerce Platform diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Internet"]
+    class N0 primary
+    N1["CloudFlare WAF DDoS protection, bot detection"]
+    class N1 secondary
+    N2["API Gateway Rate limiting, JWT validation,<br/>input validation, CORS"]
+    class N2 secondary
+    N3["mTLS"]
+    class N3 secondary
+    N4["App Services -&gt; Vault Secrets<br/>(K8s pods) (HashiCorp)<br/>AuthZ checks<br/>Input sanit"]
+    class N4 secondary
+    N5["encrypted connection"]
+    class N5 secondary
+    N6["Database Encryption at rest (AES-256)<br/>(RDS, private) PII columns encrypted<br/>Audit logging enabled"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ---
 
@@ -188,7 +270,26 @@ HTTP security headers every API/web app should set:
 
 ### E.1 HLD — Security Architecture
 
-![E.1 HLD — Security Architecture diagram](../assets/generated/01-fundamentals-38-security-fundamentals-diagram-05.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["EDGE LAYER<br/>WAF -&gt; CDN -&gt; API Gateway (rate limit, auth, validation)"]
+    class N0 primary
+    N1["NETWORK LAYER<br/>VPC -&gt; Subnets -&gt; Security Groups -&gt; Network ACLs"]
+    class N1 secondary
+    N2["APPLICATION LAYER<br/>AuthN (JWT) -&gt; AuthZ (RBAC) -&gt; Input validation -&gt;<br/>Business logic -&gt; Output encoding"]
+    class N2 secondary
+    N3["DATA LAYER<br/>Encryption at rest -&gt; Encryption in transit -&gt;<br/>PII masking -&gt; Access logging -&gt; Backup encryption"]
+    class N3 secondary
+    N4["OPERATIONS LAYER<br/>Secrets Manager -&gt; Audit logs -&gt; SIEM -&gt; Vulnerability<br/>scanning -&gt; Penetration testing -&gt; Incident response"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### E.2 LLD — Input Validation Middleware
 

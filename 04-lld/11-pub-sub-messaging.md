@@ -1,4 +1,4 @@
-# LLD 11: Pub-Sub Messaging System
+﻿# LLD 11: Pub-Sub Messaging System
 
 > **Difficulty**: Medium
 > **Key Concepts**: Observer pattern, topics, subscribers, message delivery

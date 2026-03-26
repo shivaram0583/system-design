@@ -167,7 +167,26 @@ KEYSET (cursor-based) pagination (fast for any page):
 
 ### Connection Pooling
 
-![Connection Pooling diagram](../assets/generated/02-databases-11-query-optimization-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Problem: Each DB connection costs ~10 MB RAM + setup time.<br/>1000 app servers × 10 connections each = 10,000 connections -&gt; DB OOM"]
+    class N0 primary
+    N1["Solution: Connection pooler between app and DB."]
+    class N1 secondary
+    N2["App (1000 -&gt; PgBouncer -&gt; PostgreSQL<br/>conns) (50 pooled (50 real<br/>connections) conns)"]
+    class N2 secondary
+    N3["Modes:<br/>Session pooling: 1 client = 1 server conn for session duration<br/>Transaction pooling: conn returned after each transaction (most efficient)<br/>Statement pooling: conn returned after each statement"]
+    class N3 secondary
+    N4["PgBouncer settings:<br/>pool_size = 50 # max DB connections<br/>max_client_conn = 10000 # max app connections<br/>pool_mode = transaction"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Prepared Statements
 
@@ -295,7 +314,26 @@ ORDER BY hour;
 
 ### E.1 HLD — Query Performance Infrastructure
 
-![E.1 HLD — Query Performance Infrastructure diagram](../assets/generated/02-databases-11-query-optimization-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Application"]
+    class N0 primary
+    N1["ORM / Query Builder<br/>Eager loading (avoid N+1)<br/>Select specific columns<br/>Prepared statements<br/>Keyset pagination"]
+    class N1 secondary
+    N2["Connection Pooler (PgBouncer)<br/>50 pooled connections"]
+    class N2 secondary
+    N3["PostgreSQL<br/>Partitioned tables (by date)<br/>Optimized indexes<br/>Materialized views (hourly refresh)<br/>Read replicas (analytics queries)<br/>pg_stat_statements (monitoring)"]
+    class N3 secondary
+    N4["Monitoring:<br/>pg_stat_statements -&gt; Prometheus -&gt; Grafana<br/>Slow query log -&gt; Alert on queries &gt; 1s"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### E.2 LLD — Query Optimizer Helper
 

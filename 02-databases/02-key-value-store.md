@@ -23,7 +23,23 @@
 
 A **key-value store** is the simplest NoSQL database model. Every piece of data is stored as a **key** (unique identifier) and a **value** (the data itself — a string, JSON, binary blob, etc.). Think of it as a giant hash map / dictionary.
 
-![What is a Key-Value Store? diagram](../assets/generated/02-databases-02-key-value-store-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Key Value"]
+    class N0 primary
+    N1["&quot;user:123&quot; {&quot;name&quot;:&quot;Alice&quot;,&quot;email&quot;:&quot;a@b.com&quot;}<br/>&quot;session:abc&quot; {&quot;user_id&quot;:123,&quot;expires&quot;:1705363200}<br/>&quot;cart:456&quot; {&quot;items&quot;:[{&quot;sku&quot;:&quot;A1&quot;,&quot;qty&quot;:2}]}<br/>&quot;rate_limit:10.0.0.1&quot; {&quot;count&quot;:42,&quot;window_start&quot;:1705359600}"]
+    class N1 secondary
+    N2["Operations:<br/>GET &quot;user:123&quot; -&gt; returns the value<br/>SET &quot;user:123&quot; value -&gt; stores/overwrites<br/>DEL &quot;user:123&quot; -&gt; removes<br/>TTL &quot;session:abc&quot; 3600 -&gt; auto-expire in 1 hour"]
+    class N2 secondary
+    N3["No schema, no joins, no complex queries.<br/>Just GET and SET by key — blazing fast."]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Why Key-Value Stores?
 
@@ -160,17 +176,74 @@ Hybrid (recommended):
 
 ### Redis Cluster
 
-![Redis Cluster diagram](../assets/generated/02-databases-02-key-value-store-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Client hash(key) -&gt; Slot 0-5460 -&gt; Node A (master) + replica<br/>Slot 5461-10922 -&gt; Node B (master) + replica<br/>Slot 10923-16383 -&gt; Node C (master) + replica"]
+    class N0 primary
+    N1["16384 hash slots distributed across master nodes.<br/>Each key maps to a slot: CRC16(key) % 16384"]
+    class N1 secondary
+    N2["Automatic failover: if master dies -&gt; replica promoted<br/>Resharding: move slots between nodes for rebalancing"]
+    class N2 secondary
+    N3["Limitation: Multi-key operations must be on same slot<br/>Solution: Hash tags — {user:123}:cart and {user:123}:session -&gt; same slot"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### DynamoDB Key Design
 
-![DynamoDB Key Design diagram](../assets/generated/02-databases-02-key-value-store-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["DynamoDB uses:<br/>Partition Key (PK): Determines which partition stores the item<br/>Sort Key (SK): Optional, enables range queries within a partition"]
+    class N0 primary
+    N1["Table: UserOrders"]
+    class N1 secondary
+    N2["PK (user_id) SK (order_id) total status"]
+    class N2 secondary
+    N3["user_123 order_2024_001 99.99 paid<br/>user_123 order_2024_002 49.50 pending<br/>user_456 order_2024_003 75.00 paid"]
+    class N3 secondary
+    N4["Query by user: PK = &quot;user_123&quot; -&gt; all orders for user 123<br/>Query specific: PK = &quot;user_123&quot; AND SK = &quot;order_2024_001&quot;<br/>Range query: PK = &quot;user_123&quot; AND SK BETWEEN &quot;order_2024&quot; AND &quot;order_2025&quot;"]
+    class N4 secondary
+    N5["Hot partition problem:<br/>One user with 10M orders -&gt; one partition gets all traffic<br/>Solution: Add random suffix to PK for write-heavy keys"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ---
 
 ## D. Example: Session Store with Redis
 
-![D. Example: Session Store with Redis diagram](../assets/generated/02-databases-02-key-value-store-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Login Store session<br/>Client -&gt; Auth Svc -&gt; Redis<br/>Cluster<br/>&lt;- &lt;-<br/>Cookie session_id TTL:<br/>30 min"]
+    class N0 primary
+    N1["Login:<br/>1. Verify credentials<br/>2. session_id = uuid4()<br/>3. HSET &quot;session:{session_id}&quot; &quot;user_id&quot; &quot;123&quot; &quot;role&quot; &quot;admin&quot;<br/>4. EXPIRE &quot;session:{session_id}&quot; 1800 (30 min)<br/>5. Set-Cookie: session_id=...; HttpOnly; Secure"]
+    class N1 secondary
+    N2["Each request:<br/>1. Read session_id from cookie<br/>2. HGETALL &quot;session:{session_id}&quot;<br/>3. If exists -&gt; authenticated; EXPIRE to refresh TTL<br/>4. If not -&gt; 401 Unauthorized"]
+    class N2 secondary
+    N3["Logout:<br/>DEL &quot;session:{session_id}&quot;"]
+    class N3 secondary
+    N4["Scaling: Redis Cluster with 3 masters + 3 replicas<br/>Capacity: 1M concurrent sessions × 1 KB = 1 GB RAM"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ---
 
@@ -178,7 +251,32 @@ Hybrid (recommended):
 
 ### E.1 HLD — Distributed Key-Value Store
 
-![E.1 HLD — Distributed Key-Value Store diagram](../assets/generated/02-databases-02-key-value-store-diagram-05.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Clients"]
+    class N0 primary
+    N1["Application<br/>(Redis SDK)"]
+    class N1 secondary
+    N2["hash(key) -&gt; slot -&gt; node"]
+    class N2 secondary
+    N3["Redis Cluster (6 nodes)"]
+    class N3 secondary
+    N4["Master A Master B Master C<br/>Slots Slots Slots<br/>0-5460 5461- 10923-<br/>10922 16383"]
+    class N4 secondary
+    N5["Replica A Replica B Replica C"]
+    class N5 secondary
+    N6["Persistence: AOF (everysec) + RDB snapshots (hourly)<br/>Monitoring: Redis Exporter -&gt; Prometheus -&gt; Grafana"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### E.2 LLD — Key-Value Client Wrapper
 

@@ -64,7 +64,20 @@ graph TD
 
 ### Order State Machine
 
-![Order State Machine diagram](../assets/generated/03-hld-07-food-delivery-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["PLACED -&gt; CONFIRMED -&gt; PREPARING -&gt; READY -&gt; PICKED_UP -&gt; ON_THE_WAY -&gt; DELIVERED"]
+    class N0 primary
+    N1["&gt; CANCELLED (by customer, before PREPARING) -&gt; COMPLETED<br/>&gt; REJECTED (by restaurant, if can't fulfill)"]
+    class N1 secondary
+    N2["Each transition:<br/>1. Validate transition is allowed (state machine rules)<br/>2. Update DB (PostgreSQL, with optimistic locking)<br/>3. Emit event to Kafka (order.status_changed)<br/>4. Notify relevant parties (customer, restaurant, driver)"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### Dispatch / Driver Assignment
 

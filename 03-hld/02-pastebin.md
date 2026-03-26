@@ -1,4 +1,4 @@
-# HLD 02: Pastebin
+﻿# HLD 02: Pastebin
 
 > **Difficulty**: Easy
 > **Key Concepts**: Object storage, unique IDs, TTL, content addressing

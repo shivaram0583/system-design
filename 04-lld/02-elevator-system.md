@@ -1,4 +1,4 @@
-# LLD 02: Elevator System
+﻿# LLD 02: Elevator System
 
 > **Difficulty**: Medium
 > **Key Concepts**: State machine, scheduling algorithms, concurrency

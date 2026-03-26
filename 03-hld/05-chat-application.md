@@ -1,4 +1,4 @@
-# HLD 05: Chat Application (WhatsApp / Messenger)
+﻿# HLD 05: Chat Application (WhatsApp / Messenger)
 
 > **Difficulty**: Medium
 > **Key Concepts**: WebSocket, presence, message ordering, group chat, end-to-end encryption

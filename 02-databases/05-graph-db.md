@@ -249,7 +249,29 @@ Neo4j performance:
 
 ### E.1 HLD — Graph-Powered Recommendation Engine
 
-![E.1 HLD — Graph-Powered Recommendation Engine diagram](../assets/generated/02-databases-05-graph-db-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Clients"]
+    class N0 primary
+    N1["API Gateway"]
+    class N1 secondary
+    N2["Social Service -&gt; Neo4j<br/>(friends, rec) Cluster<br/>(3 nodes)<br/>Friendships • Nodes: users, products<br/>Suggestions • Edges: FRIENDS, PURCHASED<br/>Mutual count • Graph algorithms (GDS lib)"]
+    class N2 secondary
+    N3["User Service -&gt; PostgreSQL Profile data"]
+    class N3 secondary
+    N4["Redis Cache Cache top suggestions per user<br/>TTL: 1 hour Invalidate on new friendship"]
+    class N4 secondary
+    N5["Sync: Kafka CDC from PostgreSQL -&gt; Neo4j updater service"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ### E.2 LLD — Graph Query Service
 

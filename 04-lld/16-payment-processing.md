@@ -1,4 +1,4 @@
-# LLD 16: Payment Processing
+﻿# LLD 16: Payment Processing
 
 > **Difficulty**: Hard
 > **Key Concepts**: State machine, idempotency, double-entry ledger, strategy pattern

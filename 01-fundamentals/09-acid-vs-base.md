@@ -254,7 +254,35 @@ Decision Tree:
 
 ### The Outbox Pattern — Best of Both Worlds
 
-![The Outbox Pattern — Best of Both Worlds diagram](../assets/generated/01-fundamentals-09-acid-vs-base-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Problem: Service needs to update DB AND publish event atomically<br/>If DB write succeeds but event publish fails -&gt; inconsistency"]
+    class N0 primary
+    N1["Solution: Outbox Pattern<br/>1. Write to business table + outbox table in SAME transaction (ACID)<br/>2. Background worker reads outbox table, publishes events<br/>3. Mark events as published"]
+    class N1 secondary
+    N2["Single DB Transaction (ACID)"]
+    class N2 secondary
+    N3["INSERT INTO orders (id, ...) VALUES (...);<br/>INSERT INTO outbox (event_type, payload)<br/>VALUES ('OrderCreated', '{...}');"]
+    class N3 secondary
+    N4["COMMIT;"]
+    class N4 secondary
+    N5["Outbox Worker (async, polls outbox table)"]
+    class N5 secondary
+    N6["SELECT * FROM outbox WHERE published = false;<br/>&gt; Publish to Kafka<br/>&gt; UPDATE outbox SET published = true;"]
+    class N6 secondary
+    N7["Result: DB is ACID, cross-service communication is BASE<br/>No data loss, no dual-write problem"]
+    class N7 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+```
 
 ### Monitoring ACID vs BASE Systems
 
@@ -290,7 +318,23 @@ Cons: Single database, can't scale services independently
 
 ### BASE Approach (Microservices with Saga)
 
-![BASE Approach (Microservices with Saga) diagram](../assets/generated/01-fundamentals-09-acid-vs-base-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Order -&gt; Payment -&gt; Inventory -&gt; Notif<br/>Service Service Service Service"]
+    class N0 primary
+    N1["Happy path:<br/>1. Order Service: Create order (PENDING)<br/>2. Payment Service: Charge card -&gt; success<br/>3. Inventory Service: Reserve stock -&gt; success<br/>4. Notification Service: Send email -&gt; success<br/>5. Order Service: Update order (CONFIRMED)"]
+    class N1 secondary
+    N2["Failure at step 3 (out of stock):<br/>3. Inventory Service: Reserve stock -&gt; FAILED<br/>Compensate 2: Payment Service: Refund card<br/>Compensate 1: Order Service: Cancel order (CANCELLED)"]
+    class N2 secondary
+    N3["Each service uses ACID locally (own DB transaction)<br/>Cross-service coordination is BASE (eventual consistency via events)"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ---
 
@@ -298,7 +342,26 @@ Cons: Single database, can't scale services independently
 
 ### E.1 HLD — Order Service with Saga Orchestration
 
-![E.1 HLD — Order Service with Saga Orchestration diagram](../assets/generated/01-fundamentals-09-acid-vs-base-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Saga Orchestrator<br/>(Tracks saga state, coordinates steps)"]
+    class N0 primary
+    N1["Kafka Events/Commands Saga DB<br/>&lt;- -&gt; (PostgreSQL)"]
+    class N1 secondary
+    N2["Order Payment Inventory Notif<br/>Svc Svc Svc Svc"]
+    class N2 secondary
+    N3["Postgres Postgres Postgres Postgres"]
+    class N3 secondary
+    N4["ACID ACID ACID ACID<br/>locally locally locally locally"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### E.2 LLD — Saga Orchestrator
 

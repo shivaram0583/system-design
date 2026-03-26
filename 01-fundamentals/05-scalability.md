@@ -41,13 +41,42 @@ It means:
 
 Add more power to **the same machine** — more CPU, RAM, faster disks, better network.
 
-![Vertical Scaling (Scale Up) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["BEFORE: AFTER:"]
+    class N0 primary
+    N1["Server Server<br/>4 CPU Scale 32 CPU<br/>16 GB RAM -&gt; 256 GB RAM<br/>500 GB SSD Up 4 TB NVMe SSD<br/>1 Gbps NIC 10 Gbps NIC"]
+    class N1 secondary
+    N2["$100/month $2,000/month<br/>Handles 1K QPS Handles 10K QPS"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 #### Horizontal Scaling (Scale Out)
 
 Add **more machines** of similar size and distribute the load across them.
 
-![Horizontal Scaling (Scale Out) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["BEFORE: AFTER:"]
+    class N0 primary
+    N1["Server Server 1 Server 2 Server 3<br/>4 CPU Scale 4 CPU 4 CPU 4 CPU<br/>16 GB RAM -&gt; 16GB RAM 16GB RAM 16GB RAM<br/>Handles Out<br/>1K QPS<br/>up up up"]
+    class N1 secondary
+    N2["Load<br/>Balancer"]
+    class N2 secondary
+    N3["Total: 3K QPS<br/>Cost: $300/month"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Head-to-Head Comparison
 
@@ -65,13 +94,54 @@ Add **more machines** of similar size and distribute the load across them.
 
 ### Cost Curves
 
-![Cost Curves diagram](../assets/generated/01-fundamentals-05-scalability-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Cost up<br/>Vertical<br/>╱ (exponential)<br/>╱<br/>╱<br/>╱ Horizontal<br/>╱ ╱ (linear)<br/>╱ ╱<br/>╱ ╱<br/>╱ ╱<br/>╱ ╱<br/>╱ ╱<br/>&gt; Capacity"]
+    class N0 primary
+    N1["Vertical: 2× capacity ≠ 2× cost (often 4–10× cost)<br/>Horizontal: 2× capacity ≈ 2× cost (ideally)"]
+    class N1 secondary
+    N0 --> N1
+```
 
 ### What Makes Scaling Hard?
 
 #### Stateful vs Stateless
 
-![Stateful vs Stateless diagram](../assets/generated/01-fundamentals-05-scalability-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["STATELESS SERVICE (Easy to scale):"]
+    class N0 primary
+    N1["Server 1 &lt;- Any request can go to any server<br/>No state because no server stores user-specific data"]
+    class N1 secondary
+    N2["Server 2 &lt;- Each server is interchangeable<br/>No state"]
+    class N2 secondary
+    N3["STATEFUL SERVICE (Hard to scale):"]
+    class N3 secondary
+    N4["Server 1 &lt;- User A's session is HERE<br/>Session: User A If Server 1 dies, session is lost<br/>Cart: [item1] Requests must be routed to THIS server"]
+    class N4 secondary
+    N5["Server 2 &lt;- User B's session is HERE<br/>Session: User B Can't just add servers freely<br/>Cart: [item2,3]"]
+    class N5 secondary
+    N6["Solution: Move state OUT of the app server"]
+    class N6 secondary
+    N7["Server 1 Server 2 &lt;- Stateless, interchangeable<br/>No state No state"]
+    class N7 secondary
+    N8["Redis &lt;- Sessions stored externally<br/>(Shared) Any server can access any session"]
+    class N8 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+    N7 --> N8
+```
 
 #### The Scaling Dimensions
 
@@ -88,7 +158,35 @@ A system has multiple bottlenecks. You must identify **which dimension** needs s
 
 ### Scaling Strategies by Component
 
-![Scaling Strategies by Component diagram](../assets/generated/01-fundamentals-05-scalability-diagram-05.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["SCALING STRATEGIES"]
+    class N0 primary
+    N1["CLIENT CDN for static assets<br/>Client-side caching<br/>Compression (gzip/brotli)"]
+    class N1 secondary
+    N2["CDN Edge caching<br/>Geographic distribution<br/>Static + dynamic content caching"]
+    class N2 secondary
+    N3["LOAD Horizontal scaling (multiple LBs)<br/>BALANCER L4 vs L7 based on needs<br/>Health checks + failover"]
+    class N3 secondary
+    N4["APP Horizontal scaling (stateless!)<br/>SERVERS Auto-scaling based on CPU/QPS<br/>Container orchestration (K8s)"]
+    class N4 secondary
+    N5["CACHE Distributed cache (Redis Cluster)<br/>Multi-layer (L1 in-proc + L2 distributed)<br/>Cache warming, eviction policies"]
+    class N5 secondary
+    N6["DATABASE Read replicas (scale reads)<br/>Sharding (scale writes)<br/>Connection pooling<br/>Denormalization"]
+    class N6 secondary
+    N7["QUEUE Partitioning (Kafka partitions)<br/>Consumer groups<br/>Backpressure"]
+    class N7 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+```
 
 ### Database Scaling Deep Dive
 
@@ -96,11 +194,43 @@ Databases are usually the **hardest component to scale** because they are statef
 
 #### Read Scaling: Replicas
 
-![Read Scaling: Replicas diagram](../assets/generated/01-fundamentals-05-scalability-diagram-06.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Writes -&gt; Primary<br/>(Leader)"]
+    class N0 primary
+    N1["Replication"]
+    class N1 secondary
+    N2["Reads -&gt; Replica 1 Replica2 Replica 3<br/>(Follower) (Follower) (Follower)"]
+    class N2 secondary
+    N3["Pros: Read throughput scales linearly with replicas<br/>Cons: Replication lag -&gt; stale reads (eventual consistency)<br/>Cons: Writes don't scale (still single primary)"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 #### Write Scaling: Sharding (Partitioning)
 
-![Write Scaling: Sharding (Partitioning) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-07.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Router<br/>(Shard key<br/>&gt; shard)"]
+    class N0 primary
+    N1["Shard 1 Shard 2 Shard 3<br/>Users A-H Users I-P Users Q-Z"]
+    class N1 secondary
+    N2["Primary + Primary + Primary +<br/>Replicas Replicas Replicas"]
+    class N2 secondary
+    N3["Pros: Both reads AND writes scale<br/>Cons: Cross-shard queries are expensive<br/>Cons: Resharding is painful (adding/removing shards)<br/>Cons: Choosing the right shard key is critical"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 #### Shard Key Selection
 
@@ -115,7 +245,26 @@ Databases are usually the **hardest component to scale** because they are statef
 
 Modern cloud platforms can automatically add/remove capacity:
 
-![Auto-Scaling diagram](../assets/generated/01-fundamentals-05-scalability-diagram-08.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Auto-Scaling Configuration:<br/>Metric: CPU Utilization<br/>Target: 60%<br/>Min: 2 instances<br/>Max: 20 instances<br/>Cooldown: 300 seconds (5 min between scale actions)<br/>Scale-up: +2 instances when CPU &gt; 70% for 2 min<br/>Scale-down: -1 instance when CPU &lt; 40% for 10 min"]
+    class N0 primary
+    N1["Traffic up"]
+    class N1 secondary
+    N2["&gt; Time<br/>6am 12pm 6pm 12am"]
+    class N2 secondary
+    N3["Instances up"]
+    class N3 secondary
+    N4["&gt; Time<br/>2 8 4 10 6 3"]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Scalability Anti-Patterns
 
@@ -136,7 +285,26 @@ Modern cloud platforms can automatically add/remove capacity:
 
 Not everything can be parallelized. **Amdahl's Law** defines the theoretical speedup limit:
 
-![Amdahl's Law — The Scaling Limit diagram](../assets/generated/01-fundamentals-05-scalability-diagram-09.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Speedup = 1 / (S + (1-S)/N)"]
+    class N0 primary
+    N1["Where:<br/>S = fraction of work that is sequential (can't be parallelized)<br/>N = number of processors/servers"]
+    class N1 secondary
+    N2["Example: If 10% of your system is sequential (S = 0.1):<br/>N=2: Speedup = 1/(0.1 + 0.9/2) = 1.82×<br/>N=4: Speedup = 1/(0.1 + 0.9/4) = 3.08×<br/>N=10: Speedup = 1/(0.1 + 0.9/10) = 5.26×<br/>N=100: Speedup = 1/(0.1 + 0.9/100)= 9.17×<br/>N=∞: Speedup = 1/0.1 = 10× &lt;- MAX (can never exceed this!)"]
+    class N2 secondary
+    N3["Speedup up<br/>10× Theoretical max (10% sequential)<br/>╱<br/>8× ╱<br/>╱<br/>6× ╱<br/>╱<br/>4× ╱<br/>╱<br/>2× ╱<br/>&gt; Number of servers (N)<br/>1 4 8 16 32 64 128"]
+    class N3 secondary
+    N4["Lesson: Identify and eliminate sequential bottlenecks BEFORE<br/>throwing more hardware at the problem."]
+    class N4 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+```
 
 ### Common Sequential Bottlenecks
 
@@ -220,7 +388,65 @@ Step 5: Discuss trade-offs
 
 ### Scaling Journey — From 0 to 10M Users
 
-![Scaling Journey — From 0 to 10M Users diagram](../assets/generated/01-fundamentals-05-scalability-diagram-10.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Stage 1: Single Server (0 – 1K users)"]
+    class N0 primary
+    N1["Single Server"]
+    class N1 secondary
+    N2["Web App DB<br/>Server Logic"]
+    class N2 secondary
+    N3["Cost: $20/month"]
+    class N3 secondary
+    N4["Stage 2: Separate DB (1K – 10K users)"]
+    class N4 secondary
+    N5["App -&gt; DB<br/>Server (Managed)"]
+    class N5 secondary
+    N6["Cost: $50/month + $100/month (RDS)"]
+    class N6 secondary
+    N7["Stage 3: Add Cache + CDN (10K – 100K users)"]
+    class N7 secondary
+    N8["Client -&gt; CDN -&gt; App Server -&gt; Redis -&gt; DB"]
+    class N8 secondary
+    N9["Cost: ~$500/month total"]
+    class N9 secondary
+    N10["Stage 4: Load Balancer + Multiple Servers (100K – 1M users)"]
+    class N10 secondary
+    N11["Client -&gt; CDN -&gt; LB -&gt; Servers ×3 -&gt; Redis -&gt; DB<br/>Cluster +Read<br/>Replica"]
+    class N11 secondary
+    N12["Cost: ~$2,000/month"]
+    class N12 secondary
+    N13["Stage 5: Sharding + Microservices (1M – 10M users)"]
+    class N13 secondary
+    N14["Client -&gt; CDN -&gt; LB -&gt; API -&gt; Redis -&gt; DB Shards<br/>Gateway Cluster (3 shards)"]
+    class N14 secondary
+    N15["Auth Product Order<br/>Service Service Service"]
+    class N15 secondary
+    N16["Cost: ~$10,000-30,000/month"]
+    class N16 secondary
+    N17["Stage 6: Multi-Region (10M+ users)<br/>+ Global DNS routing<br/>+ Region-local app servers + caches + DB replicas<br/>+ Cross-region replication for writes<br/>Cost: $50,000-200,000+/month"]
+    class N17 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+    N7 --> N8
+    N8 --> N9
+    N9 --> N10
+    N10 --> N11
+    N11 --> N12
+    N12 --> N13
+    N13 --> N14
+    N14 --> N15
+    N15 --> N16
+    N16 --> N17
+```
 
 ### Real-World Scaling Numbers
 
@@ -296,19 +522,92 @@ Large (100+ servers):
 
 ### Phase 1: MVP (100 users)
 
-![Phase 1: MVP (100 users) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-11.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Client -&gt; Single Server"]
+    class N0 primary
+    N1["&lt;- App SQLite<br/>(Flask)"]
+    class N1 secondary
+    N2["Create short URL: POST /shorten {url: &quot;https://example.com/very-long-path&quot;}<br/>Redirect: GET /abc123 -&gt; 301 Redirect to original URL"]
+    class N2 secondary
+    N3["QPS: ~1 req/sec<br/>Storage: ~1000 URLs = negligible<br/>Cost: $5/month (shared hosting)"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Phase 2: Growing (10K users, 100 URLs/day)
 
-![Phase 2: Growing (10K users, 100 URLs/day) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-12.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Client -&gt; App -&gt; PostgreSQL<br/>Server (RDS)"]
+    class N0 primary
+    N1["Changes:<br/>Moved from SQLite to PostgreSQL (managed RDS)<br/>Added proper indexing on short_code column<br/>HTTPS enabled"]
+    class N1 secondary
+    N2["QPS: ~10 req/sec<br/>Storage: 100K URLs × 500 bytes = 50 MB<br/>Cost: $50/month"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### Phase 3: Scaling Reads (1M users, 10K redirects/sec)
 
-![Phase 3: Scaling Reads (1M users, 10K redirects/sec) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-13.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Client -&gt; CDN -&gt; LB -&gt; Redis PostgreSQL<br/>(cache 301 Cache<br/>redirects) Primary +<br/>App ×3 2 Read<br/>Replicas"]
+    class N0 primary
+    N1["Changes:<br/>CDN caches redirect responses (huge win — 301s are highly cacheable)<br/>Redis cache for URL lookups (read:write ratio is ~100:1)<br/>3 app servers behind load balancer<br/>PostgreSQL read replicas for analytics queries"]
+    class N1 secondary
+    N2["Cache hit rate: 95% (popular URLs are cached)<br/>Effective DB QPS: 10K × 0.05 = 500 QPS (manageable)"]
+    class N2 secondary
+    N3["QPS: 10K req/sec<br/>Storage: 10M URLs × 500 bytes = 5 GB<br/>Cost: $500/month"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Phase 4: Scaling Writes + Global (100M users, 100K redirects/sec)
 
-![Phase 4: Scaling Writes + Global (100M users, 100K redirects/sec) diagram](../assets/generated/01-fundamentals-05-scalability-diagram-14.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Global DNS<br/>(Geo-routing)"]
+    class N0 primary
+    N1["US Region EU Region Asia Region"]
+    class N1 secondary
+    N2["(Each region has:)"]
+    class N2 secondary
+    N3["CDN LB + App Redis<br/>×5 nodes Cluster"]
+    class N3 secondary
+    N4["DB Shard (by hash of<br/>short_code)<br/>Shard 1 | Shard 2 |..."]
+    class N4 secondary
+    N5["Changes:<br/>Sharded database by hash(short_code) % N<br/>Distributed ID generation (Snowflake-like) for unique short codes<br/>Multi-region deployment with geo-routing<br/>Redis Cluster (not just single Redis)<br/>Kafka for analytics events (don't block the redirect path)"]
+    class N5 secondary
+    N6["Write path: Generate short code -&gt; Write to correct shard (async analytics via Kafka)<br/>Read path: CDN hit (60%) -&gt; Redis hit (35%) -&gt; DB hit (5%)"]
+    class N6 secondary
+    N7["QPS: 100K reads/sec, 1K writes/sec<br/>Storage: 1B URLs × 500 bytes = 500 GB (across shards)<br/>Cost: $20,000-50,000/month"]
+    class N7 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+```
 
 ### Scaling Decisions Summary
 
@@ -355,11 +654,52 @@ Need to handle 10× traffic increase within 2 minutes.
 
 #### Architecture with Auto-Scaling
 
-![Architecture with Auto-Scaling diagram](../assets/generated/01-fundamentals-05-scalability-diagram-15.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["CDN WAF Auto-Scaling Group<br/>(cached (DDoS ...<br/>assets) protect) App1 App2 App3 AppN"]
+    class N0 primary
+    N1["Min: 3 Max: 30<br/>Scale on: CPU &gt; 60%<br/>QPS &gt; 3K/instance"]
+    class N1 secondary
+    N2["ALB"]
+    class N2 secondary
+    N3["ElastiCache Database Layer<br/>Redis Cluster"]
+    class N3 secondary
+    N4["Node1 Node2 Primary Read Replicas<br/>(writes)<br/>Auto-scaling R1 R2"]
+    class N4 secondary
+    N5["Auto-scaling"]
+    class N5 secondary
+    N6["SQS / Kafka Lambda / Workers<br/>(Order Queue) -&gt; (Order Process)<br/>Buffer during Auto-scaled<br/>flash sales consumers"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 #### Flash Sale Strategy
 
-![Flash Sale Strategy diagram](../assets/generated/01-fundamentals-05-scalability-diagram-16.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Before Flash Sale:<br/>1. Pre-warm caches (product data, inventory counts)<br/>2. Pre-scale app servers to 15 instances (anticipate traffic)<br/>3. Set up rate limiting per user (max 5 req/sec)<br/>4. Enable write queue (orders go to SQS, processed async)<br/>5. Switch to eventual consistency for inventory display"]
+    class N0 primary
+    N1["During Flash Sale:"]
+    class N1 secondary
+    N2["Request arrives:<br/>1. Rate limiter checks (user within limit?)<br/>2. CDN serves product page (cached)<br/>3. Redis has pre-warmed inventory count<br/>4. &quot;Buy&quot; request -&gt; SQS queue (not direct DB)<br/>5. Worker processes orders from queue<br/>Atomic decrement inventory in Redis<br/>If stock &gt; 0: create order in DB<br/>If stock = 0: reject, notify user<br/>6. User gets 202 Accepted -&gt; polls for status"]
+    class N2 secondary
+    N3["After Flash Sale:<br/>1. Auto-scaler gradually reduces instances<br/>2. Queue drains remaining orders<br/>3. Reconcile Redis inventory with DB<br/>4. Generate analytics report"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 #### Scaling Approach
 
@@ -387,7 +727,29 @@ Need to handle 10× traffic increase within 2 minutes.
 
 #### Classes and Components
 
-![Classes and Components diagram](../assets/generated/01-fundamentals-05-scalability-diagram-17.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["AutoScaler"]
+    class N0 primary
+    N1["config: ScalingConfig<br/>metricsProvider: Metrics<br/>cloudProvider: CloudAPI<br/>currentInstances: int<br/>lastScaleAction: datetime"]
+    class N1 secondary
+    N2["+ evaluate(): ScalingDecision<br/>+ scaleUp(count: int): void<br/>+ scaleDown(count: int): void<br/>+ getCooldownRemaining(): int"]
+    class N2 secondary
+    N3["Metrics Scaling CloudProvider<br/>Provider Policy (Interface)"]
+    class N3 secondary
+    N4["+getCPU +evaluate +launchInstance<br/>+getQPS (metrics +terminateInst<br/>+getMem ): Dec +listInstances<br/>+custom +getHealth"]
+    class N4 secondary
+    N5["AWS GCP Azure<br/>Provider Provider Provider"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 #### Data Models
 

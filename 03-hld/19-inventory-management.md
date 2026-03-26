@@ -1,4 +1,4 @@
-# HLD 19: Inventory Management
+﻿# HLD 19: Inventory Management
 
 > **Difficulty**: Medium
 > **Key Concepts**: Stock tracking, reservations, consistency, warehouse management

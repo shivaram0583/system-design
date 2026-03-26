@@ -51,11 +51,52 @@ AuthN vs AuthZ:
 
 ### Session-Based Authentication
 
-![Session-Based Authentication diagram](../assets/generated/01-fundamentals-39-authentication-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["1. POST /login {user, pass}<br/>Client -&gt; Server"]
+    class N0 primary
+    N1["2. Set-Cookie: session_id=abc Session<br/>&lt;- Store:<br/>abc -&gt;<br/>3. GET /api/data {user:1}<br/>Cookie: session_id=abc<br/>&gt; Lookup<br/>abc -&gt;<br/>4. 200 OK {data} user 1<br/>&lt;-"]
+    class N1 secondary
+    N2["Session stored in:<br/>Memory (single server only)<br/>Redis (distributed, recommended)<br/>Database (slowest, most durable)"]
+    class N2 secondary
+    N3["Pros: Server can invalidate instantly, full control<br/>Cons: Stateful, requires session store, sticky sessions or shared store"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Token-Based Authentication (JWT)
 
-![Token-Based Authentication (JWT) diagram](../assets/generated/01-fundamentals-39-authentication-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["1. POST /login {user, pass}<br/>Client -&gt; Server"]
+    class N0 primary
+    N1["2. { access_token: &quot;eyJ...&quot;, Verify<br/>refresh_token: &quot;xyz...&quot; } creds<br/>&lt;- Sign JWT"]
+    class N1 secondary
+    N2["3. GET /api/data<br/>Authorization: Bearer eyJ...<br/>&gt;<br/>Any<br/>4. 200 OK {data} Server<br/>&lt;- Verify<br/>signature"]
+    class N2 secondary
+    N3["JWT = Header.Payload.Signature (base64 encoded)"]
+    class N3 secondary
+    N4["Header: {&quot;alg&quot;: &quot;RS256&quot;, &quot;typ&quot;: &quot;JWT&quot;}<br/>Payload: {&quot;sub&quot;: &quot;usr_123&quot;, &quot;role&quot;: &quot;admin&quot;, &quot;exp&quot;: 1705363200}<br/>Signature: RS256(header + payload, private_key)"]
+    class N4 secondary
+    N5["Verification: Any server with the public key can verify the token.<br/>No session store needed -&gt; stateless -&gt; scales horizontally."]
+    class N5 secondary
+    N6["Pros: Stateless, scalable, cross-service<br/>Cons: Can't revoke until expiry (use short expiry + refresh tokens)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### Access Token + Refresh Token Pattern
 
@@ -158,13 +199,54 @@ Solutions:
 
 ### Authentication in Microservices
 
-![Authentication in Microservices diagram](../assets/generated/01-fundamentals-39-authentication-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["API Gateway authenticates -&gt; passes identity to downstream services:"]
+    class N0 primary
+    N1["Client JWT -&gt; API Gateway -&gt; Service A<br/>Validate user_id<br/>JWT role Trusts<br/>Extract in gateway<br/>claims header"]
+    class N1 secondary
+    N2["Gateway validates JWT once.<br/>Passes user_id, roles as internal headers (X-User-Id, X-Roles).<br/>Downstream services trust the gateway (internal network only)."]
+    class N2 secondary
+    N3["Alternative: Each service validates JWT independently.<br/>More secure (zero trust) but more compute overhead."]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ---
 
 ## D. Example: Auth System for SaaS App
 
-![D. Example: Auth System for SaaS App diagram](../assets/generated/01-fundamentals-39-authentication-diagram-04.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Auth Flow:"]
+    class N0 primary
+    N1["1. POST /auth/register<br/>{email, password} -&gt; hash password -&gt; save user"]
+    class N1 secondary
+    N2["2. POST /auth/login<br/>{email, password} -&gt; verify -&gt; issue JWT pair<br/>{ access_token (15 min), refresh_token (30 days)}<br/>Set refresh_token as httpOnly secure cookie"]
+    class N2 secondary
+    N3["3. GET /api/data (Authorization: Bearer &lt;access_token&gt;)<br/>&gt; Verify JWT signature -&gt; extract user_id -&gt; serve"]
+    class N3 secondary
+    N4["4. POST /auth/refresh (Cookie: refresh_token=xyz)<br/>&gt; Verify refresh token -&gt; rotate -&gt; new access_token"]
+    class N4 secondary
+    N5["5. POST /auth/logout<br/>&gt; Revoke refresh token -&gt; clear cookie"]
+    class N5 secondary
+    N6["Storage:<br/>Users: PostgreSQL (id, email, password_hash, mfa)<br/>Refresh tokens: Redis (token -&gt; user_id, expires)<br/>Access tokens: Stateless (JWT, verified by signature)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ---
 
@@ -172,7 +254,23 @@ Solutions:
 
 ### E.1 HLD — Authentication Service
 
-![E.1 HLD — Authentication Service diagram](../assets/generated/01-fundamentals-39-authentication-diagram-05.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Clients"]
+    class N0 primary
+    N1["API Gateway Validates JWT on every request"]
+    class N1 secondary
+    N2["Auth Service -&gt; PostgreSQL Users table<br/>/login<br/>/register<br/>/refresh<br/>/logout<br/>&gt; Redis Refresh<br/>Signs JWTs tokens,<br/>Hashes PWs blocklist"]
+    class N2 secondary
+    N3["JWT signing: RS256 (asymmetric)<br/>Auth service: has private key (signs)<br/>All services: have public key (verify)"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### E.2 LLD — Authentication Service
 

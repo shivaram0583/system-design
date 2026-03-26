@@ -1,4 +1,4 @@
-# Topic 1: What is System Design?
+﻿# Topic 1: What is System Design?
 
 > **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner
@@ -59,7 +59,8 @@ block-beta
   end
   block:LLD["Low-Level Design (LLD)"]:1
     columns 1
-    H["Classes & Objects"]
+    H["Classes
+    Objects"]
     I["Interfaces"]
     J["Data Models"]
     K["Algorithms"]
@@ -95,12 +96,14 @@ Every system design revolves around balancing these pillars:
 
 ```mermaid
 graph TD
-    PERF["🎯 PERFORMANCE<br/>Latency & Throughput"]
+    PERF["🎯 PERFORMANCE<br/>Latency
+    Throughput"]
     SCALE["📈 SCALABILITY<br/>Can it handle growth?"]
     AVAIL["🟢 AVAILABILITY<br/>Is it always up?"]
     CONSIST["🔄 CONSISTENCY<br/>Does every user see same data?"]
     REL["💾 RELIABILITY<br/>Data Durability"]
-    COST["💰 COST & MAINTAINABILITY"]
+    COST["💰 COST
+    MAINTAINABILITY"]
 
     PERF --> SCALE
     PERF --> AVAIL
@@ -124,7 +127,8 @@ flowchart TD
     S2a["Traffic · Storage · Bandwidth · Memory"]
     S3["Step 3: API Design"]
     S3a["Endpoints · Request/Response · Auth"]
-    S4["Step 4: Data Model & Database"]
+    S4["Step 4: Data Model
+    Database"]
     S4a["Schema · SQL vs NoSQL · Indexing"]
     S5["Step 5: High-Level Architecture"]
     S5a["Components · Data Flow · Protocols"]
@@ -218,9 +222,12 @@ In production, system design isn't a one-time activity — it's continuous:
 
 ```mermaid
 flowchart LR
-    A["📝 Design Document"] --> B["🔨 Build & Ship"]
-    B --> C["👁️ Observe & Measure"]
-    C --> D["🔄 Iterate & Fix"]
+    A["📝 Design Document"] --> B["🔨 Build
+    A["📝 Design Document"] --> Ship"]
+    B --> C["👁️ Observe
+    B --> Measure"]
+    C --> D["🔄 Iterate
+    C --> Fix"]
     D --> A
 ```
 

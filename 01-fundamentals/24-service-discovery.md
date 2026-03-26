@@ -35,7 +35,35 @@ WITH service discovery:
 
 ### Client-Side vs Server-Side Discovery
 
-![Client-Side vs Server-Side Discovery diagram](../assets/generated/01-fundamentals-24-service-discovery-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["CLIENT-SIDE DISCOVERY:<br/>Client queries registry directly, picks an instance, connects."]
+    class N0 primary
+    N1["1. Query<br/>Client -&gt; Registry<br/>&lt;- (Consul)<br/>2. IPs"]
+    class N1 secondary
+    N2["3. Direct call<br/>&gt; Service Instance"]
+    class N2 secondary
+    N3["Client does load balancing (e.g., round-robin across returned IPs).<br/>Pros: No extra hop, client controls LB strategy.<br/>Cons: Client must implement discovery logic; language-specific."]
+    class N3 secondary
+    N4["SERVER-SIDE DISCOVERY:<br/>Client calls a load balancer/proxy; the proxy resolves via registry."]
+    class N4 secondary
+    N5["Client -&gt; LB -&gt; Registry<br/>&gt;"]
+    class N5 secondary
+    N6["&gt; Service Instance"]
+    class N6 secondary
+    N7["Pros: Client is simple (just call LB); language-agnostic.<br/>Cons: Extra network hop; LB is a potential bottleneck."]
+    class N7 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+```
 
 ### Service Registration
 
@@ -166,7 +194,29 @@ Java gotcha: JVM caches DNS forever by default!
 
 ## D. Example: Microservice Discovery with Consul
 
-![D. Example: Microservice Discovery with Consul diagram](../assets/generated/01-fundamentals-24-service-discovery-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Service Registration Flow:"]
+    class N0 primary
+    N1["1. Payment Service starts on 10.0.1.5:8080<br/>2. Registers with Consul:<br/>PUT /v1/agent/service/register<br/>{ &quot;name&quot;: &quot;payment&quot;, &quot;address&quot;: &quot;10.0.1.5&quot;,<br/>&quot;port&quot;: 8080, &quot;check&quot;: { &quot;http&quot;: &quot;/health&quot; }}<br/>3. Consul starts health checking every 10s"]
+    class N1 secondary
+    N2["Service Discovery Flow:"]
+    class N2 secondary
+    N3["1. Order Service needs payment-service<br/>2. Queries Consul:<br/>GET /v1/health/service/payment?passing=true<br/>3. Gets: [{addr: &quot;10.0.1.5:8080&quot;}, {addr: &quot;10.0.1.6:8080&quot;}]<br/>4. Client-side LB picks one -&gt; calls it"]
+    class N3 secondary
+    N4["Failure Flow:"]
+    class N4 secondary
+    N5["1. 10.0.1.5 crashes -&gt; health check fails<br/>2. Consul marks instance critical after 2 failures<br/>3. Next query returns only [10.0.1.6:8080]<br/>4. Traffic automatically routes to healthy instance"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ---
 
@@ -174,7 +224,20 @@ Java gotcha: JVM caches DNS forever by default!
 
 ### E.1 HLD — Service Discovery Architecture
 
-![E.1 HLD — Service Discovery Architecture diagram](../assets/generated/01-fundamentals-24-service-discovery-diagram-03.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["register<br/>Service A -&gt; Consul<br/>(×3) &lt;- Cluster<br/>health check (3 nodes)"]
+    class N0 primary
+    N1["register<br/>Service B -&gt; Leader<br/>(×5) Follower<br/>Follower"]
+    class N1 secondary
+    N2["discover<br/>Service C -&gt; Service<br/>(caller) &lt;- Catalog:<br/>[A: 3 IPs] A: 3 instances<br/>[B: 5 IPs] B: 5 instances"]
+    class N2 secondary
+    N0 --> N1
+    N1 --> N2
+```
 
 ### E.2 LLD — Service Registry
 

@@ -1,4 +1,4 @@
-# HLD 25: Real-Time Collaborative Editor (Google Docs)
+﻿# HLD 25: Real-Time Collaborative Editor (Google Docs)
 
 > **Difficulty**: Hard
 > **Key Concepts**: CRDT/OT, conflict resolution, cursors, WebSocket

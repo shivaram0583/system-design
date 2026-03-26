@@ -1,4 +1,4 @@
-# Interview Prep 07: Communication
+﻿# Interview Prep 07: Communication
 
 > System design interviews are 50% technical skill and 50% communication skill.
 

@@ -1,4 +1,4 @@
-# Comparison 03: Kafka vs RabbitMQ
+﻿# Comparison 03: Kafka vs RabbitMQ
 
 > Choosing the right message broker for your system.
 

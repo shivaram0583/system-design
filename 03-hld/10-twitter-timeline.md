@@ -1,4 +1,4 @@
-# HLD 10: Twitter/X Timeline
+﻿# HLD 10: Twitter/X Timeline
 
 > **Difficulty**: Medium
 > **Key Concepts**: Fan-out on write vs read, celebrity problem, timeline ranking

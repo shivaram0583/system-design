@@ -221,7 +221,29 @@ Retention: DROP PARTITION for months > 24 months old (instant cleanup)
 
 ### E.1 HLD — Partitioned Data Architecture
 
-![E.1 HLD — Partitioned Data Architecture diagram](../assets/generated/01-fundamentals-28-partitioning-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Application"]
+    class N0 primary
+    N1["Query Router<br/>Adds partition key to all<br/>queries automatically"]
+    class N1 secondary
+    N2["PostgreSQL (Partitioned)"]
+    class N2 secondary
+    N3["events_2024_01 events_2024_02 ...current<br/>(warm: compressed) (warm) (hot: SSD)"]
+    class N3 secondary
+    N4["events_2023_* -&gt; archived to S3"]
+    class N4 secondary
+    N5["Partition Manager (cron):<br/>Create next month's partition automatically<br/>Compress partitions older than 3 months<br/>Archive partitions older than 12 months<br/>Drop partitions older than 24 months"]
+    class N5 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+```
 
 ### E.2 LLD — Partition Manager
 

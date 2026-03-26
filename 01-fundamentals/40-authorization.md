@@ -166,7 +166,23 @@ Every user/service should have the MINIMUM permissions needed.
 
 ### Centralized Authorization Service
 
-![Centralized Authorization Service diagram](../assets/generated/01-fundamentals-40-authorization-diagram-01.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Instead of each microservice implementing its own AuthZ logic:"]
+    class N0 primary
+    N1["Centralized policy engine (OPA, Cedar, Oso):"]
+    class N1 secondary
+    N2["&quot;Can user X do action Y on resource Z?&quot;<br/>Service A -&gt;<br/>&lt;- allow / deny Policy<br/>Engine<br/>&quot;Can user X do action Y on resource Z?&quot; (OPA)<br/>Service B -&gt;<br/>&lt;- allow / deny Policies:<br/>RBAC +<br/>ABAC"]
+    class N2 secondary
+    N3["Tools:<br/>OPA (Open Policy Agent): General-purpose, Rego policy language<br/>AWS Cedar: Amazon's policy language (Verified Permissions)<br/>Oso: Developer-friendly, embedded policy engine<br/>Casbin: Lightweight, multiple model support (RBAC, ABAC, ReBAC)<br/>SpiceDB: Open-source Zanzibar implementation (ReBAC)"]
+    class N3 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+```
 
 ### Audit Logging
 
@@ -231,7 +247,32 @@ SaaS project management tool (like Jira):
 
 ### E.1 HLD — Authorization Architecture
 
-![E.1 HLD — Authorization Architecture diagram](../assets/generated/01-fundamentals-40-authorization-diagram-02.svg)
+```mermaid
+flowchart TB
+    classDef primary fill:#eaf2ff,stroke:#2563eb,stroke-width:1.5px,color:#0f172a;
+    classDef secondary fill:#f8fafc,stroke:#94a3b8,stroke-width:1.2px,color:#0f172a;
+    linkStyle default stroke:#64748b,stroke-width:1.3px;
+    N0["Client -&gt; API Gateway (AuthN: JWT validation)"]
+    class N0 primary
+    N1["Microservices<br/>(Order, Payment,<br/>User, etc.)"]
+    class N1 secondary
+    N2["&quot;Can user X do Y on Z?&quot;"]
+    class N2 secondary
+    N3["AuthZ Service<br/>(OPA / Cedar)"]
+    class N3 secondary
+    N4["Policy Store:<br/>RBAC rules<br/>ABAC policies<br/>Resource rules"]
+    class N4 secondary
+    N5["Permission DB<br/>(PostgreSQL)<br/>user_roles<br/>role_perms<br/>resource_acls"]
+    class N5 secondary
+    N6["Audit Log -&gt; Kafka -&gt; Elasticsearch (searchable)"]
+    class N6 secondary
+    N0 --> N1
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+```
 
 ### E.2 LLD — Authorization Service
 

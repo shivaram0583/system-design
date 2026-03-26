@@ -1,4 +1,4 @@
-# HLD 20: Hotel Booking (Booking.com / Airbnb)
+﻿# HLD 20: Hotel Booking (Booking.com / Airbnb)
 
 > **Difficulty**: Medium
 > **Key Concepts**: Availability, overbooking, double booking prevention, search

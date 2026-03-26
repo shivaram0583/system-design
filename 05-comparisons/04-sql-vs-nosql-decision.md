@@ -1,4 +1,4 @@
-# Comparison 04: SQL vs NoSQL Decision
+﻿# Comparison 04: SQL vs NoSQL Decision
 
 > The most frequently asked comparison in system design interviews.
 

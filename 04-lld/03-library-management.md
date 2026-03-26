@@ -1,4 +1,4 @@
-# LLD 03: Library Management System
+﻿# LLD 03: Library Management System
 
 > **Difficulty**: Easy
 > **Key Concepts**: OOP, CRUD, search, state transitions

@@ -1,8 +1,8 @@
 ﻿# Topic 2: Client-Server Architecture
 
-> **Track**: Core Concepts â€” Fundamentals
+> **Track**: Core Concepts — Fundamentals
 > **Difficulty**: Beginner
-> **Prerequisites**: Topic 1 â€” What is System Design
+> **Prerequisites**: Topic 1 — What is System Design
 
 ---
 
@@ -23,12 +23,18 @@
 
 Client-Server Architecture is a computing model where **two distinct roles** exist:
 
-- **Client**: The requester â€” initiates communication, sends requests, and presents results to the user
-- **Server**: The responder â€” listens for requests, processes them, and returns results
+- **Client**: The requester — initiates communication, sends requests, and presents results to the user
+- **Server**: The responder — listens for requests, processes them, and returns results
 
-This is the most fundamental pattern in networked computing. Every time you open a website, use an app, or call an API â€” you are a client talking to a server.
+This is the most fundamental pattern in networked computing. Every time you open a website, use an app, or call an API — you are a client talking to a server.
 
-![Client-server overview](../assets/visuals/client-server-overview.svg)
+```mermaid
+sequenceDiagram
+    participant C as Client (Browser, App, Script)
+    participant S as Server (Web Server, API)
+    C->>S: Request — "Give me user #42"
+    S-->>C: Response — {name: "Alice"...}
+```
 
 ### Why is Client-Server Important?
 
@@ -47,7 +53,19 @@ It is the **foundational model** upon which virtually all modern systems are bui
 
 #### Peer-to-Peer (P2P)
 
-![Client-server versus peer-to-peer](../assets/visuals/client-server-vs-p2p.svg)
+```mermaid
+flowchart LR
+    subgraph Client-Server
+        C1[Client] --> S[Server]
+        C2[Client] --> S
+        C3[Client] --> S
+    end
+    subgraph Peer-to-Peer
+        P1[Peer] <--> P2[Peer]
+        P2 <--> P3[Peer]
+        P3 <--> P1
+    end
+```
 
 | Aspect | Client-Server | Peer-to-Peer |
 |--------|--------------|-------------|
@@ -60,31 +78,59 @@ It is the **foundational model** upon which virtually all modern systems are bui
 
 #### Serverless
 
-Serverless is **still client-server** â€” the "server" is just managed by a cloud provider. You write functions; the provider handles infrastructure. The client still sends requests; something still responds.
+Serverless is **still client-server** — the "server" is just managed by a cloud provider. You write functions; the provider handles infrastructure. The client still sends requests; something still responds.
 
 ### How Client-Server Communication Works
 
 #### The Request-Response Cycle
 
-![Request lifecycle](../assets/visuals/client-server-request-lifecycle.svg)
+```mermaid
+sequenceDiagram
+    participant C as CLIENT
+    participant S as SERVER
+    Note over C,S: 1. DNS Lookup
+    C->>S: Resolve domain
+    S-->>C: IP: 93.184.216.34
+    Note over C,S: 2. TCP Handshake
+    C->>S: SYN
+    S-->>C: SYN-ACK
+    C->>S: ACK
+    Note over C,S: 3. TLS Handshake (if HTTPS)
+    C->>S: ClientHello
+    S-->>C: ServerHello + Certificate
+    C->>S: Key Exchange
+    Note over C,S: 4. HTTP Request
+    C->>S: GET /api/users/42
+    Note over S: 5. Server Processing (auth, logic, DB)
+    Note over C,S: 6. HTTP Response
+    S-->>C: 200 OK {name: "Alice"...}
+    Note over C,S: 7. Connection close or keep-alive
+    C->>S: FIN
+    S-->>C: FIN-ACK
+```
 
 #### Key Protocols in Client-Server
 
 | Protocol | Layer | Purpose | Example |
 |----------|-------|---------|---------|
-| **HTTP/HTTPS** | Application | Web requests/responses | Browser â†’ Web Server |
+| **HTTP/HTTPS** | Application | Web requests/responses | Browser → Web Server |
 | **WebSocket** | Application | Bidirectional real-time | Chat apps, live feeds |
 | **gRPC** | Application | Efficient service-to-service | Microservice communication |
 | **TCP** | Transport | Reliable, ordered delivery | Almost everything |
 | **UDP** | Transport | Fast, no guarantees | Video streaming, gaming, DNS |
-| **DNS** | Application | Domain â†’ IP resolution | Every web request starts here |
+| **DNS** | Application | Domain → IP resolution | Every web request starts here |
 | **TLS/SSL** | Between Transport & App | Encryption in transit | HTTPS = HTTP + TLS |
 
 ### Types of Client-Server Architectures
 
-![Tier models](../assets/visuals/client-server-tier-models.svg)
-
 #### 1-Tier (Single Machine)
+
+```mermaid
+flowchart LR
+    subgraph Single Machine
+        UI[UI] --- Logic[Logic] --- DB[DB]
+    end
+```
 
 - Everything on one machine
 - Example: Desktop apps with embedded DB (SQLite)
@@ -92,18 +138,33 @@ Serverless is **still client-server** â€” the "server" is just managed by a
 
 #### 2-Tier (Client + Server)
 
+```mermaid
+flowchart LR
+    Client["Client (UI + some logic)"] <--> Server["Server (Logic + DB)"]
+```
+
 - Client talks directly to database server
 - Example: Traditional desktop app with remote DB
 - **Use case**: Small internal tools, simple CRUD apps
 
-#### 3-Tier (Client + App Server + DB) â­ Most Common
+#### 3-Tier (Client + App Server + DB) ⭐ Most Common
+
+```mermaid
+flowchart LR
+    Client["Client (UI)<br/>Presentation Tier"] <--> App["App Server (Logic)<br/>Business Logic Tier"] <--> DB["Database (Data)<br/>Data Tier"]
+```
 
 - Clear separation of concerns
 - Each tier can scale independently
 - **This is the standard web application architecture**
-- Example: React frontend â†’ Node.js API â†’ PostgreSQL
+- Example: React frontend → Node.js API → PostgreSQL
 
 #### N-Tier (Multi-Tier)
+
+```mermaid
+flowchart LR
+    Client --> CDN --> LB[Load Balancer] --> App[App Server] --> Cache --> DB
+```
 
 - Real production systems have many tiers
 - Each tier handles a specific concern
@@ -121,7 +182,7 @@ Serverless is **still client-server** â€” the "server" is just managed by a
 
 **Consider alternatives when:**
 
-- You need direct peer communication (use P2P â€” e.g., video calls via WebRTC)
+- You need direct peer communication (use P2P — e.g., video calls via WebRTC)
 - You need offline-first capability (use local-first architecture)
 - You need extreme fault tolerance with no central point (use P2P/mesh)
 - Latency between client and server is unacceptable (use edge computing)
@@ -140,22 +201,66 @@ Serverless is **still client-server** â€” the "server" is just managed by a
 
 As the number of clients grows, a single server becomes a bottleneck. Here's how the architecture evolves:
 
-![Scaling evolution](../assets/visuals/client-server-scaling-evolution.svg)
+```mermaid
+flowchart LR
+    subgraph Stage 1: Single Server
+        C1[Client] --> S1[Server + DB]
+    end
+```
+
+```mermaid
+flowchart LR
+    subgraph Stage 2: Separate DB
+        C2[Client] --> S2[Server] --> DB2[DB]
+    end
+```
+
+```mermaid
+flowchart LR
+    subgraph Stage 3: LB + Multiple Servers
+        C3[Clients] --> LB3[LB] --> S3a[Server 1] --> DB3[DB]
+        LB3 --> S3b[Server 2] --> DB3
+        LB3 --> S3c[Server 3] --> DB3
+    end
+```
+
+```mermaid
+flowchart LR
+    subgraph Stage 4: Full N-Tier
+        C4[Client] --> CDN4[CDN] --> LB4[LB] --> Servers4["Servers (N)"]
+        Servers4 --> Cache4["Cache (Redis)"] --> DBP["DB (Primary)"]
+        Servers4 --> Queue4["Queue (Kafka)"]
+        DBP --> DBR["DB Replica (Read)"]
+    end
+```
 
 ### Communication Patterns
 
 | Pattern | Direction | Use Case | Example |
 |---------|----------|----------|---------|
-| **Request-Response** | Client â†’ Server â†’ Client | Standard CRUD operations | REST API call |
-| **Polling** | Client â†’ Server (repeated) | Check for updates | Email refresh every 30s |
-| **Long Polling** | Client â†’ Server (held open) | Near-real-time updates | Chat before WebSockets |
-| **Server-Sent Events (SSE)** | Server â†’ Client (one-way stream) | Live feeds, notifications | Stock ticker |
-| **WebSocket** | Client â†” Server (bidirectional) | Real-time interactive | Chat, gaming, collab editing |
-| **Webhooks** | Server â†’ Server (event-driven) | Async notifications | Payment status update |
+| **Request-Response** | Client → Server → Client | Standard CRUD operations | REST API call |
+| **Polling** | Client → Server (repeated) | Check for updates | Email refresh every 30s |
+| **Long Polling** | Client → Server (held open) | Near-real-time updates | Chat before WebSockets |
+| **Server-Sent Events (SSE)** | Server → Client (one-way stream) | Live feeds, notifications | Stock ticker |
+| **WebSocket** | Client ↔ Server (bidirectional) | Real-time interactive | Chat, gaming, collab editing |
+| **Webhooks** | Server → Server (event-driven) | Async notifications | Payment status update |
 
 #### When to Use Each
 
-![Communication pattern selector](../assets/visuals/client-server-pattern-selector.svg)
+```mermaid
+flowchart LR
+    A[Need standard CRUD?] -->|Yes| B[Request-Response (REST)]
+    A -->|No| C[Need updates every few seconds?]
+    C -->|Yes| D[ Polling (simple) or SSE (efficient)]
+    C -->|No| E[Need real-time bidirectional?]
+    E -->|Yes| F[WebSocket]
+    E -->|No| G[Need server to push events?]
+    G -->|Yes| H[SSE or WebSocket]
+    G -->|No| I[Need server-to-server async notify?]
+    I -->|Yes| J[Webhook]
+    I -->|No| K[Need low-latency inter-service?]
+    K -->|Yes| L[gRPC]
+```
 
 ---
 
@@ -165,7 +270,7 @@ As the number of clients grows, a single server becomes a bottleneck. Here's how
 
 Client-server is **implicitly assumed** in nearly every system design interview. You won't be asked "explain client-server" directly, but your understanding is tested through:
 
-- How you draw architecture diagrams (client â†’ LB â†’ servers â†’ DB)
+- How you draw architecture diagrams (client → LB → servers → DB)
 - Whether you separate concerns properly (presentation vs logic vs data)
 - How you handle different client types (web, mobile, API consumers)
 - Your choice of communication protocols (REST, WebSocket, gRPC)
@@ -185,7 +290,7 @@ Client-server is **implicitly assumed** in nearly every system design interview.
 - Drawing a client talking directly to a database
 - Not mentioning a load balancer when there are multiple servers
 - Assuming the client and server are always on the same network
-- Ignoring mobile clients (they have different constraints â€” bandwidth, battery, offline)
+- Ignoring mobile clients (they have different constraints — bandwidth, battery, offline)
 - Not considering what happens when the server is unreachable
 
 ### Common Follow-up Questions
@@ -207,7 +312,12 @@ Client-server is **implicitly assumed** in nearly every system design interview.
 
 Real servers evolve over time. Clients may be on different versions:
 
-![API versioning](../assets/visuals/client-server-api-versioning.svg)
+```mermaid
+flowchart LR
+    C1[Client v1] -->|GET /api/v1/users| S1[Server]
+    C2[Client v2] -->|GET /api/v2/users| S1
+    C3[Client v3] -->|GET /api/v3/users| S1
+```
 
 **Strategies:**
 
@@ -221,7 +331,13 @@ Real servers evolve over time. Clients may be on different versions:
 
 Creating a new TCP connection for every request is expensive. Real servers use **connection pooling**:
 
-![Connection pooling](../assets/visuals/client-server-connection-pooling.svg)
+```mermaid
+flowchart LR
+    C[Client] --> P[Pool]
+    P -->|conn1| S1[Server]
+    P -->|conn2| S1
+    P -->|conn3| S1
+```
 
 This applies to:
 - DB connections (PostgreSQL connection pool via PgBouncer)
@@ -232,7 +348,12 @@ This applies to:
 
 In production, clients must handle server failures gracefully:
 
-![Timeouts and retries](../assets/visuals/client-server-timeouts-retries.svg)
+```mermaid
+flowchart LR
+    C[Client] -->|Request| S[Server]
+    S -->|Timeout| C
+    C -->|Retry| S
+```
 
 #### Observability in Client-Server
 
@@ -286,11 +407,36 @@ Design the client-server interaction for loading a product page on an e-commerce
 
 ### Architecture Flow
 
-![E-commerce architecture and request flow](../assets/visuals/client-server-ecommerce-flow.svg)
+```mermaid
+flowchart LR
+    Browser["Browser (React)"] --> CDN
+    CDN --> Static["Static files (JS, CSS, img)"]
+    Browser --> LB[Load Balancer]
+    LB --> S1[Server 1]
+    LB --> S2[Server 2]
+    LB --> S3[Server 3]
+    S1 --> Redis["Redis (Cache)"]
+    S2 --> Redis["Redis (Cache)"]
+    S3 --> Redis["Redis (Cache)"]
+    S1 --> PG["PostgreSQL (Products, Reviews)"]
+    S2 --> PG["PostgreSQL (Products, Reviews)"]
+    S3 --> PG["PostgreSQL (Products, Reviews)"]
+```
 
 ### Step-by-Step Request Flow
 
-The illustration above shows both the page architecture and the cache-hit/cache-miss request path for a product page load.
+```mermaid
+flowchart LR
+    C[Client] -->|GET /product/12345| CDN
+    CDN -->|Cache HIT| C
+    CDN -->|Cache MISS| LB
+    LB -->|Forward| S[Server]
+    S -->|Cache HIT| C
+    S -->|Cache MISS| PG
+    PG -->|Row data| S
+    S -->|SET cache| Redis
+    S -->|200 OK| C
+```
 
 ### API Design
 
@@ -340,7 +486,7 @@ public class Recommendation {
 
 ## E. HLD and LLD
 
-### E.1 HLD â€” Client-Server for a Generic Web Application
+### E.1 HLD — Client-Server for a Generic Web Application
 
 #### Requirements
 
@@ -400,12 +546,36 @@ public class CapacityEstimator {
 
 #### Architecture Diagram
 
-![Generic web app HLD](../assets/visuals/client-server-generic-webapp.svg)
+```mermaid
+flowchart TD
+    subgraph Clients
+        Web["Web (React)"]
+        iOS["Mobile (iOS)"]
+        Android["Mobile (Android)"]
+        API["3rd Party API"]
+    end
+    Clients -->|HTTPS| CDN["CDN — Static assets"]
+    CDN --> DNS["DNS — Domain → IP"]
+    DNS --> WAF["WAF — Firewall"]
+    WAF --> LB["LB — Load Balancer (L7)"]
+    LB --> S1[Server 1]
+    LB --> S2[Server 2]
+    LB --> S3[Server 3]
+    S1 --> Cache["Cache (Redis)"]
+    S2 --> Cache["Cache (Redis)"]
+    S3 --> Cache["Cache (Redis)"]
+    S1 --> DB["DB (Postgres)"]
+    S2 --> DB["DB (Postgres)"]
+    S3 --> DB["DB (Postgres)"]
+    S1 --> Queue["Queue (Kafka)"]
+    S2 --> Queue["Queue (Kafka)"]
+    S3 --> Queue["Queue (Kafka)"]
+```
 
 #### Data Flow
 
-**Read path:** Client â†’ CDN (static) / LB (dynamic) â†’ Server â†’ Cache â†’ DB â†’ Response
-**Write path:** Client â†’ LB â†’ Server â†’ Validate â†’ DB â†’ (optional) Queue â†’ Response
+**Read path:** Client → CDN (static) / LB (dynamic) → Server → Cache → DB → Response
+**Write path:** Client → LB → Server → Validate → DB → (optional) Queue → Response
 
 #### Scaling Approach
 
@@ -439,11 +609,37 @@ public class CapacityEstimator {
 
 ---
 
-### E.2 LLD â€” Client-Server Request Handler
+### E.2 LLD — Client-Server Request Handler
 
 #### Classes and Components
 
-![Request handler components](../assets/visuals/client-server-request-handler-classes.svg)
+```mermaid
+classDiagram
+    class HTTPServer {
+        -int port
+        -Router router
+        -Middleware[] middlewareChain
+        +start() void
+        +stop() void
+        +handleRequest(req, res) void
+    }
+    class Router {
+        +addRoute(method, path, handler) void
+        +resolve(req) Handler
+    }
+    class Middleware {
+        <<interface>>
+        +process(req, res, next) void
+    }
+    class AuthMW
+    class LoggerMW
+    class RateLimitMW
+    HTTPServer --> Router
+    HTTPServer --> Middleware
+    AuthMW ..|> Middleware
+    LoggerMW ..|> Middleware
+    RateLimitMW ..|> Middleware
+```
 
 #### Interfaces
 
@@ -504,11 +700,41 @@ CREATE INDEX idx_request_logs_user_id ON request_logs(user_id);
 CREATE INDEX idx_request_logs_status ON request_logs(status_code);
 ```
 
-#### Sequence Flow â€” Handling a GET Request
+#### Sequence Flow — Handling a GET Request
 
-![GET request sequence](../assets/visuals/client-server-get-request-sequence.svg)
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant LB as Load Balancer
+    participant S as Server
+    participant MW as Middleware
+    participant H as Handler
+    participant Ca as Cache
+    participant DB as DB
 
-#### Pseudocode â€” Server Request Handling
+    C->>LB: GET /users/42
+    LB->>S: Forward request
+    S->>MW: AuthMiddleware
+    Note over MW: Verify JWT ✓ Valid
+    MW-->>S: next()
+    S->>MW: LogMiddleware
+    Note over MW: Log request
+    MW-->>S: next()
+    S->>MW: RateLimitMW
+    Note over MW: Check limit
+    MW-->>S: next()
+    S->>H: Route match
+    H->>Ca: GET key
+    Ca-->>H: MISS
+    H->>DB: SELECT * FROM users WHERE id=42
+    DB-->>H: Row data
+    H->>Ca: SET cache
+    H-->>S: 200 OK {user data}
+    S-->>LB: Response
+    LB-->>C: 200 OK
+```
+
+#### Pseudocode — Server Request Handling
 
 ```java
 public class HTTPServer {
@@ -584,10 +810,10 @@ public class HTTPServer {
 ### Key Takeaways
 
 1. **Client-Server** is the foundational model: client requests, server responds
-2. **3-tier architecture** (Presentation â†’ Logic â†’ Data) is the industry standard for web apps
-3. Real systems evolve from single server â†’ LB + multiple servers â†’ full N-tier with CDN, cache, queue
+2. **3-tier architecture** (Presentation → Logic → Data) is the industry standard for web apps
+3. Real systems evolve from single server → LB + multiple servers → full N-tier with CDN, cache, queue
 4. **Communication protocols** matter: REST for CRUD, WebSocket for real-time, gRPC for internal services
-5. **Stateless servers** are critical for horizontal scaling â€” never store session state locally
+5. **Stateless servers** are critical for horizontal scaling — never store session state locally
 6. In production, you must handle **timeouts, retries, connection pooling, and failure gracefully**
 7. Security is non-negotiable: HTTPS everywhere, validate on server, never trust the client
 8. **Observability** (latency, error rate, QPS) is how you keep client-server systems healthy
@@ -596,7 +822,7 @@ public class HTTPServer {
 
 - [ ] Can I explain client-server architecture in one sentence?
 - [ ] Can I draw a 3-tier architecture diagram?
-- [ ] Can I explain the full request-response lifecycle (DNS â†’ TCP â†’ TLS â†’ HTTP â†’ Response)?
+- [ ] Can I explain the full request-response lifecycle (DNS → TCP → TLS → HTTP → Response)?
 - [ ] Do I know the difference between 1-tier, 2-tier, 3-tier, and N-tier?
 - [ ] Can I compare client-server with peer-to-peer?
 - [ ] Can I name 5 communication patterns (request-response, polling, long polling, SSE, WebSocket)?
@@ -647,10 +873,9 @@ public class HTTPServer {
    - Live order tracking (real-time location updates)
    - Internal communication between Order Service and Payment Service
 
-4. **Exercise 4**: A server currently handles 500 req/sec on a single machine. Traffic is expected to grow to 50,000 req/sec. Design the scaling strategy â€” what components do you add and in what order?
+4. **Exercise 4**: A server currently handles 500 req/sec on a single machine. Traffic is expected to grow to 50,000 req/sec. Design the scaling strategy — what components do you add and in what order?
 
 ---
 
-> **Previous**: [01 â€” What is System Design](01-what-is-system-design.md)
-> **Next**: [03 â€” Monolith vs Microservices](03-monolith-vs-microservices.md)
-
+> **Previous**: [01 — What is System Design](01-what-is-system-design.md)
+> **Next**: [03 — Monolith vs Microservices](03-monolith-vs-microservices.md)

@@ -1,4 +1,4 @@
-# LLD 05: ATM Machine
+﻿# LLD 05: ATM Machine
 
 > **Difficulty**: Easy
 > **Key Concepts**: State machine, Chain of Responsibility, transaction handling
